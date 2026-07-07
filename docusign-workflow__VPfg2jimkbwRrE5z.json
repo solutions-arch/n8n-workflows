@@ -1,0 +1,1652 @@
+{
+  "updatedAt": "2026-04-29T19:05:56.935Z",
+  "createdAt": "2025-10-24T16:27:55.347Z",
+  "id": "VPfg2jimkbwRrE5z",
+  "name": "DocuSign workflow",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "04924edf-bee9-4ea2-b65b-7c53dfdffa4b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -512,
+        352
+      ],
+      "id": "a779f390-d3b7-464c-bdd5-28b6d64fad17",
+      "name": "Webhook",
+      "webhookId": "04924edf-bee9-4ea2-b65b-7c53dfdffa4b"
+    },
+    {
+      "parameters": {
+        "jsCode": "function S(val, fb = \"\") {\n  if (val === null || val === undefined) return fb;\n  return String(val);\n}\n\nreturn $input.all().map(item => {\n  const j = item.json;\n\n  const body = {\n    templateId: \"91d5ff8a-d6c1-4935-a695-f9739798036a\",\n    status: \"sent\",\n    templateRoles: [\n      {\n        roleName: \"SV Representative\",\n        name: S(j.placementRep, \"Scale Virtually Representative\"), \n        email: S(j.placementEmail, \"jenn@scalevirtually.com\"), \n        routingOrder: \"1\",\n        tabs: {\n          textTabs: [\n            // Client Info\n            { tabLabel: \"Client BContactEmail\", value: S(j.accountOwnerEmail) },\n            { tabLabel: \"Client BContactName\", value: S(j.client) },\n            { tabLabel: \"Client BContactPhone\", value: S(j.accountOwnerContactDetails) },\n            { tabLabel: \"Client CompanyAddress\", value: S(j.companyAddress) },\n            { tabLabel: \"Client CompanyName\", value: S(j.company) },\n            { tabLabel: \"Client ContactName\", value: S(j.client) },\n            { tabLabel: \"Client Email\", value: S(j.accountOwnerEmail) },\n            { tabLabel: \"Client Phone\", value: S(j.accountOwnerContactDetails) },\n            \n            // Client POC Info\n            { tabLabel: \"Client POCEmail\", value: S(j.pocEmail) },\n            { tabLabel: \"Client POCName\", value: S(j.pocName) },\n            { tabLabel: \"Client POCPhone\", value: S(j.pocContactNumber) },\n            { tabLabel: \"Client POCPosition\", value: S(j.pocPosition) },\n            \n            // VA Basic Info\n            { tabLabel: \"VA Name\", value: S(j.vaName) },\n            { tabLabel: \"VA OHWH Rate\", value: S(j.svOtRate_num || j.svOtRate) },\n            { tabLabel: \"VA RestDays\", value: S(j.restDays) },\n            { tabLabel: \"VA RWH Rate\", value: S(j.svBaseRate_num || j.svBaseRate) },\n            { tabLabel: \"VA StartDate\", value: S(j.vaStartDate) },\n            { tabLabel: \"VA Timezone\", value: S(j.timeZone) },\n            { tabLabel: \"VA WorkingHours\", value: S(j.workingHours) },\n            \n            // VA Schedule - separate fields for each day\n            { tabLabel: \"VA Schedule1\", value: S(j.workSchedule1) },\n            { tabLabel: \"VA Schedule2\", value: S(j.workSchedule2) },\n            { tabLabel: \"VA Schedule3\", value: S(j.workSchedule3) },\n            { tabLabel: \"VA Schedule4\", value: S(j.workSchedule4) },\n            { tabLabel: \"VA Schedule5\", value: S(j.workSchedule5) },\n          ]\n        }\n      },\n      {\n        roleName: \"Client\",\n        name: S(j.client),\n        email: S(j.accountOwnerEmail),\n        routingOrder: \"2\"\n      },\n    ],\n  };\n\n  return { json: { body } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        160
+      ],
+      "id": "89657a3d-ed86-47b7-a026-3f5e6e1e127c",
+      "name": "Build Docusign JSON"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://demo.docusign.net/restapi/v2.1/accounts/43707015/envelopes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        160
+      ],
+      "id": "e910807d-7028-43c3-b9b0-d7fdbea0ae1e",
+      "name": "Create Envelope from template",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "5GwaLGWlJPDkxmCV",
+          "name": "Developer Test Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Automatically create and send DocuSign VA Endorsement Form contracts when new VA placements are created in Airtable"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -384,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "71599b01-ed48-4156-b12a-20ddea77123f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Loop through all incoming items (in case multiple webhooks fire at once)\nreturn items.map(item => {\n  \n  // 1. ACCESS THE VARIABLE\n  // In n8n, the incoming webhook payload is usually inside 'item.json'\n  // We want the 'body' property where Airtable data lives.\n  const rawBody = item.json.body;\u00a0 \n\n  // 2. HELPER: Number Converter\n  // Converts \"$11.00\" strings to actual numbers (11.00)\n  const parseCurrency = (value) => {\n    if (typeof value === 'string' && value.includes('$')) {\n        return parseFloat(value.replace('$', '').replace(',', ''));\n    }\n    return value;\n  };\n\n  // 3. CONSTRUCT OUTPUT\n  // We return the clean structure inside the 'json' property required by n8n\n  return {\n    json: {\n  \n      ...rawBody,\n\n     \n      // This keeps the original strings (e.g. \"$11.00\") but adds \n      // usable numbers for any math nodes you might use later.\n      clientRate_num: parseCurrency(rawBody.clientRate),\n      clientOtRate_num: parseCurrency(rawBody.clientOtRate),\n      svBaseRate_num: parseCurrency(rawBody.svBaseRate),\n      svOtRate_num: parseCurrency(rawBody.svOtRate),\n      \n \n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        160
+      ],
+      "id": "e87e7d05-7f80-4783-b4f1-97e80b3548aa",
+      "name": "Dala Cleaning"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appxWtN5uQpxgXlup",
+          "mode": "list",
+          "cachedResultName": "1113",
+          "cachedResultUrl": "https://airtable.com/appxWtN5uQpxgXlup"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblCCWeZz4KHN9QKB",
+          "mode": "list",
+          "cachedResultName": "VA Placements",
+          "cachedResultUrl": "https://airtable.com/appxWtN5uQpxgXlup/tblCCWeZz4KHN9QKB"
+        },
+        "filterByFormula": "=RECORD_ID() = '{{ $('Webhook').item.json.body.recordId }}'",
+        "options": {
+          "fields": []
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1280,
+        336
+      ],
+      "id": "1dd8cc62-b0d9-4336-97e1-de0322d6166f",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        944,
+        336
+      ],
+      "id": "3e3c4f3a-be2b-4087-8a0a-74e6e327752f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appxWtN5uQpxgXlup",
+          "mode": "list",
+          "cachedResultName": "1113",
+          "cachedResultUrl": "https://airtable.com/appxWtN5uQpxgXlup"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblCCWeZz4KHN9QKB",
+          "mode": "list",
+          "cachedResultName": "VA Placements",
+          "cachedResultUrl": "https://airtable.com/appxWtN5uQpxgXlup/tblCCWeZz4KHN9QKB"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Envelope ID": "={{ $('Create Envelope from template').item.json.envelopeId }}",
+            "Client Docusign Status": "Pending"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Placements ID",
+              "displayName": "Placements ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placed VA",
+              "displayName": "Placed VA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "End Date with Client",
+              "displayName": "End Date with Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Replacement Requirements",
+              "displayName": "Replacement Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL Status",
+              "displayName": "PL Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Awaiting Endorsement",
+                  "value": "Awaiting Endorsement"
+                },
+                {
+                  "name": "Active",
+                  "value": "Active"
+                },
+                {
+                  "name": "Replaced",
+                  "value": "Replaced"
+                },
+                {
+                  "name": "Cancelled",
+                  "value": "Cancelled"
+                },
+                {
+                  "name": "Endorsement - Failed",
+                  "value": "Endorsement - Failed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Active VA Name",
+              "displayName": "Active VA Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Replaced By",
+              "displayName": "Replaced By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "REQUIRED MVA (from PLACEMENTS Requirements)",
+              "displayName": "REQUIRED MVA (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Reason for MVA Cancellation",
+              "displayName": "Reason for MVA Cancellation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL - Client Interviews",
+              "displayName": "PL - Client Interviews",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements (from VA) (from PL - Client Interviews)",
+              "displayName": "PLACEMENTS Requirements (from VA) (from PL - Client Interviews)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants (from PL - Client Interviews)",
+              "displayName": "Virtual Assistants (from PL - Client Interviews)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirement (from PLACEMENTS Requirements)",
+              "displayName": "PDEV Requirement (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENT TYPE (from PLACEMENTS Requirements)",
+              "displayName": "PLACEMENT TYPE (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Clients",
+              "displayName": "Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "MVA Pair being REPLACED Rollup (from PLACEMENTS Requirements)",
+              "displayName": "MVA Pair being REPLACED Rollup (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants",
+              "displayName": "Virtual Assistants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Back-To-Placements",
+              "displayName": "Back-To-Placements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placed VA (from CI)",
+              "displayName": "Placed VA (from CI)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants 2",
+              "displayName": "Virtual Assistants 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL STAGE (from PLACEMENTS Requirements)",
+              "displayName": "PL STAGE (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL - Shortlisting",
+              "displayName": "PL - Shortlisting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics Needed (from PLACEMENTS Requirements)",
+              "displayName": "Logistics Needed (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Interviewer Contact Details (from PLACEMENTS Requirements)",
+              "displayName": "Interviewer Contact Details (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Requirement POC / POCs (Interviewers from Placements Requirements)",
+              "displayName": "Requirement POC / POCs (Interviewers from Placements Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Finance Notes",
+              "displayName": "Finance Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Scope Type",
+              "displayName": "Scope Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Address",
+              "displayName": "Company Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF",
+              "displayName": "SUF",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Full/Part Time",
+              "displayName": "Full/Part Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Time Zone",
+              "displayName": "Time Zone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + Client Profile",
+              "displayName": "JD + Client Profile",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Rate",
+              "displayName": "Client Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL STAGE",
+              "displayName": "PL STAGE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsed to OPS",
+              "displayName": "Endorsed to OPS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Account Owner Email",
+              "displayName": "Account Owner Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Account Owner Contact Details",
+              "displayName": "Account Owner Contact Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Number of VA/s",
+              "displayName": "Number of VA/s",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SV Base Rate",
+              "displayName": "SV Base Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SV Email",
+              "displayName": "SV Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Source",
+              "displayName": "VA Source",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistant (from Placed VA)",
+              "displayName": "Virtual Assistant (from Placed VA)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PAD",
+              "displayName": "PAD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Docusign",
+              "displayName": "Docusign",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics",
+              "displayName": "Logistics",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics For VA",
+              "displayName": "Logistics For VA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Start Date",
+              "displayName": "VA Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Schedule for VA",
+              "displayName": "Schedule for VA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Activity Logs",
+              "displayName": "Activity Logs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics Request Status",
+              "displayName": "Logistics Request Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics Request Sent?",
+              "displayName": "Logistics Request Sent?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics Request Sent At",
+              "displayName": "Logistics Request Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Resend Logistics Request?",
+              "displayName": "Resend Logistics Request?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Image",
+              "displayName": "VA Image",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Endorsement Email Status",
+              "displayName": "Endorsement Email Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Endorsement Email Sent?",
+              "displayName": "Endorsement Email Sent?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Endorsement Email Sent At",
+              "displayName": "Endorsement Email Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Resend Endorsement Email?",
+              "displayName": "Resend Endorsement Email?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Congrats Email Status",
+              "displayName": "Congrats Email Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Congrats Email Sent?",
+              "displayName": "Congrats Email Sent?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Congrats Email Sent At",
+              "displayName": "Congrats Email Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Resend Congrats Email?",
+              "displayName": "Resend Congrats Email?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "NCO",
+              "displayName": "NCO",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Podio Upload",
+              "displayName": "Podio Upload",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Record ID",
+              "displayName": "Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "MVA Cancellation",
+              "displayName": "MVA Cancellation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Other Recipient",
+              "displayName": "Other Recipient",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "For Scrubbing?",
+              "displayName": "For Scrubbing?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fields with Missing Data",
+              "displayName": "Fields with Missing Data",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Scrubbed At",
+              "displayName": "Last Scrubbed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Profit Margin",
+              "displayName": "Profit Margin",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Profit Justification",
+              "displayName": "Profit Justification",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Profit Indicator",
+              "displayName": "Profit Indicator",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Final Client Rate",
+              "displayName": "Final Client Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final SV Base Rate",
+              "displayName": "Final SV Base Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Role (Rollup)",
+              "displayName": "Role (Rollup)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Last Modified",
+              "displayName": "Last Modified",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants copy",
+              "displayName": "Virtual Assistants copy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company (text)",
+              "displayName": "Company (text)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Name",
+              "displayName": "VA Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client OT Rate",
+              "displayName": "Client OT Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SV OT Rate",
+              "displayName": "SV OT Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Name",
+              "displayName": "POC Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Email",
+              "displayName": "POC Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Contact Number",
+              "displayName": "POC Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Rest Days",
+              "displayName": "Rest Days",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "B2P Amendment",
+              "displayName": "B2P Amendment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Position",
+              "displayName": "POC Position",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Number of Working Hours",
+              "displayName": "Number of Working Hours",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Day 1 Schedule",
+              "displayName": "Day 1 Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Day 2 Schedule",
+              "displayName": "Day 2 Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Day 3 Schedule",
+              "displayName": "Day 3 Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Day 4 Schedule",
+              "displayName": "Day 4 Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Day 5 Schedule",
+              "displayName": "Day 5 Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placements Representative",
+              "displayName": "Placements Representative",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Representative Email",
+              "displayName": "Representative Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Contract (Docusign)",
+              "displayName": "Client Contract (Docusign)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "VA Contract (Docusign)",
+              "displayName": "VA Contract (Docusign)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Envelope ID",
+              "displayName": "Envelope ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client Docusign Status",
+              "displayName": "Client Docusign Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Sent",
+                  "value": "Sent"
+                },
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Signed",
+                  "value": "Signed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1584,
+        336
+      ],
+      "id": "d1e051ec-b680-4173-ae4f-6d6302b089c3",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Dala Cleaning",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Build Docusign JSON": {
+      "main": [
+        [
+          {
+            "node": "Create Envelope from template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dala Cleaning": {
+      "main": [
+        [
+          {
+            "node": "Build Docusign JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Envelope from template": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
+            "content-length": "1078",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "3.89.222.63",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9aadc68a42a4c655-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-airtable-source": "appxWtN5uQpxgXlup/wfl5xJ5nMYPcbu5sO",
+            "x-forwarded-for": "3.89.222.63, 104.23.211.209",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-bd6m6",
+            "x-is-trusted": "yes",
+            "x-real-ip": "3.89.222.63"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "source": "airtable",
+            "baseId": "appxWtN5uQpxgXlup",
+            "tableId": "tblCCWeZz4KHN9QKB",
+            "tableName": "VA Placements",
+            "recordId": "rec9Chz3rKxteDQJg",
+            "action": "placements_send_to_n8n",
+            "placementsId": "Lizadette Lazo for Jesse Herfel \u2013 Operational Support EVA \u2013 Replacement - 2",
+            "company": "Complete Cash Offers LLC",
+            "client": "Jesse Herfel",
+            "companyAddress": "Some",
+            "accountOwnerContactDetails": "(602) 705-2232",
+            "accountOwnerEmail": "jenn@scalevirtually.com",
+            "pocName": "Jianna Caritativo",
+            "pocEmail": "jianna@scalevirtually.com",
+            "pocContactNumber": "123456789",
+            "pocPosition": "Executive",
+            "workingHours": "8",
+            "vaName": "Lizadette Lazo",
+            "vaStartDate": "November 17, 2025",
+            "fullOrPartTime": "Full Time VA",
+            "clientRate": "$11.00",
+            "clientOtRate": "$16.50",
+            "svBaseRate": "$6.00",
+            "svOtRate": "$9.00",
+            "timeZone": "CST",
+            "workSchedule1": "Monday | 8 AM - 5 PM",
+            "workSchedule2": "Tuesday | 8 AM - 5 PM",
+            "workSchedule3": "Wednesday | 8 AM - 5 PM",
+            "workSchedule4": "Thursday | 8 AM - 5 PM",
+            "workSchedule5": "Friday | 8 AM - 5 PM",
+            "restDays": "Saturday, Sunday",
+            "placementRep": null,
+            "placementEmail": null,
+            "envelopeId": null
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook-test/04924edf-bee9-4ea2-b65b-7c53dfdffa4b",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "versionId": "71d4112a-78e6-4b5f-b07a-e0ee6e26a9d8",
+  "activeVersionId": null,
+  "versionCounter": 76,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-10-24T16:27:55.351Z",
+      "createdAt": "2025-10-24T16:27:55.351Z",
+      "role": "workflow:owner",
+      "workflowId": "VPfg2jimkbwRrE5z",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

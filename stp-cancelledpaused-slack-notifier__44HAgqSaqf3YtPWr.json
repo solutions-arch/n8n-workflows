@@ -1,0 +1,844 @@
+{
+  "updatedAt": "2026-04-29T19:06:23.594Z",
+  "createdAt": "2026-02-10T21:59:49.300Z",
+  "id": "44HAgqSaqf3YtPWr",
+  "name": "STP Cancelled/Paused Slack Notifier",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "72459110-141e-4e3d-ae90-848481ba3c5b",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e28e55e6-6a04-497d-81b4-bf091740fb44",
+      "name": "Webhook",
+      "webhookId": "72459110-141e-4e3d-ae90-848481ba3c5b"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#placements-talent-acquisitions",
+          "mode": "name"
+        },
+        "text": "={{$json.slackMessage}}\n",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "fdeb79dd-f762-42fc-a51e-584bc873f7de",
+      "name": "Send a message",
+      "webhookId": "0c39708d-d87a-4fd7-bec5-1fae14787024",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json.body ?? $json;\n\n// IMPORTANT: adjust this if your webhook uses a different key name\nconst recordId =\n  data.recordId ??\n  data.id ??               // sometimes people send id instead of recordId\n  data.record?.id ??\n  null;\n\nconst stpCode = data.stpCode ?? \"-\";\n\nconst status =\n  data.requisitionStatus?.name ??\n  data.requisitionStatus ??\n  \"-\";\n\nconst cancellationReason =\n  data.cancellationReason?.name ??\n  data.cancellationReason ??\n  null;\n\nconst slackMessage =\n  `Hi team. FYI, the requirement *${stpCode}* has been moved to *${status}*.\\n\\n` +\n  `> _${cancellationReason || \"No cancellation reason provided.\"}_\\n\\n` +\n  `Thank you.`;\n\nreturn [\n  {\n    json: {\n      // carry these forward so later nodes can use them\n      recordId,\n      stpCode,\n      status,\n      cancellationReason,\n      slackMessage,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        0
+      ],
+      "id": "e795816b-9598-4468-b3fd-8ef3429b4453",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "#test-channel"
+            },
+            {
+              "name": "text",
+              "value": "=={{$json.text}}"
+            },
+            {
+              "name": "blocks",
+              "value": "=={{$json.blocks}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        48,
+        368
+      ],
+      "id": "a1d3c7de-9042-47d1-ab62-ac75a298368f",
+      "name": "HTTP Request",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "pS62OxdnzvYqXMmc",
+          "name": "Slack account 2"
+        },
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltJ5qVMmfYA6xnS",
+          "mode": "list",
+          "cachedResultName": "PL - STP Requests",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbltJ5qVMmfYA6xnS"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "STP notified?": true,
+            "id": "={{$node[\"Code in JavaScript\"].json.recordId}}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "STP Code",
+              "displayName": "STP Code",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "STP Request ID",
+              "displayName": "STP Request ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "JD + C",
+              "displayName": "JD + C",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "REQUIRED MVA",
+              "displayName": "REQUIRED MVA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsement Count",
+              "displayName": "Endorsement Count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Placement Record ID",
+              "displayName": "Placement Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsed to OPS",
+              "displayName": "Endorsed to OPS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company (from PLACEMENTS Requirements)",
+              "displayName": "Company (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Full/Part Time",
+              "displayName": "Full/Part Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Hard Requirement",
+              "displayName": "Hard Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Target Start Date",
+              "displayName": "Target Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Addressee",
+              "displayName": "Addressee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Recipient",
+              "displayName": "Recipient",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Client Rate",
+              "displayName": "Final Client Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Clients",
+              "displayName": "Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + Client Profile",
+              "displayName": "JD + Client Profile",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Title",
+              "displayName": "VA Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Requisition Date",
+              "displayName": "Requisition Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "STP TTF",
+              "displayName": "STP TTF",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "STP Follow-up Indicator",
+              "displayName": "STP Follow-up Indicator",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Week Commencing",
+              "displayName": "Week Commencing",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Requisition Status",
+              "displayName": "Requisition Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "STP - Ongoing",
+                  "value": "STP - Ongoing"
+                },
+                {
+                  "name": "STP - Completed",
+                  "value": "STP - Completed"
+                },
+                {
+                  "name": "STP - Cancelled",
+                  "value": "STP - Cancelled"
+                },
+                {
+                  "name": "STP - Parked",
+                  "value": "STP - Parked"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Endorsed to Placements",
+              "displayName": "Endorsed to Placements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsed VAs",
+              "displayName": "Endorsed VAs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Week Commencing (from Endorsed VAs)",
+              "displayName": "Week Commencing (from Endorsed VAs)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements 2",
+              "displayName": "PLACEMENTS Requirements 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Placements Requirements (text)",
+              "displayName": "Placements Requirements (text)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsed VAs (text)",
+              "displayName": "Endorsed VAs (text)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants copy",
+              "displayName": "Virtual Assistants copy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "STP WOW",
+              "displayName": "STP WOW",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Cancellation Reason",
+              "displayName": "Cancellation Reason",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Record ID",
+              "displayName": "Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "STP notified?",
+              "displayName": "STP notified?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Send Notifier",
+              "displayName": "Send Notifier",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        0
+      ],
+      "id": "2a07b758-4b8e-4646-8fba-6353d79436c3",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        272,
+        368
+      ],
+      "id": "38ec1b1b-de06-4b50-9d90-505139066ae2",
+      "name": "Merge"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+            "content-length": "363",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "en-US,en;q=0.9",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "112.203.220.148",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "PH",
+            "cf-ray": "9cd5b3a941d1d509-HKG",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "origin": "https://block--tu-am73-vy-h7pc-h-a--cbq9nrw.alt.airtableblocks.com",
+            "priority": "u=1, i",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "112.203.220.148, 162.159.98.119",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-g9qxk",
+            "x-is-trusted": "yes",
+            "x-real-ip": "112.203.220.148"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "airtable.button.clicked",
+            "table": "PL - STP Requests",
+            "recordId": "recqAZArfU1wuAH5W",
+            "recordUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbltJ5qVMmfYA6xnS/recqAZArfU1wuAH5W",
+            "stpCode": "JIA-TEST",
+            "requisitionStatus": {
+              "id": "selbXJa1oLc28Gg1o",
+              "name": "STP - Ongoing",
+              "color": "tealLight1"
+            },
+            "cancellationReason": "Testing",
+            "firedAt": "2026-02-13T16:26:18.349Z"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/72459110-141e-4e3d-ae90-848481ba3c5b",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "cdb68d9b-b6d8-4ce0-9bf5-b1eed7436d43",
+  "activeVersionId": null,
+  "versionCounter": 58,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-10T21:59:49.303Z",
+      "createdAt": "2026-02-10T21:59:49.303Z",
+      "role": "workflow:owner",
+      "workflowId": "44HAgqSaqf3YtPWr",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

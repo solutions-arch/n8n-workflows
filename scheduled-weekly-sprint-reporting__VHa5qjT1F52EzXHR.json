@@ -1,0 +1,1365 @@
+{
+  "updatedAt": "2026-07-04T13:06:15.567Z",
+  "createdAt": "2026-03-06T13:40:36.530Z",
+  "id": "VHa5qjT1F52EzXHR",
+  "name": "[Scheduled] Weekly Sprint Reporting",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        16
+      ],
+      "id": "0bef4aca-48fe-4f00-93d4-227e9ce9fdd7",
+      "name": "When clicking \u2018Execute workflow\u2019",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/task/{{ $json.id }}/comment",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "custom_task_ids",
+              "value": "false"
+            },
+            {
+              "name": "team_id",
+              "value": "9014746495"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 2000
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        608,
+        256
+      ],
+      "id": "6e0311f5-742f-4cae-8348-1d0517eaf2bb",
+      "name": "Get Comments"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "task_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1280,
+        112
+      ],
+      "id": "9147ee47-cbb0-4fa5-a385-db88a2578dd5",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const COUNT_SUBTASKS = true; // change to false if you only want main/top-level tasks\nconst EXCLUDE_ARCHIVED = true;\n\nconst cleanedTasks = [];\nconst ownerCounts = {};\nconst statusCounts = {};\n\nlet totalTasks = 0;\nlet overdueCount = 0;\nlet completedTasks = 0;\n\n// ---------- Helpers ----------\nfunction isTaskObject(obj) {\n  return !!obj && typeof obj === 'object' && (\n    obj.id ||\n    obj.name ||\n    obj.status ||\n    obj.date_created ||\n    obj.date_updated\n  );\n}\n\nfunction getRawTasks() {\n  const inputItems = $input.all();\n\n  // Prefer bundled compiled_tasks if present anywhere\n  const compiledTaskArrays = inputItems\n    .map(item => item?.json?.compiled_tasks)\n    .filter(Array.isArray);\n\n  if (compiledTaskArrays.length > 0) {\n    return compiledTaskArrays.flat();\n  }\n\n  // Otherwise treat each input item as a task\n  return inputItems\n    .map(item => item?.json)\n    .filter(isTaskObject);\n}\n\nfunction dedupeTasks(tasks) {\n  const seen = new Map();\n\n  for (const task of tasks) {\n    const key =\n      task?.id ||\n      task?.task_id ||\n      task?.custom_id ||\n      task?.url ||\n      JSON.stringify(task);\n\n    if (!seen.has(key)) {\n      seen.set(key, task);\n    }\n  }\n\n  return [...seen.values()];\n}\n\nfunction toTimestamp(value) {\n  if (value === null || value === undefined || value === '') return null;\n\n  if (typeof value === 'number' && Number.isFinite(value)) {\n    return value > 1e12 ? value : value * 1000;\n  }\n\n  if (typeof value === 'string') {\n    const trimmed = value.trim();\n    if (!trimmed) return null;\n\n    if (/^\\d+$/.test(trimmed)) {\n      const num = Number(trimmed);\n      return num > 1e12 ? num : num * 1000;\n    }\n\n    const parsed = Date.parse(trimmed);\n    return Number.isNaN(parsed) ? null : parsed;\n  }\n\n  return null;\n}\n\nfunction formatDate(value) {\n  const ts = toTimestamp(value);\n  if (!ts) return null;\n\n  return new Intl.DateTimeFormat('en-PH', {\n    timeZone: 'Asia/Manila',\n    year: 'numeric',\n    month: 'short',\n    day: '2-digit',\n    hour: 'numeric',\n    minute: '2-digit',\n    hour12: true,\n  }).format(new Date(ts));\n}\n\nfunction normalizeText(text) {\n  return String(text ?? '')\n    .replace(/\\r/g, '')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .replace(/[ \\t]+\\n/g, '\\n')\n    .trim();\n}\n\nfunction toTitleCase(text) {\n  const value = String(text ?? '').trim();\n  if (!value) return 'Unmapped';\n\n  return value\n    .split(/\\s+/)\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1))\n    .join(' ');\n}\n\nfunction isCompleted(task) {\n  const statusType = String(task?.status?.type || '').toLowerCase();\n  const statusName = String(task?.status?.status || task?.status || '').toLowerCase();\n\n  return (\n    ['done', 'closed', 'complete', 'completed'].includes(statusType) ||\n    ['done', 'closed', 'complete', 'completed'].includes(statusName) ||\n    !!task?.date_done ||\n    !!task?.date_closed\n  );\n}\n\nfunction getOwners(task) {\n  const assignees = Array.isArray(task?.assignees) ? task.assignees : [];\n\n  const owners = assignees\n    .map(a => a?.username || a?.email || a?.id)\n    .filter(Boolean);\n\n  return owners.length ? [...new Set(owners)] : ['Unassigned'];\n}\n\nfunction buildDiscussionThread(task) {\n  const entries = [];\n\n  const directCommentText =\n    normalizeText(task?.comment_text) ||\n    normalizeText(\n      Array.isArray(task?.comment)\n        ? task.comment.map(part => (typeof part?.text === 'string' ? part.text : '')).join('')\n        : ''\n    );\n\n  if (directCommentText) {\n    const author = task?.user?.username || task?.creator?.username || 'Unknown';\n    const dateStr = formatDate(task?.date);\n    entries.push(`${dateStr ? `[${dateStr}] ` : ''}${author}: ${directCommentText}`);\n  }\n\n  if (Array.isArray(task?.comments)) {\n    for (const comment of task.comments) {\n      const commentText =\n        normalizeText(comment?.comment_text) ||\n        normalizeText(comment?.text) ||\n        normalizeText(\n          Array.isArray(comment?.comment)\n            ? comment.comment.map(part => (typeof part?.text === 'string' ? part.text : '')).join('')\n            : ''\n        );\n\n      if (!commentText) continue;\n\n      const author =\n        comment?.user?.username ||\n        comment?.author?.username ||\n        comment?.creator?.username ||\n        'Unknown';\n\n      const dateStr = formatDate(\n        comment?.date ||\n        comment?.date_created ||\n        comment?.created_at\n      );\n\n      entries.push(`${dateStr ? `[${dateStr}] ` : ''}${author}: ${commentText}`);\n    }\n  }\n\n  const uniqueEntries = [...new Set(entries)];\n  return uniqueEntries.length ? uniqueEntries.join('\\n\\n') : 'No discussion yet.';\n}\n\n// ---------- Main ----------\nlet allTasks = dedupeTasks(getRawTasks());\n\nif (EXCLUDE_ARCHIVED) {\n  allTasks = allTasks.filter(task => !task?.archived);\n}\n\nif (!COUNT_SUBTASKS) {\n  allTasks = allTasks.filter(task => !task?.parent);\n}\n\nconst now = Date.now();\n\nfor (const task of allTasks) {\n  totalTasks++;\n\n  const rawStatusName = task?.status?.status || task?.status || 'unmapped';\n  const formattedStatus = toTitleCase(rawStatusName);\n  statusCounts[formattedStatus] = (statusCounts[formattedStatus] || 0) + 1;\n\n  const completed = isCompleted(task);\n  if (completed) completedTasks++;\n\n  const owners = getOwners(task);\n  const taskOwner = owners.join(', ');\n\n  for (const owner of owners) {\n    ownerCounts[owner] = (ownerCounts[owner] || 0) + 1;\n  }\n\n  const dueTs = toTimestamp(task?.due_date);\n  if (dueTs && dueTs < now && !completed) {\n    overdueCount++;\n  }\n\n  cleanedTasks.push({\n    task_id: task?.id || 'N/A',\n    task_name: task?.name || 'Unnamed Task',\n    task_owner: taskOwner,\n    status: formattedStatus,\n    is_subtask: !!task?.parent,\n    parent_task_id: task?.parent || null,\n    top_level_parent: task?.top_level_parent || null,\n    due_date: task?.due_date || null,\n    due_date_formatted: formatDate(task?.due_date),\n    discussion_thread: buildDiscussionThread(task),\n    task_url: task?.url || null\n  });\n}\n\nconst completionRate =\n  totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);\n\nreturn [\n  {\n    json: {\n      dashboard_metrics: {\n        total_tasks: totalTasks,\n        completion_rate: completionRate,\n        overdue_tasks: overdueCount,\n        tasks_by_owner: ownerCounts,\n        tasks_by_status: statusCounts\n      },\n      sprint_data: cleanedTasks\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        112
+      ],
+      "id": "776d8e51-81a7-4b29-9a21-d24fb6441be4",
+      "name": "Output Cleaner"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following JSON extract from our sprint tracking system. \n\nIdentify the core project context automatically based on the discussions, and generate the structured operational report according to your system instructions.\n\nSprint Data:\n{{ JSON.stringify($json.sprint_data) }}",
+        "options": {
+          "systemMessage": "You are a helpful business reporting assistant.\n\nYour job is to read a JSON dataset of sprint tasks and recent task discussions, then write a clear weekly update that non-technical readers can understand quickly.\n\nThe audience includes managers, operations staff, and stakeholders who may not be familiar with technical tools, workflows, or engineering terms.\n\nIMPORTANT RULES:\n1. Use plain English.\n2. Avoid jargon, acronyms, and overly technical wording. If a tool or platform is mentioned, briefly explain it in simple terms only when needed.\n3. Be accurate. Only use information that is clearly supported by the JSON data.\n4. Be concise, but not stiff or robotic.\n5. Focus on business meaning:\n   - What moved forward\n   - What is still in progress\n   - What needs attention\n   - Who is handling it\n6. Do not invent missing context.\n7. Do not include raw task dumps or long technical discussion threads.\n8. If there are no meaningful blockers, say so clearly.\n\nREQUIRED OUTPUT STRUCTURE:\n\n## Weekly Snapshot\nWrite 2\u20133 short sentences summarizing the overall progress this week in a way that a non-technical person can easily understand.\n\n---\n## What Moved Forward\n* Group updates by project, team, or business area.\n* **[Project/Area Name]**: Explain the progress in simple language. Mention the owner if helpful.\n* **[Project/Area Name]**: Explain the progress in simple language. Mention the owner if helpful.\n\n---\n## What Needs Attention\n* Only include important blockers, delays, or risks.\n* **[Short Issue Title]**: Explain what the issue is, why it matters, and who is working on it.\n* If there are no major blockers, write: *No major blockers were identified this week.*\n\n---\n## Suggested Focus Next Week\n* Give 2\u20134 short bullet points on what the team should likely focus on next, based only on the data."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1952,
+        112
+      ],
+      "id": "f99ed1a5-76dc-48b3-9f04-c1169947b4d0",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        2032,
+        336
+      ],
+      "id": "c3cbaf0b-9bf3-483d-82e0-f1145f29bc10",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/list/{{ $json.id }}/task",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "archived",
+              "value": "false"
+            },
+            {
+              "name": "include_closed",
+              "value": "true"
+            },
+            {
+              "name": "subtasks",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        160,
+        112
+      ],
+      "id": "377e6f79-52d4-4bf0-a0ca-53aea64c180c",
+      "name": "Get Tasks from List"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Fetch the global metrics directly from the Output Cleaner node\nconst metricsItem = $items(\"Output Cleaner\")[0];\nconst metrics = metricsItem ? metricsItem.json.dashboard_metrics : {};\n\nconst totalTasks = metrics.total_tasks || 0;\nconst completionRate = metrics.completion_rate || 0;\nconst overdueTasks = metrics.overdue_tasks || 0;\nconst ownerCounts = metrics.tasks_by_owner || {};\nconst statusCounts = metrics.tasks_by_status || {};\n\n// 2. Generate the QuickChart.io Pie Chart URL for Global Status\nconst chartLabels = Object.keys(statusCounts);\nconst chartData = Object.values(statusCounts);\n\nconst chartConfig = {\n  type: 'outlabeledPie',\n  data: {\n    labels: chartLabels,\n    datasets: [{\n        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'],\n        data: chartData\n    }]\n  },\n  options: {\n    plugins: {\n      legend: { display: false },\n      outlabels: { text: '%l: %v', color: 'white', stretch: 35, font: { minSize: 12 } }\n    }\n  }\n};\nconst encodedChartUrl = `https://quickchart.io/chart?w=500&h=250&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;\n\n// 3. Build the \"Global Workload\" HTML List\nlet ownerHtmlList = '<ul style=\"list-style-type: none; padding: 0; margin: 0;\">';\n// Sort owners by task count (highest first)\nconst sortedOwners = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1]);\nfor (const [owner, count] of sortedOwners) {\n    ownerHtmlList += `<li style=\"padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #475569; font-size: 15px;\">\n        <strong>${owner}</strong>: ${count} task(s)\n    </li>`;\n}\nownerHtmlList += '</ul>';\n\n// 4. Build the Top Executive Stat Cards\nconst statCards = `\n  <div style=\"margin-bottom: 30px; width: 100%;\">\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n      <tr>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #f8fafc; padding: 15px 10px; border-radius: 8px; border: 1px solid #e2e8f0;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #0f172a;\">${totalTasks}</div>\n             <div style=\"font-size: 11px; color: #64748b; text-transform: uppercase; margin-top: 5px;\">Total Active Tasks</div>\n          </div>\n        </td>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #f0fdf4; padding: 15px 10px; border-radius: 8px; border: 1px solid #bbf7d0;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #166534;\">${completionRate}%</div>\n             <div style=\"font-size: 11px; color: #15803d; text-transform: uppercase; margin-top: 5px;\">Global Completion</div>\n          </div>\n        </td>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #fef2f2; padding: 15px 10px; border-radius: 8px; border: 1px solid #fecaca;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #991b1b;\">${overdueTasks}</div>\n             <div style=\"font-size: 11px; color: #b91c1c; text-transform: uppercase; margin-top: 5px;\">Tasks Overdue</div>\n          </div>\n        </td>\n      </tr>\n    </table>\n  </div>\n`;\n\n// 5. Construct the Visual Dashboard Section\nconst dashboardSection = `\n    ${statCards}\n    <div style=\"margin-bottom: 40px;\">\n        <h2 style=\"color: #1e293b; font-size: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px;\">Global Sprint Distribution</h2>\n        <div style=\"text-align: center; margin-bottom: 25px;\">\n            <img src=\"${encodedChartUrl}\" alt=\"Task Status Pie Chart\" style=\"max-width: 100%; height: auto;\" />\n        </div>\n        <h2 style=\"color: #1e293b; font-size: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px;\">Team Workload</h2>\n        ${ownerHtmlList}\n    </div>\n    <hr style=\"border: 0; height: 2px; background: #e2e8f0; margin: 30px 0;\" />\n`;\n\n// 6. Process the AI Report Text (from this node's input)\nlet html = $input.first().json.output || \"\";\n\n// Format the Markdown AI text into clean HTML\nhtml = html.replace(/^(\\*\\*.*?\\*\\*)$/gm, '<h3 style=\"color: #334155; font-size: 18px; margin-top: 25px; margin-bottom: 10px;\">$1</h3>');\nhtml = html.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\nhtml = html.replace(/`(.*?)`/g, '<code style=\"background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; color: #e11d48; font-size: 14px;\">$1</code>');\nhtml = html.replace(/^---$/gm, '<hr style=\"border: 0; height: 2px; background: #e2e8f0; margin: 30px 0;\" />');\nhtml = html.replace(/^##\\s+(.*)/gm, '<h2 style=\"color: #1e293b; font-size: 22px; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;\">$1</h2>');\nhtml = html.replace(/^\\*\\s+(.*)/gm, '<li style=\"margin-bottom: 10px;\">$1</li>');\nhtml = html.replace(/(<li.*?>.*?<\\/li>\\n?)+/g, match => `\\n<ul style=\"margin-bottom: 20px; padding-left: 20px;\">\\n${match}</ul>\\n`);\n\n// Catch any unformatted paragraphs (like the Executive Summary) and wrap them\nhtml = html.replace(/^(?!<)(.+)$/gm, '<p style=\"margin-bottom: 15px;\">$1</p>');\n\n// Combine Dashboard + AI Report with global font styling\nconst finalHtml = `\n  <div style=\"font-family: Arial, sans-serif; color: #475569; font-size: 15px; line-height: 1.6; max-width: 750px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;\">\n    <h1 style=\"text-align: center; color: #0f172a; font-size: 28px; line-height: 1.2; margin-bottom: 30px;\">Executive Operations Report</h1>\n    ${dashboardSection}\n    ${html}\n  </div>\n`;\n\nreturn [{\n  json: {\n    html_report: finalHtml\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2304,
+        112
+      ],
+      "id": "39adeee9-1399-4a44-8a13-39bd77504789",
+      "name": "Email Builder"
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com, aja@scalevirtually.com, janssen@scalevirtually.com, jianna@scalevirtually.com, jenn@scalevirtually.com, amanda@scalevirtually.com",
+        "subject": "=[Sprint Report] Week {{ $now.weekNumber }} - {{ $now.year }}",
+        "message": "={{ $json.html_report }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Solution Architects Sprint Report"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2528,
+        208
+      ],
+      "id": "f78afb48-af49-4d2f-9c77-d79890578415",
+      "name": "Send Sprint Report",
+      "webhookId": "8065db3e-b713-43a2-8b07-5d19730abd9a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.clickup.com/api/v2/space/90144428276/folder",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "archived",
+              "value": "false"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -736,
+        112
+      ],
+      "id": "d21add65-6d2f-420a-b8d8-af3292259385",
+      "name": "Fetch Folders from the Space"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "folders",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        112
+      ],
+      "id": "49c8ef02-3f95-45c2-ac7d-9f01b7197553",
+      "name": "Split Out Folders"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "tasks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        384,
+        112
+      ],
+      "id": "ed3a10a1-0594-4e44-9e53-489e501b7584",
+      "name": "Split Out Tasks"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/folder/{{ $json.id }}/list",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "archived",
+              "value": "false"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -288,
+        112
+      ],
+      "id": "8c87399c-6a03-4df9-a668-238a4ce6ad96",
+      "name": "Fetch Lists (Sprints) per Folder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allLists = [];\n\n// 1. Flatten all lists from the folder HTTP requests\nfor (const item of $input.all()) {\n  if (item.json.lists && Array.isArray(item.json.lists)) {\n    allLists.push(...item.json.lists);\n  }\n}\n\nconst now = Date.now();\n\n// 2. Filter for strictly ACTIVE sprints (where today falls inside the sprint window)\nconst activeSprints = allLists.filter(list => {\n  // If a list doesn't have start and end dates, it's likely not a sprint, so we skip it\n  if (!list.start_date || !list.due_date) return false;\n  \n  const startDateMs = parseInt(list.start_date, 10);\n  const dueDateMs = parseInt(list.due_date, 10);\n  \n  // Keep the list if right now is after the start date AND before the due date\n  return now >= startDateMs && now <= dueDateMs;\n});\n\n// Stop the workflow gracefully if no active sprints are found\nif (activeSprints.length === 0) {\n  return []; \n}\n\n// 3. Return each active sprint as a separate item to feed the Loop\nreturn activeSprints.map(sprint => ({ json: sprint }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        112
+      ],
+      "id": "a703dcb0-891e-4148-b69c-043c9986fda7",
+      "name": "Date Filter"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "compiled_tasks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        112
+      ],
+      "id": "6a813ce1-c2ef-44a8-9e29-ca641551f7fd",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com",
+        "subject": "=[Sprint Report] Week {{ $now.weekNumber }} - {{ $now.year }}",
+        "message": "={{ $json.html_report }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Solution Architects Sprint Report"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2528,
+        16
+      ],
+      "id": "a84fe685-3b67-4d24-b2ac-0d65066c9fc0",
+      "name": "Send Sprint for Test",
+      "webhookId": "8065db3e-b713-43a2-8b07-5d19730abd9a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                6
+              ],
+              "triggerAtHour": 5,
+              "triggerAtMinute": 40
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -960,
+        208
+      ],
+      "id": "5b35ad2f-f10b-4f8f-9bfd-e79d9f7690b8",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "function getStartOfWeekManilaMs() {\n  const now = new Date();\n  const parts = new Intl.DateTimeFormat('en-US', {\n    timeZone: 'Asia/Manila',\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n  }).formatToParts(now);\n  const map = Object.fromEntries(parts.map(p => [p.type, p.value]));\n  const manilaMidnight = new Date(`${map.year}-${map.month}-${map.day}T00:00:00+08:00`);\n  const day = manilaMidnight.getDay();\n  const daysToMonday = (day + 6) % 7;\n  manilaMidnight.setUTCDate(manilaMidnight.getUTCDate() - daysToMonday);\n  return manilaMidnight.getTime();\n}\n\nconst startOfWeekMs = getStartOfWeekManilaMs();\n\nconst thisWeekComments = $input.all().flatMap(item => {\n  const taskId = item.json.id ?? null;         // from the tasks node\n  const comments = Array.isArray(item.json.comments) ? item.json.comments : [];\n\n  return comments\n    .filter(comment => {\n      const commentMs = Number(comment.date);\n      return Number.isFinite(commentMs) && commentMs >= startOfWeekMs;\n    })\n    .map(comment => ({ ...comment, task_id: taskId }));\n});\n\nreturn thisWeekComments.map(comment => ({ json: comment }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        192
+      ],
+      "id": "0c5a3f51-02d4-47ac-8398-2e90f6df3f1b",
+      "name": "Filter Weekly Comments Per Task"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        832,
+        192
+      ],
+      "id": "afb661ef-9abf-4c73-ad95-d55d167b6040",
+      "name": "Merge1"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Fetch Folders from the Space",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Comments": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output Cleaner": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks from List": {
+      "main": [
+        [
+          {
+            "node": "Split Out Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Email Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Builder": {
+      "main": [
+        [
+          {
+            "node": "Send Sprint for Test",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Sprint Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Sprint Report": {
+      "main": [
+        []
+      ]
+    },
+    "Fetch Folders from the Space": {
+      "main": [
+        [
+          {
+            "node": "Split Out Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Tasks": {
+      "main": [
+        [
+          {
+            "node": "Get Comments",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Folders": {
+      "main": [
+        [
+          {
+            "node": "Fetch Lists (Sprints) per Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Lists (Sprints) per Folder": {
+      "main": [
+        [
+          {
+            "node": "Date Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date Filter": {
+      "main": [
+        [
+          {
+            "node": "Get Tasks from List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Output Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Folders from the Space",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Weekly Comments Per Task": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Filter Weekly Comments Per Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "rGzixtwYBsqnFWBo",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "a3935395-d5b3-41b3-b7fa-037d5124e020",
+  "activeVersionId": "a3935395-d5b3-41b3-b7fa-037d5124e020",
+  "versionCounter": 200,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-03-06T13:40:36.533Z",
+      "createdAt": "2026-03-06T13:40:36.533Z",
+      "role": "workflow:owner",
+      "workflowId": "VHa5qjT1F52EzXHR",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:06:15.568Z",
+    "createdAt": "2026-07-04T13:06:15.568Z",
+    "versionId": "a3935395-d5b3-41b3-b7fa-037d5124e020",
+    "workflowId": "VHa5qjT1F52EzXHR",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          -960,
+          16
+        ],
+        "id": "0bef4aca-48fe-4f00-93d4-227e9ce9fdd7",
+        "name": "When clicking \u2018Execute workflow\u2019",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "url": "=https://api.clickup.com/api/v2/task/{{ $json.id }}/comment",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "custom_task_ids",
+                "value": "false"
+              },
+              {
+                "name": "team_id",
+                "value": "9014746495"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {
+            "batching": {
+              "batch": {
+                "batchSize": 5,
+                "batchInterval": 2000
+              }
+            },
+            "response": {
+              "response": {
+                "responseFormat": "json"
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          608,
+          256
+        ],
+        "id": "6e0311f5-742f-4cae-8348-1d0517eaf2bb",
+        "name": "Get Comments"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "advanced": true,
+          "mergeByFields": {
+            "values": [
+              {
+                "field1": "id",
+                "field2": "task_id"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1280,
+          112
+        ],
+        "id": "9147ee47-cbb0-4fa5-a385-db88a2578dd5",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "jsCode": "const COUNT_SUBTASKS = true; // change to false if you only want main/top-level tasks\nconst EXCLUDE_ARCHIVED = true;\n\nconst cleanedTasks = [];\nconst ownerCounts = {};\nconst statusCounts = {};\n\nlet totalTasks = 0;\nlet overdueCount = 0;\nlet completedTasks = 0;\n\n// ---------- Helpers ----------\nfunction isTaskObject(obj) {\n  return !!obj && typeof obj === 'object' && (\n    obj.id ||\n    obj.name ||\n    obj.status ||\n    obj.date_created ||\n    obj.date_updated\n  );\n}\n\nfunction getRawTasks() {\n  const inputItems = $input.all();\n\n  // Prefer bundled compiled_tasks if present anywhere\n  const compiledTaskArrays = inputItems\n    .map(item => item?.json?.compiled_tasks)\n    .filter(Array.isArray);\n\n  if (compiledTaskArrays.length > 0) {\n    return compiledTaskArrays.flat();\n  }\n\n  // Otherwise treat each input item as a task\n  return inputItems\n    .map(item => item?.json)\n    .filter(isTaskObject);\n}\n\nfunction dedupeTasks(tasks) {\n  const seen = new Map();\n\n  for (const task of tasks) {\n    const key =\n      task?.id ||\n      task?.task_id ||\n      task?.custom_id ||\n      task?.url ||\n      JSON.stringify(task);\n\n    if (!seen.has(key)) {\n      seen.set(key, task);\n    }\n  }\n\n  return [...seen.values()];\n}\n\nfunction toTimestamp(value) {\n  if (value === null || value === undefined || value === '') return null;\n\n  if (typeof value === 'number' && Number.isFinite(value)) {\n    return value > 1e12 ? value : value * 1000;\n  }\n\n  if (typeof value === 'string') {\n    const trimmed = value.trim();\n    if (!trimmed) return null;\n\n    if (/^\\d+$/.test(trimmed)) {\n      const num = Number(trimmed);\n      return num > 1e12 ? num : num * 1000;\n    }\n\n    const parsed = Date.parse(trimmed);\n    return Number.isNaN(parsed) ? null : parsed;\n  }\n\n  return null;\n}\n\nfunction formatDate(value) {\n  const ts = toTimestamp(value);\n  if (!ts) return null;\n\n  return new Intl.DateTimeFormat('en-PH', {\n    timeZone: 'Asia/Manila',\n    year: 'numeric',\n    month: 'short',\n    day: '2-digit',\n    hour: 'numeric',\n    minute: '2-digit',\n    hour12: true,\n  }).format(new Date(ts));\n}\n\nfunction normalizeText(text) {\n  return String(text ?? '')\n    .replace(/\\r/g, '')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .replace(/[ \\t]+\\n/g, '\\n')\n    .trim();\n}\n\nfunction toTitleCase(text) {\n  const value = String(text ?? '').trim();\n  if (!value) return 'Unmapped';\n\n  return value\n    .split(/\\s+/)\n    .map(word => word.charAt(0).toUpperCase() + word.slice(1))\n    .join(' ');\n}\n\nfunction isCompleted(task) {\n  const statusType = String(task?.status?.type || '').toLowerCase();\n  const statusName = String(task?.status?.status || task?.status || '').toLowerCase();\n\n  return (\n    ['done', 'closed', 'complete', 'completed'].includes(statusType) ||\n    ['done', 'closed', 'complete', 'completed'].includes(statusName) ||\n    !!task?.date_done ||\n    !!task?.date_closed\n  );\n}\n\nfunction getOwners(task) {\n  const assignees = Array.isArray(task?.assignees) ? task.assignees : [];\n\n  const owners = assignees\n    .map(a => a?.username || a?.email || a?.id)\n    .filter(Boolean);\n\n  return owners.length ? [...new Set(owners)] : ['Unassigned'];\n}\n\nfunction buildDiscussionThread(task) {\n  const entries = [];\n\n  const directCommentText =\n    normalizeText(task?.comment_text) ||\n    normalizeText(\n      Array.isArray(task?.comment)\n        ? task.comment.map(part => (typeof part?.text === 'string' ? part.text : '')).join('')\n        : ''\n    );\n\n  if (directCommentText) {\n    const author = task?.user?.username || task?.creator?.username || 'Unknown';\n    const dateStr = formatDate(task?.date);\n    entries.push(`${dateStr ? `[${dateStr}] ` : ''}${author}: ${directCommentText}`);\n  }\n\n  if (Array.isArray(task?.comments)) {\n    for (const comment of task.comments) {\n      const commentText =\n        normalizeText(comment?.comment_text) ||\n        normalizeText(comment?.text) ||\n        normalizeText(\n          Array.isArray(comment?.comment)\n            ? comment.comment.map(part => (typeof part?.text === 'string' ? part.text : '')).join('')\n            : ''\n        );\n\n      if (!commentText) continue;\n\n      const author =\n        comment?.user?.username ||\n        comment?.author?.username ||\n        comment?.creator?.username ||\n        'Unknown';\n\n      const dateStr = formatDate(\n        comment?.date ||\n        comment?.date_created ||\n        comment?.created_at\n      );\n\n      entries.push(`${dateStr ? `[${dateStr}] ` : ''}${author}: ${commentText}`);\n    }\n  }\n\n  const uniqueEntries = [...new Set(entries)];\n  return uniqueEntries.length ? uniqueEntries.join('\\n\\n') : 'No discussion yet.';\n}\n\n// ---------- Main ----------\nlet allTasks = dedupeTasks(getRawTasks());\n\nif (EXCLUDE_ARCHIVED) {\n  allTasks = allTasks.filter(task => !task?.archived);\n}\n\nif (!COUNT_SUBTASKS) {\n  allTasks = allTasks.filter(task => !task?.parent);\n}\n\nconst now = Date.now();\n\nfor (const task of allTasks) {\n  totalTasks++;\n\n  const rawStatusName = task?.status?.status || task?.status || 'unmapped';\n  const formattedStatus = toTitleCase(rawStatusName);\n  statusCounts[formattedStatus] = (statusCounts[formattedStatus] || 0) + 1;\n\n  const completed = isCompleted(task);\n  if (completed) completedTasks++;\n\n  const owners = getOwners(task);\n  const taskOwner = owners.join(', ');\n\n  for (const owner of owners) {\n    ownerCounts[owner] = (ownerCounts[owner] || 0) + 1;\n  }\n\n  const dueTs = toTimestamp(task?.due_date);\n  if (dueTs && dueTs < now && !completed) {\n    overdueCount++;\n  }\n\n  cleanedTasks.push({\n    task_id: task?.id || 'N/A',\n    task_name: task?.name || 'Unnamed Task',\n    task_owner: taskOwner,\n    status: formattedStatus,\n    is_subtask: !!task?.parent,\n    parent_task_id: task?.parent || null,\n    top_level_parent: task?.top_level_parent || null,\n    due_date: task?.due_date || null,\n    due_date_formatted: formatDate(task?.due_date),\n    discussion_thread: buildDiscussionThread(task),\n    task_url: task?.url || null\n  });\n}\n\nconst completionRate =\n  totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);\n\nreturn [\n  {\n    json: {\n      dashboard_metrics: {\n        total_tasks: totalTasks,\n        completion_rate: completionRate,\n        overdue_tasks: overdueCount,\n        tasks_by_owner: ownerCounts,\n        tasks_by_status: statusCounts\n      },\n      sprint_data: cleanedTasks\n    }\n  }\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1728,
+          112
+        ],
+        "id": "776d8e51-81a7-4b29-9a21-d24fb6441be4",
+        "name": "Output Cleaner"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=Analyze the following JSON extract from our sprint tracking system. \n\nIdentify the core project context automatically based on the discussions, and generate the structured operational report according to your system instructions.\n\nSprint Data:\n{{ JSON.stringify($json.sprint_data) }}",
+          "options": {
+            "systemMessage": "You are a helpful business reporting assistant.\n\nYour job is to read a JSON dataset of sprint tasks and recent task discussions, then write a clear weekly update that non-technical readers can understand quickly.\n\nThe audience includes managers, operations staff, and stakeholders who may not be familiar with technical tools, workflows, or engineering terms.\n\nIMPORTANT RULES:\n1. Use plain English.\n2. Avoid jargon, acronyms, and overly technical wording. If a tool or platform is mentioned, briefly explain it in simple terms only when needed.\n3. Be accurate. Only use information that is clearly supported by the JSON data.\n4. Be concise, but not stiff or robotic.\n5. Focus on business meaning:\n   - What moved forward\n   - What is still in progress\n   - What needs attention\n   - Who is handling it\n6. Do not invent missing context.\n7. Do not include raw task dumps or long technical discussion threads.\n8. If there are no meaningful blockers, say so clearly.\n\nREQUIRED OUTPUT STRUCTURE:\n\n## Weekly Snapshot\nWrite 2\u20133 short sentences summarizing the overall progress this week in a way that a non-technical person can easily understand.\n\n---\n## What Moved Forward\n* Group updates by project, team, or business area.\n* **[Project/Area Name]**: Explain the progress in simple language. Mention the owner if helpful.\n* **[Project/Area Name]**: Explain the progress in simple language. Mention the owner if helpful.\n\n---\n## What Needs Attention\n* Only include important blockers, delays, or risks.\n* **[Short Issue Title]**: Explain what the issue is, why it matters, and who is working on it.\n* If there are no major blockers, write: *No major blockers were identified this week.*\n\n---\n## Suggested Focus Next Week\n* Give 2\u20134 short bullet points on what the team should likely focus on next, based only on the data."
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          1952,
+          112
+        ],
+        "id": "f99ed1a5-76dc-48b3-9f04-c1169947b4d0",
+        "name": "AI Agent"
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "claude-sonnet-4-5-20250929",
+            "cachedResultName": "Claude Sonnet 4.5"
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+        "typeVersion": 1.3,
+        "position": [
+          2032,
+          336
+        ],
+        "id": "c3cbaf0b-9bf3-483d-82e0-f1145f29bc10",
+        "name": "Anthropic Chat Model",
+        "credentials": {
+          "anthropicApi": {
+            "id": "eQfzvn3izR7ec2J1",
+            "name": "Solutions Anthropic"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "=https://api.clickup.com/api/v2/list/{{ $json.id }}/task",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "archived",
+                "value": "false"
+              },
+              {
+                "name": "include_closed",
+                "value": "true"
+              },
+              {
+                "name": "subtasks",
+                "value": "true"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          160,
+          112
+        ],
+        "id": "377e6f79-52d4-4bf0-a0ca-53aea64c180c",
+        "name": "Get Tasks from List"
+      },
+      {
+        "parameters": {
+          "jsCode": "// 1. Fetch the global metrics directly from the Output Cleaner node\nconst metricsItem = $items(\"Output Cleaner\")[0];\nconst metrics = metricsItem ? metricsItem.json.dashboard_metrics : {};\n\nconst totalTasks = metrics.total_tasks || 0;\nconst completionRate = metrics.completion_rate || 0;\nconst overdueTasks = metrics.overdue_tasks || 0;\nconst ownerCounts = metrics.tasks_by_owner || {};\nconst statusCounts = metrics.tasks_by_status || {};\n\n// 2. Generate the QuickChart.io Pie Chart URL for Global Status\nconst chartLabels = Object.keys(statusCounts);\nconst chartData = Object.values(statusCounts);\n\nconst chartConfig = {\n  type: 'outlabeledPie',\n  data: {\n    labels: chartLabels,\n    datasets: [{\n        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'],\n        data: chartData\n    }]\n  },\n  options: {\n    plugins: {\n      legend: { display: false },\n      outlabels: { text: '%l: %v', color: 'white', stretch: 35, font: { minSize: 12 } }\n    }\n  }\n};\nconst encodedChartUrl = `https://quickchart.io/chart?w=500&h=250&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;\n\n// 3. Build the \"Global Workload\" HTML List\nlet ownerHtmlList = '<ul style=\"list-style-type: none; padding: 0; margin: 0;\">';\n// Sort owners by task count (highest first)\nconst sortedOwners = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1]);\nfor (const [owner, count] of sortedOwners) {\n    ownerHtmlList += `<li style=\"padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #475569; font-size: 15px;\">\n        <strong>${owner}</strong>: ${count} task(s)\n    </li>`;\n}\nownerHtmlList += '</ul>';\n\n// 4. Build the Top Executive Stat Cards\nconst statCards = `\n  <div style=\"margin-bottom: 30px; width: 100%;\">\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n      <tr>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #f8fafc; padding: 15px 10px; border-radius: 8px; border: 1px solid #e2e8f0;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #0f172a;\">${totalTasks}</div>\n             <div style=\"font-size: 11px; color: #64748b; text-transform: uppercase; margin-top: 5px;\">Total Active Tasks</div>\n          </div>\n        </td>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #f0fdf4; padding: 15px 10px; border-radius: 8px; border: 1px solid #bbf7d0;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #166534;\">${completionRate}%</div>\n             <div style=\"font-size: 11px; color: #15803d; text-transform: uppercase; margin-top: 5px;\">Global Completion</div>\n          </div>\n        </td>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #fef2f2; padding: 15px 10px; border-radius: 8px; border: 1px solid #fecaca;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #991b1b;\">${overdueTasks}</div>\n             <div style=\"font-size: 11px; color: #b91c1c; text-transform: uppercase; margin-top: 5px;\">Tasks Overdue</div>\n          </div>\n        </td>\n      </tr>\n    </table>\n  </div>\n`;\n\n// 5. Construct the Visual Dashboard Section\nconst dashboardSection = `\n    ${statCards}\n    <div style=\"margin-bottom: 40px;\">\n        <h2 style=\"color: #1e293b; font-size: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px;\">Global Sprint Distribution</h2>\n        <div style=\"text-align: center; margin-bottom: 25px;\">\n            <img src=\"${encodedChartUrl}\" alt=\"Task Status Pie Chart\" style=\"max-width: 100%; height: auto;\" />\n        </div>\n        <h2 style=\"color: #1e293b; font-size: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px;\">Team Workload</h2>\n        ${ownerHtmlList}\n    </div>\n    <hr style=\"border: 0; height: 2px; background: #e2e8f0; margin: 30px 0;\" />\n`;\n\n// 6. Process the AI Report Text (from this node's input)\nlet html = $input.first().json.output || \"\";\n\n// Format the Markdown AI text into clean HTML\nhtml = html.replace(/^(\\*\\*.*?\\*\\*)$/gm, '<h3 style=\"color: #334155; font-size: 18px; margin-top: 25px; margin-bottom: 10px;\">$1</h3>');\nhtml = html.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\nhtml = html.replace(/`(.*?)`/g, '<code style=\"background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; color: #e11d48; font-size: 14px;\">$1</code>');\nhtml = html.replace(/^---$/gm, '<hr style=\"border: 0; height: 2px; background: #e2e8f0; margin: 30px 0;\" />');\nhtml = html.replace(/^##\\s+(.*)/gm, '<h2 style=\"color: #1e293b; font-size: 22px; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;\">$1</h2>');\nhtml = html.replace(/^\\*\\s+(.*)/gm, '<li style=\"margin-bottom: 10px;\">$1</li>');\nhtml = html.replace(/(<li.*?>.*?<\\/li>\\n?)+/g, match => `\\n<ul style=\"margin-bottom: 20px; padding-left: 20px;\">\\n${match}</ul>\\n`);\n\n// Catch any unformatted paragraphs (like the Executive Summary) and wrap them\nhtml = html.replace(/^(?!<)(.+)$/gm, '<p style=\"margin-bottom: 15px;\">$1</p>');\n\n// Combine Dashboard + AI Report with global font styling\nconst finalHtml = `\n  <div style=\"font-family: Arial, sans-serif; color: #475569; font-size: 15px; line-height: 1.6; max-width: 750px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;\">\n    <h1 style=\"text-align: center; color: #0f172a; font-size: 28px; line-height: 1.2; margin-bottom: 30px;\">Executive Operations Report</h1>\n    ${dashboardSection}\n    ${html}\n  </div>\n`;\n\nreturn [{\n  json: {\n    html_report: finalHtml\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2304,
+          112
+        ],
+        "id": "39adeee9-1399-4a44-8a13-39bd77504789",
+        "name": "Email Builder"
+      },
+      {
+        "parameters": {
+          "sendTo": "pj@scalevirtually.com, aja@scalevirtually.com, janssen@scalevirtually.com, jianna@scalevirtually.com, jenn@scalevirtually.com, amanda@scalevirtually.com",
+          "subject": "=[Sprint Report] Week {{ $now.weekNumber }} - {{ $now.year }}",
+          "message": "={{ $json.html_report }}",
+          "options": {
+            "appendAttribution": false,
+            "senderName": "Solution Architects Sprint Report"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          2528,
+          208
+        ],
+        "id": "f78afb48-af49-4d2f-9c77-d79890578415",
+        "name": "Send Sprint Report",
+        "webhookId": "8065db3e-b713-43a2-8b07-5d19730abd9a",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "QdsxfF1pgD1hbNDT",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "https://api.clickup.com/api/v2/space/90144428276/folder",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "archived",
+                "value": "false"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "json"
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -736,
+          112
+        ],
+        "id": "d21add65-6d2f-420a-b8d8-af3292259385",
+        "name": "Fetch Folders from the Space"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "folders",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          -512,
+          112
+        ],
+        "id": "49c8ef02-3f95-45c2-ac7d-9f01b7197553",
+        "name": "Split Out Folders"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "tasks",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          384,
+          112
+        ],
+        "id": "ed3a10a1-0594-4e44-9e53-489e501b7584",
+        "name": "Split Out Tasks"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.clickup.com/api/v2/folder/{{ $json.id }}/list",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "archived",
+                "value": "false"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -288,
+          112
+        ],
+        "id": "8c87399c-6a03-4df9-a668-238a4ce6ad96",
+        "name": "Fetch Lists (Sprints) per Folder"
+      },
+      {
+        "parameters": {
+          "jsCode": "const allLists = [];\n\n// 1. Flatten all lists from the folder HTTP requests\nfor (const item of $input.all()) {\n  if (item.json.lists && Array.isArray(item.json.lists)) {\n    allLists.push(...item.json.lists);\n  }\n}\n\nconst now = Date.now();\n\n// 2. Filter for strictly ACTIVE sprints (where today falls inside the sprint window)\nconst activeSprints = allLists.filter(list => {\n  // If a list doesn't have start and end dates, it's likely not a sprint, so we skip it\n  if (!list.start_date || !list.due_date) return false;\n  \n  const startDateMs = parseInt(list.start_date, 10);\n  const dueDateMs = parseInt(list.due_date, 10);\n  \n  // Keep the list if right now is after the start date AND before the due date\n  return now >= startDateMs && now <= dueDateMs;\n});\n\n// Stop the workflow gracefully if no active sprints are found\nif (activeSprints.length === 0) {\n  return []; \n}\n\n// 3. Return each active sprint as a separate item to feed the Loop\nreturn activeSprints.map(sprint => ({ json: sprint }));"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -64,
+          112
+        ],
+        "id": "a703dcb0-891e-4148-b69c-043c9986fda7",
+        "name": "Date Filter"
+      },
+      {
+        "parameters": {
+          "aggregate": "aggregateAllItemData",
+          "destinationFieldName": "compiled_tasks",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.aggregate",
+        "typeVersion": 1,
+        "position": [
+          1504,
+          112
+        ],
+        "id": "6a813ce1-c2ef-44a8-9e29-ca641551f7fd",
+        "name": "Aggregate"
+      },
+      {
+        "parameters": {
+          "sendTo": "pj@scalevirtually.com",
+          "subject": "=[Sprint Report] Week {{ $now.weekNumber }} - {{ $now.year }}",
+          "message": "={{ $json.html_report }}",
+          "options": {
+            "appendAttribution": false,
+            "senderName": "Solution Architects Sprint Report"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          2528,
+          16
+        ],
+        "id": "a84fe685-3b67-4d24-b2ac-0d65066c9fc0",
+        "name": "Send Sprint for Test",
+        "webhookId": "8065db3e-b713-43a2-8b07-5d19730abd9a",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "QdsxfF1pgD1hbNDT",
+            "name": "Solutions"
+          }
+        },
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  6
+                ],
+                "triggerAtHour": 5,
+                "triggerAtMinute": 40
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -960,
+          208
+        ],
+        "id": "5b35ad2f-f10b-4f8f-9bfd-e79d9f7690b8",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "jsCode": "function getStartOfWeekManilaMs() {\n  const now = new Date();\n  const parts = new Intl.DateTimeFormat('en-US', {\n    timeZone: 'Asia/Manila',\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n  }).formatToParts(now);\n  const map = Object.fromEntries(parts.map(p => [p.type, p.value]));\n  const manilaMidnight = new Date(`${map.year}-${map.month}-${map.day}T00:00:00+08:00`);\n  const day = manilaMidnight.getDay();\n  const daysToMonday = (day + 6) % 7;\n  manilaMidnight.setUTCDate(manilaMidnight.getUTCDate() - daysToMonday);\n  return manilaMidnight.getTime();\n}\n\nconst startOfWeekMs = getStartOfWeekManilaMs();\n\nconst thisWeekComments = $input.all().flatMap(item => {\n  const taskId = item.json.id ?? null;         // from the tasks node\n  const comments = Array.isArray(item.json.comments) ? item.json.comments : [];\n\n  return comments\n    .filter(comment => {\n      const commentMs = Number(comment.date);\n      return Number.isFinite(commentMs) && commentMs >= startOfWeekMs;\n    })\n    .map(comment => ({ ...comment, task_id: taskId }));\n});\n\nreturn thisWeekComments.map(comment => ({ json: comment }));"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1056,
+          192
+        ],
+        "id": "0c5a3f51-02d4-47ac-8398-2e90f6df3f1b",
+        "name": "Filter Weekly Comments Per Task"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineByPosition",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          832,
+          192
+        ],
+        "id": "afb661ef-9abf-4c73-ad95-d55d167b6040",
+        "name": "Merge1"
+      }
+    ],
+    "connections": {
+      "When clicking \u2018Execute workflow\u2019": {
+        "main": [
+          [
+            {
+              "node": "Fetch Folders from the Space",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Comments": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "Aggregate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Output Cleaner": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Anthropic Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Tasks from List": {
+        "main": [
+          [
+            {
+              "node": "Split Out Tasks",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          [
+            {
+              "node": "Email Builder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email Builder": {
+        "main": [
+          [
+            {
+              "node": "Send Sprint for Test",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Send Sprint Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Sprint Report": {
+        "main": [
+          []
+        ]
+      },
+      "Fetch Folders from the Space": {
+        "main": [
+          [
+            {
+              "node": "Split Out Folders",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out Tasks": {
+        "main": [
+          [
+            {
+              "node": "Get Comments",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out Folders": {
+        "main": [
+          [
+            {
+              "node": "Fetch Lists (Sprints) per Folder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Lists (Sprints) per Folder": {
+        "main": [
+          [
+            {
+              "node": "Date Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Date Filter": {
+        "main": [
+          [
+            {
+              "node": "Get Tasks from List",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate": {
+        "main": [
+          [
+            {
+              "node": "Output Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Fetch Folders from the Space",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter Weekly Comments Per Task": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge1": {
+        "main": [
+          [
+            {
+              "node": "Filter Weekly Comments Per Task",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

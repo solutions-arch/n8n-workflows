@@ -1,0 +1,494 @@
+{
+  "updatedAt": "2026-07-04T13:15:52.059Z",
+  "createdAt": "2026-01-20T17:41:40.001Z",
+  "id": "OfFZdK41X9k331OB",
+  "name": "[AT] Placement-Ready",
+  "description": "Notifies the team when a VA is placement-ready and later sends the VA a welcome email with resume, intro video, DISC, and match announcement requirements after their last day with the client.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "34e2c94a-9f12-436d-bcc7-6b8483f9f2bc",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0d5fc821-2e33-4c33-a3e4-005a9e6572c8",
+      "name": "Webhook",
+      "webhookId": "34e2c94a-9f12-436d-bcc7-6b8483f9f2bc"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f8fbaf0b-c782-4a53-baf6-26d31c0a2a82",
+              "name": "scheduledTime",
+              "value": "={{ DateTime.fromISO($json.body[\"Last day with the client\"]).plus({ days: 1 }).setZone('America/Chicago', { keepLocalTime: true }).set({ hour: 8, minute: 0, second: 0 }).toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b58b92ed-c112-4947-aceb-b56c39e6fefd",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $json.scheduledTime }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "5bb32a28-b5b3-466e-b763-abfc3c0673f8",
+      "name": "Wait",
+      "webhookId": "1cf7c39a-2417-40ec-94b1-128d4d7c3ce6"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body[\"SV Email\"].toString() }}",
+        "subject": "Welcome to the Scale Virtually Placements Talent Pool",
+        "message": "={{ $json.emailBody }}",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "placements@scalevirtually.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "c30e795b-439d-4a7a-9326-001baa6fe39f",
+      "name": "Send email to VA",
+      "webhookId": "95c8e1da-201c-4a9f-9f6d-7118deb68af0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.body[\"Created By\"].email }}",
+        "subject": "=Placement ready -  {{ $json.body[\"VA Name\"] }}",
+        "message": "={{ $json.placement_email_html }}",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        -176
+      ],
+      "id": "4c890769-7554-4109-b143-72265bf66559",
+      "name": "Send email to Team",
+      "webhookId": "696d249d-708d-4ed2-9590-fc4b3e70cf7f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop through all items coming from the previous node\nfor (const item of $input.all()) {\n\n  // 1. DATA EXTRACTION\n  // We grab the original data directly from the \"Webhook\" node \n  const webhookData = $('Webhook').item.json;\n  const body = webhookData.body;\n  const vaName = body[\"Virtual Assistants Name\"] || \"Candidate\";\n\n  // 2. HTML CONSTRUCTION\n  // We use the CSS/Structure from your provided script, but inject the Welcome Letter content\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8; /* Global background fill */\n  }\n\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.6; \n    font-size: 14px; /* Base font size */\n  }\n  \n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  \n  /* Orange Header Bar Style */\n  .header-bar {\n    background-color: #E8833A;\n    color: #ffffff;\n    padding: 12px;\n    text-align: center;\n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 16px;\n    letter-spacing: 0.5px;\n    border-radius: 4px 4px 0 0;\n    margin-bottom: 25px;\n  }\n\n  /* Links */\n  a { color: #2563EB; text-decoration: underline; }\n\n  /* Divider */\n  hr { border: 0; border-top: 1px solid #e5e7eb; margin: 25px 0; }\n\n  /* Lists */\n  ol { margin-left: 20px; padding-left: 10px; }\n  li { margin-bottom: 8px; }\n\n  /* Intro Block for important notes */\n  .intro-block {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin: 20px 0;\n    color: #4b5563;\n    font-size: 14px;\n  }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"header-bar\">Welcome to Placements</div>\n\n        <p>Greetings ${vaName}!</p>\n\n        <p>We're glad to inform you that you are now part of the Placements talent pool at Scale Virtually! This means we'll begin endorsing you to our clients here in Scale Virtually.</p> \n        \n        <p>But before we move forward, we need you to update your resume using the Scale Virtually resume format. Please use the template linked below as a reference:</p>\n\n        <p>\ud83d\udc49 <a href=\"https://docs.google.com/document/d/1XsY6mvKG6t-l7_8ZSfJ3KaiRS8_H71Udxf1Rb3KGFe8/edit?pli=1&tab=t.0\">Resume Template</a></p>\n\n        <div class=\"intro-block\">\n            <strong>IMPORTANT REMINDER:</strong> Please <strong>DO NOT EDIT</strong> the file directly. Instead, make a copy of the file first and then edit the duplicate file.\n        </div>\n\n        <hr>\n\n        <p>The next step is to create your Intro Video. Linked is a <a href=\"https://drive.google.com/file/d/1SmSnnpTfI1rPcNV-gpgkTJXo7UCIA4R2/view?usp=sharing\">sample video</a> that we would like you to watch for your reference.</p>\n\n        <p>For guidance on creating an effective Intro Video, please refer to this step-by-step guide:</p>\n\n        <p>\ud83d\udcf9 <a href=\"https://docs.google.com/document/d/1xoMRcCiKsndr8PCf0tBMl-duAlI415yIxxN4JZSSNt8/edit?tab=t.0#heading=h.b8v7hzolwria\">Intro Video Guide</a></p>\n\n        <br>\n\n        <p>Lastly, we'll need you to complete a DISC Profile Assessment. You can accomplish it through the link <a href=\"https://www.tonyrobbins.com/disc?srsltid=AfmBOorb8NkqZS6mOB_Jwj7Y62c3-lzTgOabtIe8WD-RGhs0NUpjTjjE\">here</a>.</p>\n\n        <p>Once done, kindly send me a copy of your results as soon as possible so we can move forward accordingly.</p>\n\n        <br>\n\n        <p><strong>To recap, we'll need the following from you:</strong></p>\n        <ol>\n          <li>Your updated resume using the Scale Virtually format</li>\n          <li>SV Introduction Video</li>\n          <li>DISC PDF Result</li>\n          <li>Match announcement photo</li>\n        </ol>\n\n        <p style=\"margin-top: 30px; font-style: italic; color: #666;\">Let us know if you encounter any issues accessing the link. Looking forward to your response!</p>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.emailBody = htmlContent;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "a6312dfd-3a5b-4cd2-85b5-aaf82f33eb99",
+      "name": "VA Email builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop through all items coming from the previous node\nfor (const item of $input.all()) {\n\n  // 1. DATA EXTRACTION\n  const webhookData = $('Webhook').item.json; \n  const body = webhookData.body;\n\n  const safeGet = (val) => {\n    if (Array.isArray(val)) return val[0] || '';\n    return val || '';\n  };\n  \n  const formatDate = (dateStr) => {\n    if (!dateStr) return 'TBD';\n    const d = new Date(dateStr);\n    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });\n  };\n\n  const vaName = safeGet(body[\"VA Name\"]) || body[\"Virtual Assistants Name\"] || \"Candidate\";\n  const prevClient = safeGet(body[\"Latest Client\"]) || \"N/A\";\n  const prevRole = safeGet(body[\"Latest Role\"]) || \"N/A\";\n  const reason = body[\"Reason for MVA Cancellation\"] || \"N/A\";\n  const memo = body[\"Memo\"] || \"N/A\";\n  const lastDay = formatDate(body[\"Last day with the client\"]);\n  const interviewReady = formatDate(body[\"Ready for Interviews\"]);\n  \n  const resumeStatus = body[\"Updated Resume\"] ? body[\"Updated Resume\"].name : \"N/A\";\n  const videoStatus = body[\"Updated Intro Video\"] ? body[\"Updated Intro Video\"].name : \"N/A\";\n  \n  const requestorEmail = body[\"Created By\"] ? body[\"Created By\"].email : \"placements@scalevirtually.com\";\n\n\n  // 2. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.6; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 600px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  \n  .header-title {\n    color: #E8833A;\n    font-size: 20px;\n    font-weight: 800;\n    text-transform: uppercase;\n    margin-bottom: 20px;\n    border-bottom: 2px solid #E8833A;\n    padding-bottom: 10px;\n    text-align: center;\n  }\n\n  /* --- RED BORDERED BOX, NO BOLD TEXT --- */\n  .alert-box {\n    border: 1px solid #D93025; /* Thinner red border */\n    border-radius: 4px;\n    padding: 12px;\n    margin: 20px 0;\n    text-align: center;\n    color: #D93025; /* Red text */\n    font-weight: 400; /* Regular weight, not bold */\n    font-size: 15px;\n  }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 20px; \n  }\n  td { \n    padding: 8px 0; \n    vertical-align: top; \n    font-size: 14px;\n    border-bottom: 1px solid #f0f0f0;\n  }\n  .label-col { \n    width: 35%; \n    font-weight: 700; \n    color: #111827; \n    padding-right: 10px;\n  }\n  .value-col { \n    width: 65%; \n    color: #374151; \n  }\n  \n  .footer {\n    margin-top: 30px;\n    font-size: 12px;\n    color: #6b7280;\n    border-top: 1px solid #e5e7eb;\n    padding-top: 15px;\n  }\n  a { color: #2563EB; text-decoration: none; }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <p>Hi Team,</p>\n        <p>See placement ready for VA <strong>${vaName}</strong>.</p>\n        <br>\n\n        <div class=\"header-title\">VA Placement Ready</div>\n\n        <table role=\"presentation\">\n          <tr>\n            <td class=\"label-col\">Name:</td>\n            <td class=\"value-col\"><strong>${vaName}</strong></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Previous Client:</td>\n            <td class=\"value-col\">${prevClient}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Previous Role:</td>\n            <td class=\"value-col\">${prevRole}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Reason for MVA Cancellation:</td>\n            <td class=\"value-col\">${reason}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Memo:</td>\n            <td class=\"value-col\">${memo}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Last Day with Client:</td>\n            <td class=\"value-col\">${lastDay}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">VA Resume:</td>\n            <td class=\"value-col\" style=\"color: #E8833A; font-weight:600;\">${resumeStatus}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">VA Intro Video:</td>\n            <td class=\"value-col\" style=\"color: #E8833A; font-weight:600;\">${videoStatus}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Ready for Interviews:</td>\n            <td class=\"value-col\"><strong>${interviewReady}</strong></td>\n          </tr>\n        </table>\n\n        <div class=\"alert-box\">\n          Placements Team: Only engage with the VA on <strong>${lastDay} onwards</strong>. Refer to the Success Coaches if you need details from this VA\n        </div>\n\n        <div class=\"footer\">\n          This is an automated email. For concerns, feel free to reach out to the requestor: <a href=\"mailto:${requestorEmail}\">${requestorEmail}</a>.\n        </div>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.placement_email_html = htmlContent;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -176
+      ],
+      "id": "05178fbc-6349-4706-9b89-39e454d66389",
+      "name": "Do not engage the VA messaging"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Do not engage the VA messaging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "VA Email builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VA Email builder": {
+      "main": [
+        [
+          {
+            "node": "Send email to VA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Do not engage the VA messaging": {
+      "main": [
+        [
+          {
+            "node": "Send email to Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "timeSavedPerExecution": 5,
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "8819a4f2-3c38-4aa9-8ffd-643421553e2f",
+  "activeVersionId": "8819a4f2-3c38-4aa9-8ffd-643421553e2f",
+  "versionCounter": 178,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-01-20T17:41:40.006Z",
+      "createdAt": "2026-01-20T17:41:40.006Z",
+      "role": "workflow:owner",
+      "workflowId": "OfFZdK41X9k331OB",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:15:52.060Z",
+    "createdAt": "2026-07-04T13:15:52.060Z",
+    "versionId": "8819a4f2-3c38-4aa9-8ffd-643421553e2f",
+    "workflowId": "OfFZdK41X9k331OB",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "34e2c94a-9f12-436d-bcc7-6b8483f9f2bc",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "0d5fc821-2e33-4c33-a3e4-005a9e6572c8",
+        "name": "Webhook",
+        "webhookId": "34e2c94a-9f12-436d-bcc7-6b8483f9f2bc"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "f8fbaf0b-c782-4a53-baf6-26d31c0a2a82",
+                "name": "scheduledTime",
+                "value": "={{ DateTime.fromISO($json.body[\"Last day with the client\"]).plus({ days: 1 }).setZone('America/Chicago', { keepLocalTime: true }).set({ hour: 8, minute: 0, second: 0 }).toISO() }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          224,
+          0
+        ],
+        "id": "b58b92ed-c112-4947-aceb-b56c39e6fefd",
+        "name": "Edit Fields"
+      },
+      {
+        "parameters": {
+          "resume": "specificTime",
+          "dateTime": "={{ $json.scheduledTime }}"
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          448,
+          0
+        ],
+        "id": "5bb32a28-b5b3-466e-b763-abfc3c0673f8",
+        "name": "Wait",
+        "webhookId": "1cf7c39a-2417-40ec-94b1-128d4d7c3ce6"
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Webhook').item.json.body[\"SV Email\"].toString() }}",
+          "subject": "Welcome to the Scale Virtually Placements Talent Pool",
+          "message": "={{ $json.emailBody }}",
+          "options": {
+            "appendAttribution": false,
+            "ccList": "placements@scalevirtually.com"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          896,
+          0
+        ],
+        "id": "c30e795b-439d-4a7a-9326-001baa6fe39f",
+        "name": "Send email to VA",
+        "webhookId": "95c8e1da-201c-4a9f-9f6d-7118deb68af0",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $json.body[\"Created By\"].email }}",
+          "subject": "=Placement ready -  {{ $json.body[\"VA Name\"] }}",
+          "message": "={{ $json.placement_email_html }}",
+          "options": {
+            "appendAttribution": false,
+            "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          496,
+          -176
+        ],
+        "id": "4c890769-7554-4109-b143-72265bf66559",
+        "name": "Send email to Team",
+        "webhookId": "696d249d-708d-4ed2-9590-fc4b3e70cf7f",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Loop through all items coming from the previous node\nfor (const item of $input.all()) {\n\n  // 1. DATA EXTRACTION\n  // We grab the original data directly from the \"Webhook\" node \n  const webhookData = $('Webhook').item.json;\n  const body = webhookData.body;\n  const vaName = body[\"Virtual Assistants Name\"] || \"Candidate\";\n\n  // 2. HTML CONSTRUCTION\n  // We use the CSS/Structure from your provided script, but inject the Welcome Letter content\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8; /* Global background fill */\n  }\n\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.6; \n    font-size: 14px; /* Base font size */\n  }\n  \n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  \n  /* Orange Header Bar Style */\n  .header-bar {\n    background-color: #E8833A;\n    color: #ffffff;\n    padding: 12px;\n    text-align: center;\n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 16px;\n    letter-spacing: 0.5px;\n    border-radius: 4px 4px 0 0;\n    margin-bottom: 25px;\n  }\n\n  /* Links */\n  a { color: #2563EB; text-decoration: underline; }\n\n  /* Divider */\n  hr { border: 0; border-top: 1px solid #e5e7eb; margin: 25px 0; }\n\n  /* Lists */\n  ol { margin-left: 20px; padding-left: 10px; }\n  li { margin-bottom: 8px; }\n\n  /* Intro Block for important notes */\n  .intro-block {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin: 20px 0;\n    color: #4b5563;\n    font-size: 14px;\n  }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"header-bar\">Welcome to Placements</div>\n\n        <p>Greetings ${vaName}!</p>\n\n        <p>We're glad to inform you that you are now part of the Placements talent pool at Scale Virtually! This means we'll begin endorsing you to our clients here in Scale Virtually.</p> \n        \n        <p>But before we move forward, we need you to update your resume using the Scale Virtually resume format. Please use the template linked below as a reference:</p>\n\n        <p>\ud83d\udc49 <a href=\"https://docs.google.com/document/d/1XsY6mvKG6t-l7_8ZSfJ3KaiRS8_H71Udxf1Rb3KGFe8/edit?pli=1&tab=t.0\">Resume Template</a></p>\n\n        <div class=\"intro-block\">\n            <strong>IMPORTANT REMINDER:</strong> Please <strong>DO NOT EDIT</strong> the file directly. Instead, make a copy of the file first and then edit the duplicate file.\n        </div>\n\n        <hr>\n\n        <p>The next step is to create your Intro Video. Linked is a <a href=\"https://drive.google.com/file/d/1SmSnnpTfI1rPcNV-gpgkTJXo7UCIA4R2/view?usp=sharing\">sample video</a> that we would like you to watch for your reference.</p>\n\n        <p>For guidance on creating an effective Intro Video, please refer to this step-by-step guide:</p>\n\n        <p>\ud83d\udcf9 <a href=\"https://docs.google.com/document/d/1xoMRcCiKsndr8PCf0tBMl-duAlI415yIxxN4JZSSNt8/edit?tab=t.0#heading=h.b8v7hzolwria\">Intro Video Guide</a></p>\n\n        <br>\n\n        <p>Lastly, we'll need you to complete a DISC Profile Assessment. You can accomplish it through the link <a href=\"https://www.tonyrobbins.com/disc?srsltid=AfmBOorb8NkqZS6mOB_Jwj7Y62c3-lzTgOabtIe8WD-RGhs0NUpjTjjE\">here</a>.</p>\n\n        <p>Once done, kindly send me a copy of your results as soon as possible so we can move forward accordingly.</p>\n\n        <br>\n\n        <p><strong>To recap, we'll need the following from you:</strong></p>\n        <ol>\n          <li>Your updated resume using the Scale Virtually format</li>\n          <li>SV Introduction Video</li>\n          <li>DISC PDF Result</li>\n          <li>Match announcement photo</li>\n        </ol>\n\n        <p style=\"margin-top: 30px; font-style: italic; color: #666;\">Let us know if you encounter any issues accessing the link. Looking forward to your response!</p>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.emailBody = htmlContent;\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          0
+        ],
+        "id": "a6312dfd-3a5b-4cd2-85b5-aaf82f33eb99",
+        "name": "VA Email builder"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Loop through all items coming from the previous node\nfor (const item of $input.all()) {\n\n  // 1. DATA EXTRACTION\n  const webhookData = $('Webhook').item.json; \n  const body = webhookData.body;\n\n  const safeGet = (val) => {\n    if (Array.isArray(val)) return val[0] || '';\n    return val || '';\n  };\n  \n  const formatDate = (dateStr) => {\n    if (!dateStr) return 'TBD';\n    const d = new Date(dateStr);\n    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });\n  };\n\n  const vaName = safeGet(body[\"VA Name\"]) || body[\"Virtual Assistants Name\"] || \"Candidate\";\n  const prevClient = safeGet(body[\"Latest Client\"]) || \"N/A\";\n  const prevRole = safeGet(body[\"Latest Role\"]) || \"N/A\";\n  const reason = body[\"Reason for MVA Cancellation\"] || \"N/A\";\n  const memo = body[\"Memo\"] || \"N/A\";\n  const lastDay = formatDate(body[\"Last day with the client\"]);\n  const interviewReady = formatDate(body[\"Ready for Interviews\"]);\n  \n  const resumeStatus = body[\"Updated Resume\"] ? body[\"Updated Resume\"].name : \"N/A\";\n  const videoStatus = body[\"Updated Intro Video\"] ? body[\"Updated Intro Video\"].name : \"N/A\";\n  \n  const requestorEmail = body[\"Created By\"] ? body[\"Created By\"].email : \"placements@scalevirtually.com\";\n\n\n  // 2. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.6; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 600px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  \n  .header-title {\n    color: #E8833A;\n    font-size: 20px;\n    font-weight: 800;\n    text-transform: uppercase;\n    margin-bottom: 20px;\n    border-bottom: 2px solid #E8833A;\n    padding-bottom: 10px;\n    text-align: center;\n  }\n\n  /* --- RED BORDERED BOX, NO BOLD TEXT --- */\n  .alert-box {\n    border: 1px solid #D93025; /* Thinner red border */\n    border-radius: 4px;\n    padding: 12px;\n    margin: 20px 0;\n    text-align: center;\n    color: #D93025; /* Red text */\n    font-weight: 400; /* Regular weight, not bold */\n    font-size: 15px;\n  }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 20px; \n  }\n  td { \n    padding: 8px 0; \n    vertical-align: top; \n    font-size: 14px;\n    border-bottom: 1px solid #f0f0f0;\n  }\n  .label-col { \n    width: 35%; \n    font-weight: 700; \n    color: #111827; \n    padding-right: 10px;\n  }\n  .value-col { \n    width: 65%; \n    color: #374151; \n  }\n  \n  .footer {\n    margin-top: 30px;\n    font-size: 12px;\n    color: #6b7280;\n    border-top: 1px solid #e5e7eb;\n    padding-top: 15px;\n  }\n  a { color: #2563EB; text-decoration: none; }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <p>Hi Team,</p>\n        <p>See placement ready for VA <strong>${vaName}</strong>.</p>\n        <br>\n\n        <div class=\"header-title\">VA Placement Ready</div>\n\n        <table role=\"presentation\">\n          <tr>\n            <td class=\"label-col\">Name:</td>\n            <td class=\"value-col\"><strong>${vaName}</strong></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Previous Client:</td>\n            <td class=\"value-col\">${prevClient}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Previous Role:</td>\n            <td class=\"value-col\">${prevRole}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Reason for MVA Cancellation:</td>\n            <td class=\"value-col\">${reason}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Memo:</td>\n            <td class=\"value-col\">${memo}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Last Day with Client:</td>\n            <td class=\"value-col\">${lastDay}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">VA Resume:</td>\n            <td class=\"value-col\" style=\"color: #E8833A; font-weight:600;\">${resumeStatus}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">VA Intro Video:</td>\n            <td class=\"value-col\" style=\"color: #E8833A; font-weight:600;\">${videoStatus}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Ready for Interviews:</td>\n            <td class=\"value-col\"><strong>${interviewReady}</strong></td>\n          </tr>\n        </table>\n\n        <div class=\"alert-box\">\n          Placements Team: Only engage with the VA on <strong>${lastDay} onwards</strong>. Refer to the Success Coaches if you need details from this VA\n        </div>\n\n        <div class=\"footer\">\n          This is an automated email. For concerns, feel free to reach out to the requestor: <a href=\"mailto:${requestorEmail}\">${requestorEmail}</a>.\n        </div>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.placement_email_html = htmlContent;\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          -176
+        ],
+        "id": "05178fbc-6349-4706-9b89-39e454d66389",
+        "name": "Do not engage the VA messaging"
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Do not engage the VA messaging",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields": {
+        "main": [
+          [
+            {
+              "node": "Wait",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait": {
+        "main": [
+          [
+            {
+              "node": "VA Email builder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "VA Email builder": {
+        "main": [
+          [
+            {
+              "node": "Send email to VA",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Do not engage the VA messaging": {
+        "main": [
+          [
+            {
+              "node": "Send email to Team",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

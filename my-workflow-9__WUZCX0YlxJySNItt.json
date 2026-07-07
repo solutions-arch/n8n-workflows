@@ -1,0 +1,100 @@
+{
+  "updatedAt": "2026-03-02T17:46:43.394Z",
+  "createdAt": "2026-03-02T17:46:43.394Z",
+  "id": "WUZCX0YlxJySNItt",
+  "name": "My workflow 9",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9014746495",
+        "events": [
+          "listUpdated"
+        ],
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.clickUpTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1e380beb-8a7d-45bf-a3a8-7bb180da9e7c",
+      "name": "ClickUp Trigger",
+      "webhookId": "d8421652-d4cd-460a-a800-85f2b7122abc",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "xSQtTzkZnE7sxIB9",
+          "name": "ClickUp account"
+        }
+      }
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "044ad0a8-c23e-4013-b8b3-369da3dbc39f",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-02T17:46:43.397Z",
+      "createdAt": "2026-03-02T17:46:43.397Z",
+      "role": "workflow:owner",
+      "workflowId": "WUZCX0YlxJySNItt",
+      "projectId": "FtQDRp9NTnHC2f4o",
+      "project": {
+        "updatedAt": "2026-04-09T18:34:38.902Z",
+        "createdAt": "2025-09-03T13:17:34.780Z",
+        "id": "FtQDRp9NTnHC2f4o",
+        "name": "Solution Architects <solutions@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-03T13:17:34.780Z",
+            "createdAt": "2025-09-03T13:17:34.780Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "FtQDRp9NTnHC2f4o",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

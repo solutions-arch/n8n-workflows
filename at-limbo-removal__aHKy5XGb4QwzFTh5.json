@@ -1,0 +1,264 @@
+{
+  "updatedAt": "2026-07-04T13:12:55.936Z",
+  "createdAt": "2026-02-18T13:41:29.377Z",
+  "id": "aHKy5XGb4QwzFTh5",
+  "name": "[AT] Limbo Removal",
+  "description": "Automatically sends an email notification to the team when a VA is submitted for Limbo removal and marked as inactive.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "65273784-6391-4018-b59e-7beb5815a981",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e193c0b0-8cc2-4f91-a32f-13807881011a",
+      "name": "Webhook",
+      "webhookId": "65273784-6391-4018-b59e-7beb5815a981"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop through all incoming items\nfor (const item of $input.all()) {\n  \n  // 1. DATA EXTRACTION\n  const data = item.json.body?.record || {};\n\n  // 2. FORMATTING HELPERS\n  const formatDate = (dateString) => {\n    if (!dateString) return 'TBD';\n    return new Date(dateString).toLocaleDateString('en-US', { \n      month: 'long', day: 'numeric', year: 'numeric' \n    });\n  };\n\n  const safeGet = (val, fallback = '') => {\n    if (Array.isArray(val)) {\n      const first = val[0];\n      // Handle array of objects vs array of strings\n      return (first && typeof first === 'object') ? (first.name || fallback) : (first || fallback);\n    }\n    return val || fallback;\n  };\n\n  const formatMultiLine = (text) => {\n    if (!text) return '';\n    return text.replace(/\\n/g, '<br>');\n  };\n\n  // 3. PREPARE VARIABLES\n  const submittedBy = safeGet(data['Submitted by'], 'Unknown');\n  const vaName = safeGet(data['Virtual Assistant Name'], 'N/A');\n  const reason = safeGet(data['Reason for Removal'], 'No reason provided.');\n  const submissionDate = formatDate(data['Created']);\n  const requestorEmail = safeGet(data[\"Requestor's Email\"], 'N/A');\n\n  // 4. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.5; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  .greeting { margin-bottom: 15px; font-size: 14px; }\n  .intro-text { margin-bottom: 25px; font-size: 14px; }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 25px; \n    border: 1px solid #e5e7eb; \n  }\n  th { \n    background-color: #E8833A; \n    color: #ffffff; \n    padding: 12px; \n    text-align: center; \n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 14px;\n    letter-spacing: 0.5px;\n  }\n  td { \n    padding: 12px 15px; \n    border-bottom: 1px solid #e5e7eb; \n    vertical-align: top; \n    font-size: 14px;\n  }\n  .label-col { \n    width: 35%; \n    background-color: #f0f2f5; \n    color: #111827; \n    font-weight: 800; \n    border-right: 1px solid #e5e7eb;\n  }\n  .value-col { width: 65%; color: #374151; }\n\n  .footer-note {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin-top: 10px;\n    color: #4b5563;\n    font-size: 14px;\n  }\n  .status-tag {\n    color: #b91c1c;\n    font-weight: 800;\n  }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"greeting\">Hi <strong>Team</strong>,</div>\n        <div class=\"intro-text\">A Limbo removal request has been submitted by: <strong>${submittedBy}</strong></div>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Removal Details</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Virtual Assistant</td>\n            <td class=\"value-col\">${vaName}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Reason for Removal</td>\n            <td class=\"value-col\">${formatMultiLine(reason)}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Submitted Date</td>\n            <td class=\"value-col\">${submissionDate}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Requestor Email</td>\n            <td class=\"value-col\">${requestorEmail}</td>\n          </tr>\n        </table>\n\n        <div class=\"footer-note\">\n          <strong>Note:</strong> ${vaName} is now tagged as <span class=\"status-tag\">Inactive</span>.\n        </div>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.email_html = htmlContent;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "9fed2c7c-fa91-4563-8ba9-b4168e3fac84",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.record[\"Requestor's Email\"][0] }}",
+        "subject": "=Limbo Removal Submission for {{ $json.body.record[\"Virtual Assistant Name\"] }}",
+        "message": "={{ $json.email_html }}",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "b48a2f6c-7b02-4c94-830f-e110554f48ee",
+      "name": "Send a message",
+      "webhookId": "ea561ec2-7c6f-41db-8dfd-d873b4be7440",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "timeSavedPerExecution": 3,
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "fe479111-29d2-45b5-a827-f70b5b1054a1",
+  "activeVersionId": "fe479111-29d2-45b5-a827-f70b5b1054a1",
+  "versionCounter": 161,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-18T13:41:29.382Z",
+      "createdAt": "2026-02-18T13:41:29.382Z",
+      "role": "workflow:owner",
+      "workflowId": "aHKy5XGb4QwzFTh5",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:12:55.937Z",
+    "createdAt": "2026-07-04T13:12:55.937Z",
+    "versionId": "fe479111-29d2-45b5-a827-f70b5b1054a1",
+    "workflowId": "aHKy5XGb4QwzFTh5",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "65273784-6391-4018-b59e-7beb5815a981",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "e193c0b0-8cc2-4f91-a32f-13807881011a",
+        "name": "Webhook",
+        "webhookId": "65273784-6391-4018-b59e-7beb5815a981"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Loop through all incoming items\nfor (const item of $input.all()) {\n  \n  // 1. DATA EXTRACTION\n  const data = item.json.body?.record || {};\n\n  // 2. FORMATTING HELPERS\n  const formatDate = (dateString) => {\n    if (!dateString) return 'TBD';\n    return new Date(dateString).toLocaleDateString('en-US', { \n      month: 'long', day: 'numeric', year: 'numeric' \n    });\n  };\n\n  const safeGet = (val, fallback = '') => {\n    if (Array.isArray(val)) {\n      const first = val[0];\n      // Handle array of objects vs array of strings\n      return (first && typeof first === 'object') ? (first.name || fallback) : (first || fallback);\n    }\n    return val || fallback;\n  };\n\n  const formatMultiLine = (text) => {\n    if (!text) return '';\n    return text.replace(/\\n/g, '<br>');\n  };\n\n  // 3. PREPARE VARIABLES\n  const submittedBy = safeGet(data['Submitted by'], 'Unknown');\n  const vaName = safeGet(data['Virtual Assistant Name'], 'N/A');\n  const reason = safeGet(data['Reason for Removal'], 'No reason provided.');\n  const submissionDate = formatDate(data['Created']);\n  const requestorEmail = safeGet(data[\"Requestor's Email\"], 'N/A');\n\n  // 4. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.5; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  .greeting { margin-bottom: 15px; font-size: 14px; }\n  .intro-text { margin-bottom: 25px; font-size: 14px; }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 25px; \n    border: 1px solid #e5e7eb; \n  }\n  th { \n    background-color: #E8833A; \n    color: #ffffff; \n    padding: 12px; \n    text-align: center; \n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 14px;\n    letter-spacing: 0.5px;\n  }\n  td { \n    padding: 12px 15px; \n    border-bottom: 1px solid #e5e7eb; \n    vertical-align: top; \n    font-size: 14px;\n  }\n  .label-col { \n    width: 35%; \n    background-color: #f0f2f5; \n    color: #111827; \n    font-weight: 800; \n    border-right: 1px solid #e5e7eb;\n  }\n  .value-col { width: 65%; color: #374151; }\n\n  .footer-note {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin-top: 10px;\n    color: #4b5563;\n    font-size: 14px;\n  }\n  .status-tag {\n    color: #b91c1c;\n    font-weight: 800;\n  }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"greeting\">Hi <strong>Team</strong>,</div>\n        <div class=\"intro-text\">A Limbo removal request has been submitted by: <strong>${submittedBy}</strong></div>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Removal Details</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Virtual Assistant</td>\n            <td class=\"value-col\">${vaName}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Reason for Removal</td>\n            <td class=\"value-col\">${formatMultiLine(reason)}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Submitted Date</td>\n            <td class=\"value-col\">${submissionDate}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Requestor Email</td>\n            <td class=\"value-col\">${requestorEmail}</td>\n          </tr>\n        </table>\n\n        <div class=\"footer-note\">\n          <strong>Note:</strong> ${vaName} is now tagged as <span class=\"status-tag\">Inactive</span>.\n        </div>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.email_html = htmlContent;\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          208,
+          0
+        ],
+        "id": "9fed2c7c-fa91-4563-8ba9-b4168e3fac84",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Webhook').item.json.body.record[\"Requestor's Email\"][0] }}",
+          "subject": "=Limbo Removal Submission for {{ $json.body.record[\"Virtual Assistant Name\"] }}",
+          "message": "={{ $json.email_html }}",
+          "options": {
+            "appendAttribution": false,
+            "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          416,
+          0
+        ],
+        "id": "b48a2f6c-7b02-4c94-830f-e110554f48ee",
+        "name": "Send a message",
+        "webhookId": "ea561ec2-7c6f-41db-8dfd-d873b4be7440",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

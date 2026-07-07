@@ -1,0 +1,458 @@
+{
+  "updatedAt": "2026-02-20T17:42:24.049Z",
+  "createdAt": "2026-02-02T18:07:18.772Z",
+  "id": "ZUI1S6qh6BlTXI6j",
+  "name": "Podio - Bubble Relay (Edit User)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "83270ac3-f92a-4f0a-9e92-302c71a6caf4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        48,
+        64
+      ],
+      "id": "243046dc-47df-4b0e-ade1-71f3a78e3335",
+      "name": "Webhook",
+      "webhookId": "83270ac3-f92a-4f0a-9e92-302c71a6caf4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://scalevirtually.net/api/1.1/wf/201_edit_record",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        704,
+        144
+      ],
+      "id": "9976aa9e-29fa-4218-a021-2d192553654c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f217b868-40df-42d0-8eb6-e890e898e173",
+              "leftValue": "={{ $json.body.type }}",
+              "rightValue": "hook.verify",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        64
+      ],
+      "id": "812158dd-ed6b-4abb-adfc-3324cbc49b64",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.podio.com/hook/{{ $('Webhook').item.json.body.hook_id }}/verify/validate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer  {{ $json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "code",
+              "value": "={{ $('Webhook').item.json.body.code }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        656,
+        -48
+      ],
+      "id": "ff6ceb8c-c8a3-4508-aff6-bb38a4944923",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://podio.com/oauth/token",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "app"
+            },
+            {
+              "name": "client_id",
+              "value": "sv-timekeeping"
+            },
+            {
+              "name": "client_secret",
+              "value": "9y5LtlYXU8q5EFVKdaeLBLziHzue6BOwTPZ0806rjJqshKQJB0Y2qHwE4711XA1P"
+            },
+            {
+              "name": "app_id",
+              "value": "25161212"
+            },
+            {
+              "name": "app_token",
+              "value": "2224bae67c6743159433bc508389fe92"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        -32
+      ],
+      "id": "6355b4cc-ff19-4cc4-afcb-b4a814161c67",
+      "name": "HTTP Request2"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "044ba008-e439-41be-964f-54ae3ba89277",
+  "activeVersionId": "044ba008-e439-41be-964f-54ae3ba89277",
+  "versionCounter": 183,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-02T18:07:18.775Z",
+      "createdAt": "2026-02-02T18:07:18.775Z",
+      "role": "workflow:owner",
+      "workflowId": "ZUI1S6qh6BlTXI6j",
+      "projectId": "FtQDRp9NTnHC2f4o",
+      "project": {
+        "updatedAt": "2026-04-09T18:34:38.902Z",
+        "createdAt": "2025-09-03T13:17:34.780Z",
+        "id": "FtQDRp9NTnHC2f4o",
+        "name": "Solution Architects <solutions@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-03T13:17:34.780Z",
+            "createdAt": "2025-09-03T13:17:34.780Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "FtQDRp9NTnHC2f4o",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-02-20T17:42:24.051Z",
+    "createdAt": "2026-02-20T17:42:24.051Z",
+    "versionId": "044ba008-e439-41be-964f-54ae3ba89277",
+    "workflowId": "ZUI1S6qh6BlTXI6j",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "83270ac3-f92a-4f0a-9e92-302c71a6caf4",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          48,
+          64
+        ],
+        "id": "243046dc-47df-4b0e-ade1-71f3a78e3335",
+        "name": "Webhook",
+        "webhookId": "83270ac3-f92a-4f0a-9e92-302c71a6caf4"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://scalevirtually.net/api/1.1/wf/201_edit_record",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.body }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          704,
+          144
+        ],
+        "id": "9976aa9e-29fa-4218-a021-2d192553654c",
+        "name": "HTTP Request"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "f217b868-40df-42d0-8eb6-e890e898e173",
+                "leftValue": "={{ $json.body.type }}",
+                "rightValue": "hook.verify",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          240,
+          64
+        ],
+        "id": "812158dd-ed6b-4abb-adfc-3324cbc49b64",
+        "name": "If"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://api.podio.com/hook/{{ $('Webhook').item.json.body.hook_id }}/verify/validate",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer  {{ $json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "code",
+                "value": "={{ $('Webhook').item.json.body.code }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          656,
+          -48
+        ],
+        "id": "ff6ceb8c-c8a3-4508-aff6-bb38a4944923",
+        "name": "HTTP Request1"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://podio.com/oauth/token",
+          "sendBody": true,
+          "contentType": "multipart-form-data",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "grant_type",
+                "value": "app"
+              },
+              {
+                "name": "client_id",
+                "value": "sv-timekeeping"
+              },
+              {
+                "name": "client_secret",
+                "value": "9y5LtlYXU8q5EFVKdaeLBLziHzue6BOwTPZ0806rjJqshKQJB0Y2qHwE4711XA1P"
+              },
+              {
+                "name": "app_id",
+                "value": "25161212"
+              },
+              {
+                "name": "app_token",
+                "value": "2224bae67c6743159433bc508389fe92"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          448,
+          -32
+        ],
+        "id": "6355b4cc-ff19-4cc4-afcb-b4a814161c67",
+        "name": "HTTP Request2"
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request2",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request2": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solutions  ",
+    "name": null,
+    "description": null
+  }
+}

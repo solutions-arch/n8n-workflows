@@ -1,0 +1,2529 @@
+{
+  "updatedAt": "2026-04-29T18:01:33.857Z",
+  "createdAt": "2026-03-30T21:43:22.867Z",
+  "id": "9ipbPBk4vdrxZG44",
+  "name": "[JotForm] EVA Non-bilingual",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "form": "260894361860060",
+        "onlyAnswers": false
+      },
+      "id": "967f3949-3a7d-4fe0-9d70-4f8ac8b7f4aa",
+      "name": "Jotform Trigger",
+      "type": "n8n-nodes-base.jotFormTrigger",
+      "typeVersion": 1,
+      "position": [
+        192,
+        624
+      ],
+      "webhookId": "0d077206-c6ef-4ea1-b5f3-ead0dce5b559",
+      "credentials": {
+        "jotFormApi": {
+          "id": "oSP9HZQEaTyKBuX5",
+          "name": "Solutions Jotform"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst raw = data.rawRequest || {};\n\n// Candidate Info\nconst nameObj = raw['Name'] || {};\nconst firstName = typeof nameObj === 'object' ? (nameObj.first || '') : String(nameObj);\nconst lastName  = typeof nameObj === 'object' ? (nameObj.last  || '') : '';\nconst candidateName  = (firstName + ' ' + lastName).trim();\nconst candidateEmail = raw['Email'] || '';\nconst submissionDate = new Date().toISOString().split('T')[0];\nconst videoLink = raw['Short Intro Video link'] || 'Not provided';\n\n// Strip HTML helper\nfunction stripHtml(str) {\n  if (typeof str !== 'string') return String(str || '');\n  return str\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<b>(.*?)<\\/b>/gi, '$1')\n    .replace(/<[^>]+>/g, '')\n    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')\n    .replace(/&quot;/g, '\"').replace(/&nbsp;/g, ' ')\n    .trim();\n}\n\n// Part 1 \u2014 Priority Ranking\nconst rankingKey = Object.keys(raw).find(k => k.includes('Prioritize the emails'));\nconst priorityRanking = rankingKey ? stripHtml(raw[rankingKey]) : 'Not provided';\n\n// Part 1 \u2014 Action Matrix\nconst matrixKey = Object.keys(raw).find(k => k.includes('Identify what needs immediate action'));\nconst actionMatrix = matrixKey ? (raw[matrixKey] || {}) : {};\nconst emailLabels = [\n  'Email 1 \u2014 URGENT: Client unhappy about missed deadline',\n  'Email 2 \u2014 Podcast Invitation',\n  'Email 3 \u2014 Team Internal: Project Delay',\n  'Email 4 \u2014 Invoice Approval',\n  'Email 5 \u2014 Calendar Conflict Tomorrow'\n];\nconst immediateActions = [], canWait = [], toDelegate = [];\nfor (let i = 0; i < 5; i++) {\n  const row = actionMatrix[i.toString()];\n  if (!row) continue;\n  let category = null;\n  if (Array.isArray(row)) { category = row[0]; }\n  else if (typeof row === 'object') { const vals = Object.values(row); if (vals.length) category = vals[0]; }\n  if (category === 'Needs Immediate Action') immediateActions.push('\u2022 ' + emailLabels[i]);\n  else if (category === 'Can Wait')           canWait.push('\u2022 '           + emailLabels[i]);\n  else if (category === 'Should be Delegated') toDelegate.push('\u2022 '      + emailLabels[i]);\n}\n\n// Part 1 \u2014 Draft Replies\nconst draft1Key = Object.keys(raw).find(k => k.toLowerCase().includes('first email priority'));\nconst draft2Key = Object.keys(raw).find(k => k.toLowerCase().includes('second email priority'));\nconst draftReply1 = draft1Key ? stripHtml(raw[draft1Key]) : 'Not provided';\nconst draftReply2 = draft2Key ? stripHtml(raw[draft2Key]) : 'Not provided';\n\n// Part 2 \u2014 Calendar\nconst scheduleKey  = Object.keys(raw).find(k => k.toLowerCase().includes('reorganize the schedule'));\nconst reasoningKey = Object.keys(raw).find(k => k.toLowerCase().includes('explain your reasoning'));\nconst revisedSchedule   = scheduleKey  ? stripHtml(raw[scheduleKey])  : 'Not provided';\nconst calendarReasoning = reasoningKey ? stripHtml(raw[reasoningKey]) : 'Not provided';\n\n// Part 3 \u2014 Project Breakdown\nconst projectKey  = Object.keys(raw).find(k => k.toLowerCase().includes('plan to execute') || k.toLowerCase().includes('simple plan'));\nconst projectPlan = projectKey ? stripHtml(raw[projectKey]) : 'Not provided';\n\nconst formattedSubmission = [\n  'CANDIDATE SUBMISSION', '---',\n  'Name: ' + candidateName,\n  'Email: ' + candidateEmail,\n  'Date Submitted: ' + submissionDate, '',\n  'PART 1 \u2014 INBOX PRIORITIZATION', '',\n  'Priority Ranking (1 = most urgent):', priorityRanking, '',\n  'Immediate Action Items:', (immediateActions.length ? immediateActions.join('\\n') : '\u2022 Not specified'), '',\n  'Can Wait:', (canWait.length ? canWait.join('\\n') : '\u2022 Not specified'), '',\n  'Delegate:', (toDelegate.length ? toDelegate.join('\\n') : '\u2022 Not specified'), '',\n  'Draft Reply \u2014 Highest Priority:', draftReply1, '',\n  'Draft Reply \u2014 Second Priority:', draftReply2, '',\n  'PART 2 \u2014 CALENDAR DECISION', '',\n  'Revised Schedule:', revisedSchedule, '',\n  'Reasoning:', calendarReasoning, '',\n  'PART 3 \u2014 PROJECT BREAKDOWN', '',\n  'Objective: Launch a 2-week employee referral program', '',\n  'Plan / Key Steps:', projectPlan\n].join('\\n');\n\nreturn [{ json: { candidateName, candidateEmail, submissionDate, videoLink, formattedSubmission } }];"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Format Submission",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.formattedSubmission }}",
+        "options": {
+          "systemMessage": "You are an expert hiring assessor evaluating candidates for a Bilingual Executive Assistant / Executive Operations Partner role.\n\nEvaluate strictly based on the candidate's submitted answers only. Do not assume missing information. Do not fill gaps. Be strict and objective.\n\nThis role requires:\n- Strong prioritization and urgency judgment\n- Executive-level decision-making\n- Clear, professional, calm communication\n- Ability to structure ambiguous work into actionable plans\n- Full operational ownership with minimal supervision\n\n---\nWHAT TO EVALUATE\n---\n\nPart 1 \u2014 Inbox Prioritization\n- Did they rank the 5 emails correctly (client escalation \u2192 calendar conflict \u2192 internal delay \u2192 invoice \u2192 podcast)?\n- Did they correctly identify what needs immediate action, what can wait, what to delegate?\n- Are the 2 draft replies clear, calm, concise, and solution-oriented \u2014 no over-explaining?\n\nPart 2 \u2014 Calendar & Decision-Making\n- Did they reorganize the 4 conflicting items correctly (client escalation first, deep work preserved, team meeting adjusted, personal respected but not at business cost)?\n- Did they explain their reasoning in 3\u20135 bullet points?\n- Is the judgment sound \u2014 do they protect high-value time?\n\nPart 3 \u2014 Project Breakdown\n- Did they break the 2-week referral program into clear phases (planning \u2192 build \u2192 launch)?\n- Did they identify what needs to be decided and flag risks/blockers?\n- Is the sequencing logical \u2014 no chaos, no vague steps?\n\n---\nSCORING INSTRUCTIONS\n---\nScore each category 1\u20135. Be strict. Do not inflate scores.\nPenalize vague, passive, or generic responses.\nPrioritization and Decision-Making carry the highest weight.\n\n1. PRIORITIZATION\nDid they correctly identify urgency vs. noise?\n- 1\u20132 = incorrect or random order\n- 3 = mostly correct, weak reasoning\n- 4 = strong and reliable\n- 5 = excellent executive-level judgment\n\n2. COMMUNICATION\nAre responses clear, concise, and professional?\n- 1\u20132 = unclear or unprofessional\n- 3 = acceptable\n- 4 = clear and professional\n- 5 = highly polished, executive-ready\n\n3. DECISION-MAKING\nDoes the candidate make sound decisions and justify them?\n- 1\u20132 = avoids decisions or weak reasoning\n- 3 = acceptable\n- 4 = strong judgment, protects priorities\n- 5 = excellent \u2014 would trust them to act independently\n\n4. STRUCTURE & THINKING\nCan they turn vague input into a clear, logical plan?\n- 1\u20132 = disorganized\n- 3 = some structure\n- 4 = clear and logical\n- 5 = highly structured and strategic\n\n---\nPASS / FAIL RULES\n---\nPASS if:\n- Prioritization >= 4\n- Decision-Making >= 4\n- No category below 3\n- Bilingual passes (if applicable)\n\nBORDERLINE if:\n- Some strengths but at least one meaningful weakness\n\nFAIL if:\n- Prioritization < 4 OR Decision-making < 4\n- OR any category below 3\n- OR poor communication throughout\n\n---\nFINAL FILTER\n---\nBefore recommending PASS, confirm:\n\"Would I trust this person to run an executive's day without constant supervision?\"\nIf the answer is hesitant \u2014 recommend BORDERLINE or FAIL.\n\n---\nOUTPUT FORMAT \u2014 DO NOT CHANGE\n---\nCandidate Evaluation\n\nPrioritization: X/5\nReasoning:\n-\n-\n\nCommunication: X/5\nReasoning:\n-\n-\n\nDecision-Making: X/5\nReasoning:\n-\n-\n\nStructure & Thinking: X/5\nReasoning:\n-\n-\n\nStrengths:\n-\n-\n\nRed Flags:\n-\n-\n\nFinal Recommendation: PASS / BORDERLINE / FAIL\n\nOverall Explanation:\n(2 to 5 sentences only)"
+        }
+      },
+      "id": "6e8e54c0-4709-4c87-b693-41281cb24544",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1312,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-20250514",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-20250514"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "7e0ce21e-e172-4e92-8eac-f51d88b5bbf2",
+      "name": "Portkey - EVA Assessment",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1392,
+        496
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "kjgRtLKMRyfcC0gs",
+          "name": "EVA Assessment"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentOutput = $input.first().json.output || $input.first().json.text || $input.first().json.message || '';\nconst prevData = $('Format Submission').first().json;\n\n// Strip bold markers, dividers, and collapse blank lines before parsing\nconst clean = agentOutput\n  .replace(/\\*\\*/g, '')\n  .replace(/^---$/gm, '')\n  .replace(/\\n{2,}/g, '\\n');\n\nfunction extractScore(text, label) {\n  const esc = label.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const m = text.match(new RegExp(esc + ':\\\\s*(\\\\d+)\\\\s*/\\\\s*5', 'i'));\n  return m ? parseInt(m[1]) : null;\n}\n\nfunction extractReasoning(text, startLabel, endLabel) {\n  const esc = s => s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const startReg = new RegExp(esc(startLabel) + '[^\\\\n]*\\\\n+Reasoning:\\\\s*', 'i');\n  const startM = text.match(startReg);\n  if (!startM) return '';\n  const after = text.slice(startM.index + startM[0].length);\n  if (endLabel) {\n    const endM = after.match(new RegExp(esc(endLabel), 'i'));\n    return endM ? after.slice(0, endM.index).trim() : after.trim();\n  }\n  return after.trim();\n}\n\nconst prioritizationScore = extractScore(clean, 'Prioritization');\nconst communicationScore  = extractScore(clean, 'Communication');\nconst decisionMakingScore = extractScore(clean, 'Decision-Making');\nconst structureScore      = extractScore(clean, 'Structure & Thinking');\n\nconst prioritizationReasoning = extractReasoning(clean, 'Prioritization:', 'Communication:');\nconst communicationReasoning  = extractReasoning(clean, 'Communication:', 'Decision-Making:');\nconst decisionReasoning       = extractReasoning(clean, 'Decision-Making:', 'Structure & Thinking:');\nconst structureReasoning      = extractReasoning(clean, 'Structure & Thinking:', 'Strengths:');\n\nconst strengthsM      = clean.match(/Strengths:\\s*([\\s\\S]*?)(?=Red Flags:|$)/i);\nconst redFlagsM       = clean.match(/Red Flags:\\s*([\\s\\S]*?)(?=Final Recommendation:|$)/i);\nconst recommendationM = clean.match(/Final Recommendation:\\s*(PASS|BORDERLINE|FAIL)/i);\nconst explanationM    = clean.match(/Overall Explanation:\\s*([\\s\\S]*?)$/i);\n\nconst strengths           = strengthsM      ? strengthsM[1].trim()           : '';\nconst redFlags            = redFlagsM       ? redFlagsM[1].trim()            : '';\nconst finalRecommendation = recommendationM ? recommendationM[1].toUpperCase() : 'BORDERLINE';\nconst overallExplanation  = explanationM    ? explanationM[1].trim()         : '';\n\nreturn [{ json: {\n  candidateName:            prevData.candidateName,\n  candidateEmail:           prevData.candidateEmail,\n  submissionDate:           prevData.submissionDate,\n  videoLink:                prevData.videoLink,\n  prioritizationScore, communicationScore, decisionMakingScore, structureScore,\n  prioritizationReasoning, communicationReasoning, decisionReasoning, structureReasoning,\n  strengths, redFlags, finalRecommendation, overallExplanation,\n  fullEvaluation: agentOutput\n}}];"
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Parse Evaluation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "pass-cond-1",
+                    "leftValue": "={{ $json.fields[\"Final Recommendation\"] }}",
+                    "rightValue": "PASS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PASS"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "borderline-cond-1",
+                    "leftValue": "={{ $json.fields[\"Final Recommendation\"] }}",
+                    "rightValue": "BORDERLINE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "BORDERLINE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fail-cond-1",
+                    "leftValue": "={{ $json.fields[\"Final Recommendation\"] }}",
+                    "rightValue": "FAIL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "FAIL"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4e5f6a7-b8c9-0123-def0-234567890123",
+      "name": "Route by Result",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2464,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "=:white_check_mark: *EVA Assessment \u2014 PASS*\n*Candidate:* {{ $json.fields[\"Full Name\"] }} ({{ $json.fields[\"Email Address\"] }})\n*Submitted:* {{ $('Format Submission').item.json.submissionDate }}\n\n*Scores:*\n\u2022 Prioritization: {{ $json.fields[\"Score: Prioritization\"] }}/5\n\u2022 Communication: {{ $json.fields[\"Score: Communication\"] }}/5\n\u2022 Decision-Making: {{ $json.fields[\"Score: Decision-Making\"] }}/5\n\u2022 Structure & Thinking: {{ $json.fields[\"Score: Structure & Thinking\"] }}/5\n\n*Strengths:*\n{{ $json.fields.Strengths }}\n\n*Red Flags:*\n{{ $json.fields[\"Red Flags\"] }}\n\n*Overall:*\n{{ $json.fields[\"Overall Explanation\"] }}\n\n:point_right: Please review and confirm to move this candidate forward.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "e5f6a7b8-c9d0-1234-ef01-345678901234",
+      "name": "PASS - Notify Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        -192
+      ],
+      "webhookId": "04dac18c-db99-40ce-a88a-76814ca72d44",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "=:warning: *EVA Assessment \u2014 BORDERLINE \u2014 Human Review Required*\n*Candidate:* {{ $json.fields[\"Full Name\"] }} ({{ $json.fields[\"Email Address\"] }})\n*Submitted:* {{ $('Format Submission').item.json.submissionDate }}\n\n*Scores:*\n\u2022 Prioritization: {{ $json.fields[\"Score: Prioritization\"] }}/5\n\u2022 Communication: {{ $json.fields[\"Score: Communication\"] }}/5\n\u2022 Decision-Making: {{ $json.fields[\"Score: Decision-Making\"] }}/5\n\u2022 Structure & Thinking: {{ $json.fields[\"Score: Structure & Thinking\"] }}/5\n\n*Strengths:*\n{{ $json.fields.Strengths }}\n\n*Red Flags:*\n{{ $json.fields[\"Red Flags\"] }}\n\n*Overall:*\n{{ $json.fields[\"Overall Explanation\"] }}\n\n:point_right: This candidate needs manual review. Please make the call.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "f6a7b8c9-d0e1-2345-f012-456789012345",
+      "name": "BORDERLINE - Notify Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        1104
+      ],
+      "webhookId": "e992e30f-61eb-4800-9738-f12e49540ce1",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.fields[\"Email Address\"] }}",
+        "subject": "Your EVA Assessment \u2014 Scale Virtually",
+        "message": "=<p>Dear {{ $json.fields[\"Full Name\"] }},</p>\n\n<p>Thank you for taking the time to complete the assessment for the Bilingual Executive Assistant / Executive Operations Partner role at Scale Virtually.</p>\n\n<p>After carefully reviewing your submission, we have decided to move forward with other candidates whose qualifications more closely match our current needs.</p>\n\n<p>We appreciate the effort you put into the assessment and your interest in joining our team. We wish you the very best in your job search.</p>\n\n<p>Warm regards,<br>\nThe Scale Virtually Team</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a7b8c9d0-e1f2-3456-0123-567890123456",
+      "name": "FAIL - Rejection Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        192,
+        1328
+      ],
+      "webhookId": "123d9497-e2ed-4fcd-9d14-7e7eb1bb25aa",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst raw = item.formattedSubmission;\n\n// Part 1 \u2014 Priority Ranking\nconst priorities = [];\nconst priorityRegex = /(\\d):\\s*<b>(Email \\d+)<\\/b><br><b>Subject:<\\/b>\\s*(.*?)<br><b>Message:<\\/b>\\s*\"([^\"]+)\"/g;\n\nlet m;\nwhile ((m = priorityRegex.exec(raw)) !== null) {\n  priorities.push({\n    rank: parseInt(m[1]),\n    email: m[2].trim(),\n    subject: m[3].trim(),\n    message: m[4].trim()\n  });\n}\n\n// Part 1 \u2014 Action Classification\nconst actionMap = {};\nconst immediateBlock = raw.match(/Immediate Action Items:\\n([\\s\\S]*?)(?=\\nCan Wait:|$)/)?.[1] || '';\nimmediateBlock.match(/\u2022\\s*(.+)/g)?.forEach(l => {\n  const label = l.replace('\u2022', '').trim();\n  actionMap[label] = 'Immediate action';\n});\n\nconst waitBlock = raw.match(/Can Wait:\\n([\\s\\S]*?)(?=\\nDelegate:|$)/)?.[1] || '';\nwaitBlock.match(/\u2022\\s*(.+)/g)?.forEach(l => {\n  const label = l.replace('\u2022', '').trim();\n  actionMap[label] = 'Can wait';\n});\n\nconst delegateBlock = raw.match(/Delegate:\\n([\\s\\S]*?)(?=\\nDraft Reply|$)/)?.[1] || '';\ndelegateBlock.match(/\u2022\\s*(.+)/g)?.forEach(l => {\n  const label = l.replace('\u2022', '').trim();\n  actionMap[label] = 'Delegate';\n});\n\n// Part 1 \u2014 Draft Replies\nconst draftReply1 = raw.match(/Draft Reply \u2014 Highest Priority:\\n([\\s\\S]*?)(?=\\nDraft Reply \u2014 Second Priority:|$)/)?.[1]?.trim() || '';\nconst draftReply2 = raw.match(/Draft Reply \u2014 Second Priority:\\n([\\s\\S]*?)(?=\\nPART 2|$)/)?.[1]?.trim() || '';\n\n// Part 2 \u2014 Calendar (Updated to String)\nconst schedule = raw.match(/Revised Schedule:\\n([\\s\\S]*?)(?=\\nReasoning:|$)/)?.[1]?.trim() || '';\nconst reasoning = raw.match(/Reasoning:\\n([\\s\\S]*?)(?=\\nPART 3|$)/)?.[1]?.trim() || '';\n\n// Part 3 \u2014 Project Breakdown\nconst projectPlan = raw.match(/Plan \\/ Key Steps:\\n([\\s\\S]*?)$/)?.[1]?.trim() || '';\n\nreturn [{\n  json: {\n    outputType: \"EVA\", \n    candidateName: item.candidateName,\n    candidateEmail: item.candidateEmail,\n    submissionDate: item.submissionDate,\n    videoLink: item.videoLink,\n    part1: {\n      priorityRanking: priorities,\n      actionClassification: actionMap,\n      draftReply1,\n      draftReply2\n    },\n    part2: {\n      schedule: schedule, // Now returns the full string\n      reasoning\n    },\n    part3: {\n      projectPlan\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        80
+      ],
+      "id": "0da67393-1afa-4857-9d5f-0eb80b70c5ed",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwXAzQeqjYI1HHK",
+          "mode": "list",
+          "cachedResultName": "EVA Assessment",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwXAzQeqjYI1HHK"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email Address": "={{ $json.candidateEmail }}",
+            "1st Priority": "={{ $json.part1.priorityRanking[0].subject }}",
+            "2nd Priority": "={{ $json.part1.priorityRanking[1].subject }}",
+            "3rd Priority": "={{ $json.part1.priorityRanking[2].subject }}",
+            "4th Priority": "={{ $json.part1.priorityRanking[3].subject }}",
+            "5th Priority": "={{ $json.part1.priorityRanking[4].subject }}",
+            "URGENT: Client unhappy about missed deadline": "={{ $json.part1.actionClassification[\"Email 1 \u2014 URGENT: Client unhappy about missed deadline\"] }}",
+            "Podcast Invitation": "={{ $json.part1.actionClassification[\"Email 2 \u2014 Podcast Invitation\"] }}",
+            "Team Internal: Project Delay": "={{ $json.part1.actionClassification[\"Email 3 \u2014 Team Internal: Project Delay\"] }}",
+            "Invoice Approval": "={{ $json.part1.actionClassification[\"Email 4 \u2014 Invoice Approval\"] }}",
+            "Calendar Conflict Tomorrow": "={{ $json.part1.actionClassification[\"Email 5 \u2014 Calendar Conflict Tomorrow\"] }}",
+            "Draft 1 Reply": "={{ $json.part1.draftReply1 }}",
+            "Draft 2 Reply": "={{ $json.part1.draftReply2 }}",
+            "Schedule": "={{ $json.part2.schedule }}",
+            "Reasoning": "={{ $json.part2.reasoning }}",
+            "Project Planning": "={{ $json.part3.projectPlan }}",
+            "JD": "EVA",
+            "Applicants": "={{ [$json.id] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Assessment ID",
+              "displayName": "Assessment ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Applicants",
+              "displayName": "Applicants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "JD",
+              "displayName": "JD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "EVA",
+                  "value": "EVA"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Bilingual Assessment?",
+              "displayName": "Bilingual Assessment?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "1st Priority",
+              "displayName": "1st Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "2nd Priority",
+              "displayName": "2nd Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "3rd Priority",
+              "displayName": "3rd Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "4th Priority",
+              "displayName": "4th Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "5th Priority",
+              "displayName": "5th Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "URGENT: Client unhappy about missed deadline",
+              "displayName": "URGENT: Client unhappy about missed deadline",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Podcast Invitation",
+              "displayName": "Podcast Invitation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Team Internal: Project Delay",
+              "displayName": "Team Internal: Project Delay",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Invoice Approval",
+              "displayName": "Invoice Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Calendar Conflict Tomorrow",
+              "displayName": "Calendar Conflict Tomorrow",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Draft 1 Reply",
+              "displayName": "Draft 1 Reply",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Draft 2 Reply",
+              "displayName": "Draft 2 Reply",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Schedule",
+              "displayName": "Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Reasoning",
+              "displayName": "Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Project Planning",
+              "displayName": "Project Planning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Score: Prioritization",
+              "displayName": "Score: Prioritization",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Score: Communication",
+              "displayName": "Score: Communication",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Score: Decision-Making",
+              "displayName": "Score: Decision-Making",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Score: Structure & Thinking",
+              "displayName": "Score: Structure & Thinking",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Prioritization Reasoning",
+              "displayName": "Prioritization Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Communication Reasoning",
+              "displayName": "Communication Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Decision Reasoning",
+              "displayName": "Decision Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Structure Reasoning",
+              "displayName": "Structure Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Red Flags",
+              "displayName": "Red Flags",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Final Recommendation",
+              "displayName": "Final Recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "FAIL",
+                  "value": "FAIL"
+                },
+                {
+                  "name": "PASS",
+                  "value": "PASS"
+                },
+                {
+                  "name": "BORDERLINE",
+                  "value": "BORDERLINE"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Overall Explanation",
+              "displayName": "Overall Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Full Evaluation",
+              "displayName": "Full Evaluation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Date Submitted",
+              "displayName": "Date Submitted",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Score: Language",
+              "displayName": "Score: Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Bilingual Reasoning",
+              "displayName": "Bilingual Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "74a03e5e-9a97-4668-a4d6-177fde3e7261",
+      "name": "Insert answers",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        80
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "U3gBjpF0dhVqmzWx",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2016,
+        352
+      ],
+      "id": "bac9caa8-fd3a-48bd-acdf-311f7500b1c2",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblJwxFxdathsKcvy",
+          "mode": "list",
+          "cachedResultName": "Applicants",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblJwxFxdathsKcvy"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.candidateName }}",
+            "Email": "={{ $json.candidateEmail }}",
+            "Intro Video": "={{ $json.videoLink }}",
+            "JD": "={{ $json.outputType }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Intro Video",
+              "displayName": "Intro Video",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "JD",
+              "displayName": "JD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "EVA",
+                  "value": "EVA"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assessment",
+              "displayName": "Assessment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "PASS",
+                  "value": "PASS"
+                },
+                {
+                  "name": "FAIL",
+                  "value": "FAIL"
+                },
+                {
+                  "name": "BORDERLINE",
+                  "value": "BORDERLINE"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Overall Assessment",
+              "displayName": "Overall Assessment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "EVA Assessment",
+              "displayName": "EVA Assessment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Date Submitted",
+              "displayName": "Date Submitted",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1088,
+        32
+      ],
+      "id": "302571e4-5ed8-4779-8468-37e90e7522f5",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1376,
+        80
+      ],
+      "id": "b0888fa1-d867-4c94-a173-2e4e45f70e65",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwXAzQeqjYI1HHK",
+          "mode": "list",
+          "cachedResultName": "EVA Assessment",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwXAzQeqjYI1HHK"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email Address": "={{ $json.candidateEmail }}",
+            "Prioritization Reasoning": "={{ $json.prioritizationReasoning }}",
+            "Communication Reasoning": "={{ $json.communicationReasoning }}",
+            "Decision Reasoning": "={{ $json.decisionReasoning }}",
+            "Structure Reasoning": "={{ $json.structureReasoning }}",
+            "Strengths": "={{ $json.strengths }}",
+            "Red Flags": "={{ $json.redFlags }}",
+            "Final Recommendation": "={{ $json.finalRecommendation }}",
+            "Overall Explanation": "={{ $json.overallExplanation }}",
+            "Full Evaluation": "={{ $json.fullEvaluation }}",
+            "Structure & Thinking": "={{ $json.structureScore }}",
+            "Decision-Making": "={{ $json.decisionMakingScore }}",
+            "Communication": "={{ $json.communicationScore }}",
+            "Prioritization": "={{ $json.prioritizationScore }}"
+          },
+          "matchingColumns": [
+            "Email Address"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Assessment ID",
+              "displayName": "Assessment ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Applicants",
+              "displayName": "Applicants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "JD",
+              "displayName": "JD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "EVA",
+                  "value": "EVA"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Bilingual Assessment?",
+              "displayName": "Bilingual Assessment?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "1st Priority",
+              "displayName": "1st Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "2nd Priority",
+              "displayName": "2nd Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "3rd Priority",
+              "displayName": "3rd Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "4th Priority",
+              "displayName": "4th Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "5th Priority",
+              "displayName": "5th Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "URGENT: Client unhappy about missed deadline",
+                  "value": "URGENT: Client unhappy about missed deadline"
+                },
+                {
+                  "name": "Podcast Invitation",
+                  "value": "Podcast Invitation"
+                },
+                {
+                  "name": "Team Internal - Project Delay",
+                  "value": "Team Internal - Project Delay"
+                },
+                {
+                  "name": "Invoice Approval",
+                  "value": "Invoice Approval"
+                },
+                {
+                  "name": "Calendar Conflict Tomorrow",
+                  "value": "Calendar Conflict Tomorrow"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "URGENT: Client unhappy about missed deadline",
+              "displayName": "URGENT: Client unhappy about missed deadline",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Podcast Invitation",
+              "displayName": "Podcast Invitation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Team Internal: Project Delay",
+              "displayName": "Team Internal: Project Delay",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Invoice Approval",
+              "displayName": "Invoice Approval",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Calendar Conflict Tomorrow",
+              "displayName": "Calendar Conflict Tomorrow",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate action",
+                  "value": "Immediate action"
+                },
+                {
+                  "name": "Can wait",
+                  "value": "Can wait"
+                },
+                {
+                  "name": "Delegate",
+                  "value": "Delegate"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Draft 1 Reply",
+              "displayName": "Draft 1 Reply",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Draft 2 Reply",
+              "displayName": "Draft 2 Reply",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Schedule",
+              "displayName": "Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Reasoning",
+              "displayName": "Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Project Planning",
+              "displayName": "Project Planning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Prioritization",
+              "displayName": "Prioritization",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Communication",
+              "displayName": "Communication",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Decision-Making",
+              "displayName": "Decision-Making",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Structure & Thinking",
+              "displayName": "Structure & Thinking",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Prioritization Reasoning",
+              "displayName": "Prioritization Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Communication Reasoning",
+              "displayName": "Communication Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Decision Reasoning",
+              "displayName": "Decision Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Structure Reasoning",
+              "displayName": "Structure Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Strengths",
+              "displayName": "Strengths",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Red Flags",
+              "displayName": "Red Flags",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Final Recommendation",
+              "displayName": "Final Recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "FAIL",
+                  "value": "FAIL"
+                },
+                {
+                  "name": "PASS",
+                  "value": "PASS"
+                },
+                {
+                  "name": "BORDERLINE",
+                  "value": "BORDERLINE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Overall Explanation",
+              "displayName": "Overall Explanation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Full Evaluation",
+              "displayName": "Full Evaluation",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Date Submitted",
+              "displayName": "Date Submitted",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Score: Language",
+              "displayName": "Score: Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Bilingual Reasoning",
+              "displayName": "Bilingual Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Upsert results to EVA table",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2240,
+        464
+      ],
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "U3gBjpF0dhVqmzWx",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblJwxFxdathsKcvy",
+          "mode": "list",
+          "cachedResultName": "Applicants",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblJwxFxdathsKcvy"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Create a record').item.json.id }}",
+            "Assessment": "={{ $json.finalRecommendation }}",
+            "Overall Assessment": "={{ $json.overallExplanation }}",
+            "Paper Screening Assessment": "={{ $json.content[0].text }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Intro Video",
+              "displayName": "Intro Video",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "JD",
+              "displayName": "JD",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "EVA",
+                  "value": "EVA"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Assessment",
+              "displayName": "Assessment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "PASS",
+                  "value": "PASS"
+                },
+                {
+                  "name": "FAIL",
+                  "value": "FAIL"
+                },
+                {
+                  "name": "BORDERLINE",
+                  "value": "BORDERLINE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Overall Assessment",
+              "displayName": "Overall Assessment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "EVA Assessment",
+              "displayName": "EVA Assessment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Date Submitted",
+              "displayName": "Date Submitted",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Paper Screening Assessment",
+              "displayName": "Paper Screening Assessment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2240,
+        272
+      ],
+      "id": "8d72f82b-d4c6-4574-95fd-0ff21568f87e",
+      "name": "Upsert results to applicant table",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "https://docs.google.com/document/d/1JDs6zszF4TOKzmfTY3fWPV69OWQ8AwB-Okcnrm9o6tM/edit?usp=drive_link",
+          "mode": "url"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        864,
+        880
+      ],
+      "id": "a3c2d0e4-282f-49d5-8368-f402d1151bd7",
+      "name": "Download JD",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "9wpDpw0NBs9mMho8",
+          "name": "PJ Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.content.answers[\"29\"].answer[0] }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "APIKEY",
+              "value": "d1b944f4ab286c011d5edcf54f22fe0e"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        640,
+        848
+      ],
+      "id": "64863608-07c5-41d3-af76-6574c7b92e2d",
+      "name": "Download Resume"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        688
+      ],
+      "id": "3574ea60-a488-49a9-a978-37565dbb48b7",
+      "name": "Extract Resume"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "jd_data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        880
+      ],
+      "id": "4c7ee381-1e9c-47fa-a2ad-73db3cff70fe",
+      "name": "Extract JD"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1376,
+        672
+      ],
+      "id": "fdcc5429-4a0e-4815-8f47-cad2e1f78586",
+      "name": "Merge Resume, JD, Form Answers"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "claude-haiku-4-5-20251001"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=MODE: {{\"V1\"}}\n\nJOB DESCRIPTION:\n{{ $json.jd_data }}\n\nCANDIDATE RESUME:\n{{ $json.text }}\n\nASSESSMENT TEST SUBMISSION:\n{{ $json.formattedSubmission }}"
+            }
+          ]
+        },
+        "options": {
+          "system": "You are an expert Talent Acquisition partner screening candidates for high-performance roles.\n\nYour job is to evaluate a candidate against the provided Job Description (JD) and Resume and produce a structured assessment.\n\n---\n\nMODE (REQUIRED \u2013 SELECT FIRST):\nType one of the following at the very top before anything else:\nMODE: V1\u00a0 (Concise, for daily screening)\nMODE: V2\u00a0 (Detailed, for coaching and calibration)\n\n---\n\nINPUT REQUIREMENTS (STRICT):\n\nYou MUST have BOTH files uploaded:\n\n\nJob Description (JD)\nCandidate Resume\n\n\nIf either file is missing, DO NOT proceed.\nRespond with: \u201cMissing required file(s): please upload both JD and Resume.\u201d\n\nDo NOT rely on pasted summaries. Use the uploaded files as the source of truth.\n\nBefore evaluating, confirm:\n\n\nCandidate name\nRole being applied for (from JD)\n\n\n---\n\nEVALUATION RULES:\n\n\nDo NOT summarize the resume.\nEvaluate strictly against the JD requirements.\nBe decisive. No hedging language.\nClassify the candidate into ONLY ONE category: A, B, or C.\n\n\nA = Executive Extension (ready or near-ready)\nB = High-Potential Operator (strong but not executive-level yet)\nC = Not a fit\n\nBe strict. A should be rare.\n\n---\n\nCONSISTENCY LOCK:\nIf the same JD and resume are used again, classification and rating must remain consistent.\n\n---\n\nOUTPUT FORMAT RULE (CRITICAL):\n\n\nOutput must be clean, plain text\nNo hashtags\nNo markdown\nNo bold, italics, or special symbols\nNo extra spacing\nNo duplicated sections\nMust be immediately copy-paste ready for ATS or Google Sheets\n\n\n---\n\nIF MODE = V1\n\nProvide:\n\nCandidate Name\nRole Applied For\n\n---\n\nClassification\n(A / B / C)\nConfidence: High / Medium / Low\nStar Rating (Workable Alignment): X / 5\n\nSTAR RATING RULES (STRICT):\n5 stars = Strong A (clear executive extension, rare)\n4 stars = Borderline A or very strong B+\n3 stars = Solid B\n2 stars = Weak B or borderline C\n1 star = Clear C\nUse whole numbers only. No decimals. Do not inflate ratings.\n\n---\n\nScorecard (Qualitative)\nCEO Support: High / Medium / Low\nIndependence: High / Medium / Low\nOperations / Execution: High / Medium / Low\nCommunication: High / Medium / Low\nSystems / Tools: High / Medium / Low\nStrategic Thinking: High / Medium / Low\n\n---\n\nKey Strengths\n3 to 5 bullet points\n\n---\n\nKey Risks\n3 to 5 bullet points\n\n---\n\nValidation Interview Questions\n\nFor each question include:\nQuestion:\nWhat this tests:\nRecruiter note:\n\nQuestions must be directly tied to identified risks. No generic questions.\n\n---\n\nFinal Talent Decision\n\nAssign ONE of the following:\n\n[ROLE] A\n[ROLE] B\nREASSIGN\nFAIL\n\nDecision Rules:\n\n\nAlways evaluate against the applied role first\nDo NOT change classification based on other roles\nUse REASSIGN only if there is clear evidence of strength in another role\nDo NOT overuse REASSIGN\nUse FAIL if candidate lacks both role fit and transferable strength\n\n\nOutput Format:\n\nFinal Talent Decision: [Insert one]\n\nIf REASSIGN:\nSuggested Role: [Specify role]\n\nIf FAIL:\nReason: [Short explanation]\n\n---\n\nIF MODE = V2\n\nProvide everything in V1 PLUS:\n\nRationale for Classification\n\nNon-Negotiables Assessment\nStrong match / Partial / Weak\n\nCore Responsibility Mapping\nStrong / Moderate / Weak\n\nExpanded Risk Analysis\n\nInterview Guidance (Expanded)\nWhat strong answers look like\nWhat weak answers look like\n\n---\n\nFINAL INSTRUCTION:\n\nBe strict with A classification. Only assign A if the candidate shows clear evidence of operating as an executive extension with autonomy, decision-making, and ability to handle complexity.\n\nDo not inflate ratings. Follow the star system exactly",
+          "maxTokens": 10000,
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        1664,
+        688
+      ],
+      "id": "d63b3ec9-aefd-4ade-b982-66f1845b42fd",
+      "name": "Paper-screening Assessment",
+      "credentials": {
+        "anthropicApi": {
+          "id": "jqxa1bqtsQ7TcGV8",
+          "name": "SV Chatbot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.jotform.com/submission/{{ $json.submissionID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "APIKEY",
+              "value": "d1b944f4ab286c011d5edcf54f22fe0e"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        416,
+        848
+      ],
+      "id": "7369d09b-4d36-46a2-af6c-66889349ed88",
+      "name": "Fetch Submission Data"
+    }
+  ],
+  "connections": {
+    "Jotform Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Submission",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Submission Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Submission": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Resume, JD, Form Answers",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Portkey - EVA Assessment": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Route by Result": {
+      "main": [
+        [],
+        [],
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Insert answers": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Upsert results to EVA table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upsert results to applicant table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Insert answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert results to EVA table": {
+      "main": [
+        [
+          {
+            "node": "Route by Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download JD": {
+      "main": [
+        [
+          {
+            "node": "Extract JD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Resume": {
+      "main": [
+        [
+          {
+            "node": "Extract Resume",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download JD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Resume": {
+      "main": [
+        [
+          {
+            "node": "Merge Resume, JD, Form Answers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract JD": {
+      "main": [
+        [
+          {
+            "node": "Merge Resume, JD, Form Answers",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Resume, JD, Form Answers": {
+      "main": [
+        [
+          {
+            "node": "Paper-screening Assessment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paper-screening Assessment": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Fetch Submission Data": {
+      "main": [
+        [
+          {
+            "node": "Download Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Jotform Trigger": {}
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Jotform Trigger": [
+      {
+        "json": {
+          "action": "",
+          "webhookURL": "https://svsolutionarchitects.app.n8n.cloud/webhook/0d077206-c6ef-4ea1-b5f3-ead0dce5b559/webhook",
+          "username": "master_admin",
+          "formID": "260894361860060",
+          "type": "WEB",
+          "customParams": "",
+          "product": "",
+          "formTitle": "EVA Assessment Form",
+          "customTitle": "",
+          "submissionID": "6508052171128439160",
+          "event": "",
+          "documentID": "",
+          "teamID": "",
+          "subject": "",
+          "isSilent": "",
+          "customBody": "",
+          "rawRequest": {
+            "Name": {
+              "first": "Odessa Mae",
+              "last": "Branzuela"
+            },
+            "Email": "virtuallydess@gmail.com",
+            "Short Intro Video link": "https://drive.google.com/file/d/1c-AyIsvuY97daam2F_QDH_T_ywpNr8kP/view?usp=sharing",
+            "Prioritize the emails from most urgent to least urgent. Use the scale from 1 (most priority) to 5 (least priority)": "1: &lt;b&gt;Email 4&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Invoice Approval&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"Please approve the attached invoice so we can process payment today.\"\r\n2: &lt;b&gt;Email 1&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; URGENT: Client unhappy about missed deadline&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"We were expecting delivery yesterday and have not received anything. This is unacceptable. Please advise immediately.\"\r\n3: &lt;b&gt;Email 5&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Calendar Conflict Tomorrow&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"You have two overlapping meetings tomorrow at 10 AM.\"\r\n4: &lt;b&gt;Email 3&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Team Internal - Project Delay&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"We're behind on Project X due to missing inputs from the client. Need direction.\"\r\n5: &lt;b&gt;Email 2&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Podcast Invitation&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"Hi! We'd love to invite your CEO to be a guest on our podcast next month. Let us know availability.\"",
+            "Identify what needs immediate action, what can wait, and what should be delegated": {
+              "0": [
+                "Needs Immediate Action"
+              ],
+              "1": {
+                "2": "Should be Delegated"
+              },
+              "2": {
+                "1": "Can Wait"
+              },
+              "3": [
+                "Needs Immediate Action"
+              ],
+              "4": {
+                "1": "Can Wait"
+              },
+              "colIds": "[\"0\",\"1\",\"2\"]",
+              "rowIds": "[\"0\",\"1\",\"2\",\"3\",\"5\"]"
+            },
+            "Draft a response for your first email priority here.": "Hi [Name],\r\n\r\nI just reviewed the invoice, and it\u2019s approved on my end. Please go ahead and process the payment today.\r\n\r\nLet me know once it\u2019s been completed or if you need anything else from me to move this forward. Thanks!\r\n\r\nBest, \r\nOdessa",
+            "Draft a response for your second email priority here.": "Hi [Client Name],\r\n\r\nI sincerely apologize for the delay. I understand this is frustrating and unacceptable, and I will do my best to resolve it as quickly as possible.\r\n\r\nI\u2019m checking with the team right now to confirm the status and will provide you with an update within an hour.\r\n\r\nThank you for your patience. I\u2019ll make sure you have a clear plan and delivery timeline shortly.\r\n\r\nBest regards,\r\nOdessa",
+            "Reorganize the schedule. ": "I would prioritize the schedule by urgency & impact:\r\n1. Client escalation \u2192 urgent & high-impact \u2192 must happen first\r\n2. Team meeting \u2192 important but can be moved slightly if needed\r\n3. Personal appointment \u2192 fixed if it\u2019s personal/medical \u2192 slot it in next available window\r\n4. Deep work block \u2192 flexible, can be rescheduled around high-priority items\r\n\r\nI\u2019ll assume the 3-hour window is 9:00 AM \u2013 12:00 PM for example purposes.\r\n9:00 \u2013 9:45 AM: Client escalation\r\n9:45 \u2013 10:30 AM: Team meeting\r\n10:30 \u2013 11:00 AM: Personal appointment\r\n11:00 \u2013 12:00 PM: Deep work block",
+            "Explain your reasoning": "Client escalation is the top priority \u2013 It\u2019s urgent and high-impact; responding quickly preserves the client relationship and prevents escalation from worsening.\r\nTeam meeting is important but flexible \u2013 Necessary for alignment, but can be slightly shortened or moved after the client issue without major consequences.\r\nPersonal appointment is fixed \u2013 Cannot be shifted; scheduling it in the middle avoids conflicts with urgent work while respecting personal time.\r\nDeep work block is flexible and requires focus \u2013 Placing it last ensures uninterrupted time after handling urgent and fixed commitments, maximizing productivity.",
+            "Create a simple plan to execute this launch": "We can launch the referral program in 2 weeks by first defining goals, rewards, and eligibility, then building messaging, graphics, and tracking, followed by internal testing and approvals. Key decisions include reward type, limits, channels, and tracking method. Main risks are approval delays, tracking issues, or low engagement. Launch can go live in week two with monitoring and adjustments as needed.\r\n\r\nSample: \r\n2-Week Referral Program Launch\r\n\r\nPlan & Decide (Days 1\u20132)\r\n- Set goals, rewards, eligibility \r\n- Decide channels & tracking method\r\n\r\nBuild & Test (Days 3\u201310)\r\n- Create messaging, graphics, landing page\r\n- Test process internally & get approvals\r\n\r\nLaunch & Monitor (Days 11\u201314)\r\n- Go live with email/social push \r\n- Track referrals, fulfill rewards, adjust if needed "
+          },
+          "fromTable": "",
+          "appID": "",
+          "pretty": "Name:Odessa Mae Branzuela, Email:virtuallydess@gmail.com, Short Intro Video link:https://drive.google.com/file/d/1c-AyIsvuY97daam2F_QDH_T_ywpNr8kP/view?usp=sharing, Prioritize the emails from most urgent to least urgent. Use the scale from 1 (most priority) to 5 (least priority):1: &lt;b&gt;Email 4&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Invoice Approval&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"Please approve the attached invoice so we can process payment today.\"\r\n2: &lt;b&gt;Email 1&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; URGENT: Client unhappy about missed deadline&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"We were expecting delivery yesterday and have not received anything. This is unacceptable. Please advise immediately.\"\r\n3: &lt;b&gt;Email 5&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Calendar Conflict Tomorrow&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"You have two overlapping meetings tomorrow at 10 AM.\"\r\n4: &lt;b&gt;Email 3&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Team Internal - Project Delay&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"We're behind on Project X due to missing inputs from the client. Need direction.\"\r\n5: &lt;b&gt;Email 2&lt;/b&gt;&lt;br&gt;&lt;b&gt;Subject:&lt;/b&gt; Podcast Invitation&lt;br&gt;&lt;b&gt;Message:&lt;/b&gt; \"Hi! We'd love to invite your CEO to be a guest on our podcast next month. Let us know availability.\", Identify what needs immediate action, what can wait, and what should be delegated:Array Array Array Array Array [\"0\",\"1\",\"2\"] [\"0\",\"1\",\"2\",\"3\",\"5\"], Draft a response for your #1 highest priority email here.:Hi [Name],\r\n\r\nI just reviewed the invoice, and it\u2019s approved on my end. Please go ahead and process the payment today.\r\n\r\nLet me know once it\u2019s been completed or if you need anything else from me to move this forward. Thanks!\r\n\r\nBest, \r\nOdessa, Draft a response for your #2 highest priority email here.:Hi [Client Name],\r\n\r\nI sincerely apologize for the delay. I understand this is frustrating and unacceptable, and I will do my best to resolve it as quickly as possible.\r\n\r\nI\u2019m checking with the team right now to confirm the status and will provide you with an update within an hour.\r\n\r\nThank you for your patience. I\u2019ll make sure you have a clear plan and delivery timeline shortly.\r\n\r\nBest regards,\r\nOdessa, Reorganize the schedule. :I would prioritize the schedule by urgency & impact:\r\n1. Client escalation \u2192 urgent & high-impact \u2192 must happen first\r\n2. Team meeting \u2192 important but can be moved slightly if needed\r\n3. Personal appointment \u2192 fixed if it\u2019s personal/medical \u2192 slot it in next available window\r\n4. Deep work block \u2192 flexible, can be rescheduled around high-priority items\r\n\r\nI\u2019ll assume the 3-hour window is 9:00 AM \u2013 12:00 PM for example purposes.\r\n9:00 \u2013 9:45 AM: Client escalation\r\n9:45 \u2013 10:30 AM: Team meeting\r\n10:30 \u2013 11:00 AM: Personal appointment\r\n11:00 \u2013 12:00 PM: Deep work block, Explain your reasoning:Client escalation is the top priority \u2013 It\u2019s urgent and high-impact; responding quickly preserves the client relationship and prevents escalation from worsening.\r\nTeam meeting is important but flexible \u2013 Necessary for alignment, but can be slightly shortened or moved after the client issue without major consequences.\r\nPersonal appointment is fixed \u2013 Cannot be shifted; scheduling it in the middle avoids conflicts with urgent work while respecting personal time.\r\nDeep work block is flexible and requires focus \u2013 Placing it last ensures uninterrupted time after handling urgent and fixed commitments, maximizing productivity., Create a simple plan to execute this launch:We can launch the referral program in 2 weeks by first defining goals, rewards, and eligibility, then building messaging, graphics, and tracking, followed by internal testing and approvals. Key decisions include reward type, limits, channels, and tracking method. Main risks are approval delays, tracking issues, or low engagement. Launch can go live in week two with monitoring and adjustments as needed.\r\n\r\nSample: \r\n2-Week Referral Program Launch\r\n\r\nPlan & Decide (Days 1\u20132)\r\n- Set goals, rewards, eligibility \r\n- Decide channels & tracking method\r\n\r\nBuild & Test (Days 3\u201310)\r\n- Create messaging, graphics, landing page\r\n- Test process internally & get approvals\r\n\r\nLaunch & Monitor (Days 11\u201314)\r\n- Go live with email/social push \r\n- Track referrals, fulfill rewards, adjust if needed , Resume:Odessa Mae Branzuela Resume.pdf",
+          "unread": "",
+          "parent": "",
+          "ip": "112.208.67.211"
+        }
+      }
+    ]
+  },
+  "versionId": "fb9bf60e-44c6-4b43-bc58-2049b7199be7",
+  "activeVersionId": null,
+  "versionCounter": 222,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-03-30T21:43:22.872Z",
+      "createdAt": "2026-03-30T21:43:22.872Z",
+      "role": "workflow:owner",
+      "workflowId": "9ipbPBk4vdrxZG44",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

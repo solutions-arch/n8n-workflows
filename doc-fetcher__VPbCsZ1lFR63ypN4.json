@@ -1,0 +1,460 @@
+{
+  "updatedAt": "2026-04-29T18:02:56.828Z",
+  "createdAt": "2026-04-20T17:43:43.223Z",
+  "id": "VPbCsZ1lFR63ypN4",
+  "name": "Doc Fetcher",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -32
+      ],
+      "id": "78b5215a-2d39-461c-a1b3-878647c34fe5",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "content": "https://api.clickup.com/api/v3/workspaces/{{your_workspace_id}}/docs/{{your_doc_id}}"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        -256
+      ],
+      "typeVersion": 1,
+      "id": "30bf43e8-71b9-4406-bb98-29870c929f62",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "docs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -32
+      ],
+      "id": "e8e8f232-a169-46de-b843-c2b46745d30d",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "url": "https://api.clickup.com/api/v3/workspaces/9014746495/docs?limit=100",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        -32
+      ],
+      "id": "9e2ff94b-05d5-4bcd-9e85-9eef0c7dc223",
+      "name": "Fetch All Docs"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d7522ea9-e81c-49f0-89ae-7c8f6de00ada",
+              "leftValue": "={{ $json.name.toLowerCase() }}",
+              "rightValue": "getting started",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            },
+            {
+              "id": "e185e1f0-810a-44a6-a7bc-6ec40f27ccff",
+              "leftValue": "={{ $json.name.toLowerCase() }}",
+              "rightValue": "wiki",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            },
+            {
+              "id": "ceaa0735-b871-4bfc-834d-3b4fd0d13121",
+              "leftValue": "={{ $json.name.toLowerCase() }}",
+              "rightValue": "template",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -32
+      ],
+      "id": "5192c37b-ca4d-47bd-a156-4e734d36a18e",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v3/workspaces/9014746495/docs/{{ $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        896,
+        -32
+      ],
+      "id": "1effa237-90f1-4b85-9c55-59a9ebe62443",
+      "name": "Fetch All Relevant Docs",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// This script maps the page content and pulls the parent Doc ID \n// from the node that originally fetched the Docs.\n\nreturn {\n  filename: `${$json.name ?? 'untitled'}.md`,\n  content: $json.content ?? '',\n  // Use paired item linking to grab the ID from the parent HTTP node\n  doc_id: $('Fetch All Relevant Docs').item.json.id \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        48
+      ],
+      "id": "3fb9be87-e29f-4a64-ab9e-297f4869ae29",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "doc_id"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2208,
+        -320
+      ],
+      "id": "0cc0b9d3-1745-452d-880a-754776b16edd",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v3/workspaces/9014746495/docs/{{ $json.id }}/pages?content_format=text%2Fmd&max_page_depth=-1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        48
+      ],
+      "id": "e8c711cc-4aa4-45f5-a4bd-91d1f7b45a9f",
+      "name": "Fetch All Pages",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0963313d-3176-4dac-aa3e-9ad87a8bad47",
+              "leftValue": "={{ $json.content }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1632,
+        48
+      ],
+      "id": "f470b13a-8517-4014-824c-0c4f271d2be2",
+      "name": "Filter Out Empty Pages"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "52e65ad7-e17c-42f6-844d-ab2535d891f8",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -32
+      ],
+      "id": "24740fc4-fc2c-4ded-bc8d-76e471ab061d",
+      "name": "Filter out Inaccessible Docs"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch All Docs": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Relevant Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch All Relevant Docs": {
+      "main": [
+        [
+          {
+            "node": "Filter out Inaccessible Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch All Pages": {
+      "main": [
+        [
+          {
+            "node": "Filter Out Empty Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Out Empty Pages": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter out Inaccessible Docs": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Pages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "44584683-ce33-4784-aa16-a8b80a5eec04",
+  "activeVersionId": null,
+  "versionCounter": 12,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-04-20T17:43:43.228Z",
+      "createdAt": "2026-04-20T17:43:43.228Z",
+      "role": "workflow:owner",
+      "workflowId": "VPbCsZ1lFR63ypN4",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T02:39:48.849Z",
+      "createdAt": "2026-04-29T02:39:48.849Z",
+      "id": "PEeL9xSBFkGsagXN",
+      "name": "Development"
+    }
+  ],
+  "activeVersion": null
+}

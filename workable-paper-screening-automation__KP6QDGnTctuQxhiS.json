@@ -1,0 +1,110 @@
+{
+  "updatedAt": "2026-04-29T18:01:53.014Z",
+  "createdAt": "2026-04-06T14:39:32.538Z",
+  "id": "KP6QDGnTctuQxhiS",
+  "name": "[Workable] Paper Screening Automation",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "triggerOn": "candidateMoved",
+        "filters": {
+          "stage": "paper-screening"
+        }
+      },
+      "type": "n8n-nodes-base.workableTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6852eff2-98d8-4b11-99d1-3e2165735b8b",
+      "name": "Workable Trigger",
+      "webhookId": "487bcd59-77cb-4491-b72f-72dc7096f870",
+      "credentials": {
+        "workableApi": {
+          "id": "mgjYO1aMyyVD1j1h",
+          "name": "Workable account"
+        }
+      }
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Workable Trigger": {}
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "84c2b985-09c3-4d0f-958c-32bd63d9c045",
+  "activeVersionId": null,
+  "versionCounter": 39,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-04-06T14:39:32.544Z",
+      "createdAt": "2026-04-06T14:39:32.544Z",
+      "role": "workflow:owner",
+      "workflowId": "KP6QDGnTctuQxhiS",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

@@ -1,0 +1,1352 @@
+{
+  "updatedAt": "2026-07-04T01:24:00.209Z",
+  "createdAt": "2026-03-27T20:31:57.474Z",
+  "id": "7UeFXR7vWpM1XZW9",
+  "name": "[Scheduled] PDEV Insights",
+  "description": "Creates the daily PDEV Slack report by collecting new PE insights, summarizing them with AI, turning them into an image, posting it to Slack, and marking the source records as already reported.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Retrieve the incoming items\nconst items = $input.all().map(item => item.json);\n\n// Helper function to safely grab a string from a field (handles Airtable arrays)\nfunction getVal(val) {\n  if (Array.isArray(val)) return val[0] || \"\";\n  return val || \"\";\n}\n\n// 1. Group the output per PDEV Requirements\nconst groupedData = items.reduce((acc, item) => {\n  const pdevReq = item[\"PDEV Requirements\"] || \"Unassigned\";\n  \n  // LOGIC: Prioritize the new 'Assigned Process Engineer Name' (Array)\n  // Fallback to legacy 'Process Engineer Name' (String) if the new one is empty\n  const primaryEngineer = getVal(item[\"Assigned Process Engineer Name\"]) || \n                          item[\"Process Engineer Name\"] || \n                          \"Unassigned\";\n\n  const insight = item[\"Dated Insights\"] || item[\"Insights\"] || \"No insight provided\";\n\n  // Initialize the group if it doesn't exist yet\n  if (!acc[pdevReq]) {\n    acc[pdevReq] = {\n      pdevRequirement: pdevReq,\n      assignedPE: primaryEngineer,\n      insights: []\n    };\n  }\n\n  // If we find the 'Assigned PE' in any record for this group, make sure it's the one we use\n  if (primaryEngineer !== \"Unassigned\" && acc[pdevReq].assignedPE === \"Unassigned\") {\n    acc[pdevReq].assignedPE = primaryEngineer;\n  }\n\n  // 2. Put the items into bullets\n  acc[pdevReq].insights.push(`- ${insight}`);\n\n  return acc;\n}, {});\n\n// 3. Put them into an LLM-ready structure\nconst llmReadyOutput = Object.values(groupedData).map(group => {\n  \n  // Create a clean Markdown block for the LLM context window\n  // We emphasize the \"Assigned PE\" so the LLM knows exactly who to credit\n  const markdownBlock = `### Requirement: ${group.pdevRequirement}\n* **Assigned PE:** ${group.assignedPE}\n* **Raw Insights for processing:**\n${group.insights.join(\"\\n\")}`;\n\n  return {\n    json: {\n      pdevRequirement: group.pdevRequirement,\n      assignedPE: group.assignedPE,\n      llmMarkdownContext: markdownBlock\n    }\n  };\n});\n\nreturn llmReadyOutput;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        752
+      ],
+      "id": "e9d6decf-90ad-49c7-9623-8e9024bfce36",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "llmMarkdownContext"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        944,
+        752
+      ],
+      "id": "f9a5a791-7d1d-41cc-844d-9edc8e20053a",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        928,
+        992
+      ],
+      "id": "60942ca8-f913-49e1-b2a5-78c2985ec41c",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "fWP2CoyeCWozkuI2",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get raw output and metadata from the Anthropic node\nconst firstItem = $input.first().json;\n\n// DYNAMIC MODEL NAME: Converts technical IDs to friendly names\nconst rawModel = firstItem.model || \"AI Model\";\nfunction getFriendlyModelName(id) {\n  if (id.includes('haiku')) return \"Haiku 4.5\";\n  if (id.includes('sonnet')) return \"Sonnet 3.5\";\n  if (id.includes('mistral')) return \"Mistral Large\";\n  if (id.includes('gpt-4o')) return \"GPT-4o\";\n  return id; \n}\nconst modelName = getFriendlyModelName(rawModel);\n\n// 2. Extract Token Usage\nlet totalTokens = 0;\nif (firstItem.usage) {\n  const input = firstItem.usage.input_tokens || 0;\n  const output = firstItem.usage.output_tokens || 0;\n  totalTokens = input + output;\n}\n\n// 3. Extract and Parse the JSON\nlet rawOutput = \"\";\nif (firstItem.content && firstItem.content.length > 0) {\n  rawOutput = firstItem.content[0].text || \"[]\";\n} else {\n  rawOutput = firstItem.text || \"[]\";\n}\n\nlet summaryData = [];\ntry {\n  const cleanedOutput = rawOutput.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n  summaryData = JSON.parse(cleanedOutput);\n} catch (error) {\n  return [{ json: { error: \"Failed to parse JSON\", rawOutput: rawOutput } }];\n}\n\n// 4. GROUPING LOGIC: Engineer -> Requirements\nconst engineerGroups = {};\n\nfor (const item of summaryData) {\n  const engName = item.engineer || \"Unassigned\";\n  const reqName = item.client || \"General Activity\";\n  \n  if (!engineerGroups[engName]) {\n    engineerGroups[engName] = {};\n  }\n  \n  if (!engineerGroups[engName][reqName]) {\n    engineerGroups[engName][reqName] = [];\n  }\n  \n  // Support multiple key names for bullet points\n  const newBullets = item.insights || item.updates || item.bullets || [];\n  engineerGroups[engName][reqName] = engineerGroups[engName][reqName].concat(newBullets);\n}\n\n// 5. Helper: Escape HTML\nfunction escapeHtml(text) {\n  return String(text || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\n// 6. Build the HTML Blocks\nlet groupedHtml = \"\";\nconst sortedEngineers = Object.keys(engineerGroups).sort();\n\nfor (const eng of sortedEngineers) {\n  let projectBlocks = \"\";\n  const projects = Object.keys(engineerGroups[eng]).sort();\n\n  for (const projName of projects) {\n    const bullets = engineerGroups[eng][projName]\n      .map(b => `<li>${escapeHtml(b)}</li>`)\n      .join(\"\");\n\n    projectBlocks += `\n      <div class=\"client-block\">\n        <div class=\"client-name\">${escapeHtml(projName)}</div>\n        <div class=\"client-insight\">\n          <ul>${bullets}</ul>\n        </div>\n      </div>\n    `;\n  }\n\n  // Each Engineer gets their own section\n  groupedHtml += `\n    <div class=\"engineer-section\">\n      <div class=\"engineer-header\">${escapeHtml(eng)}</div>\n      ${projectBlocks}\n    </div>\n  `;\n}\n\n// 7. CSS Styles (Exact match to image colors and spacing)\nconst cssStyles = `\n  <style>\n    body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }\n    .card { background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 850px; margin: 0 auto; overflow: hidden; }\n    \n    /* Main Header */\n    .header { background-color: #e67e22; padding: 30px; text-align: center; }\n    .header h1 { margin: 0; font-size: 26px; color: #fff; letter-spacing: 0.5px; }\n    .header p { margin: 8px 0 0; color: #fff; opacity: 0.9; font-size: 15px; }\n    \n    .body { padding: 30px; }\n    \n    /* Engineer Section Box */\n    .engineer-section { \n      margin-bottom: 25px; \n      padding: 20px; \n      border: 1px solid #e0e0e0; \n      border-radius: 12px; \n      background-color: #ffffff; \n    }\n    \n    /* Engineer Header */\n    .engineer-header { \n      font-size: 20px; \n      font-weight: bold; \n      color: #e67e22; \n      margin-bottom: 15px; \n      border-bottom: 1px solid #eee; \n      padding-bottom: 10px; \n    }\n    \n    /* Requirement Block with Blue Accent */\n    .client-block { \n      margin-bottom: 20px; \n      padding-left: 15px; \n      border-left: 4px solid #3498db; \n    }\n    .client-block:last-child { margin-bottom: 5px; }\n    \n    .client-name { \n      font-weight: bold; \n      font-size: 16px; \n      color: #2c3e50; \n      margin-bottom: 8px; \n    }\n    \n    .client-insight ul { margin: 0; padding-left: 20px; font-size: 14px; color: #555; line-height: 1.6; }\n    .client-insight li { margin-bottom: 6px; }\n    \n    .footer { padding: 15px; text-align: right; font-size: 10px; color: #95a5a6; border-top: 1px solid #eee; }\n  </style>\n`;\n\n// 8. Final Output\nreturn [{\n  json: {\n    html: `\n      ${cssStyles}\n      <div class=\"card\">\n        <div class=\"header\">\n          <h1>PDEV Daily Reporting</h1>\n          <p>Summary of today's activity</p>\n        </div>\n        <div class=\"body\">\n          ${groupedHtml}\n        </div>\n        <div class=\"footer\">\n          Powered by ${modelName} | Total Tokens Used: ${totalTokens.toLocaleString()}\n        </div>\n      </div>\n    `,\n    total_tokens: totalTokens\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        752
+      ],
+      "id": "64417dea-d3e0-4e77-a12c-fa9a9b26fcd8",
+      "name": "Cleaner"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "claude-haiku-4-5-20251001"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Process and summarize the following daily reporting data into the required JSON format:\n\n{{ $json.llmMarkdownContext }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "system": "Role:\nYou are an expert technical assistant and data summarizer for a Process Development (PDEV) team. Your task is to process daily activity updates, summarize them into actionable insights, and output a strict JSON structure.\n\nInstructions:\n\nSource Mapping: Use the field \"Assigned Process Engineer Name\" as the primary owner (the engineer key). Use the \"PDEV Requirement\" name as the project identifier (the client key).\n\nSummarize & Refine: Condense the raw insights into short, punchy, actionable bullet points.\n\nFocus on: Progress made, blockers resolved, or upcoming milestones.\n\nRemove: Fluff, administrative filler, timestamps (e.g., \"[Apr 01, 2026]\"), and redundant \"Fiona is...\" or \"Alex decided to...\" prefixes.\n\nDeduplicate: Merge updates that describe the same activity into a single, cohesive bullet point.\n\nAttribution: If a requirement has no \"Assigned PE\", group it under \"Unassigned\". Strictly ignore any secondary or \"shadow\" engineers mentioned in the raw data.\n\nOutput Constraints: You MUST output ONLY a valid JSON array.\n\nCRITICAL: Do NOT include any introductory text, markdown fences (```json), or trailing explanations. The response must start with [ and end with ].",
+          "maxTokens": 4096
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        752
+      ],
+      "id": "58e518fd-3175-4293-917b-00cc79447f7b",
+      "name": "Message a model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblZiB3uCUJmuKaXr",
+          "mode": "list",
+          "cachedResultName": "PE Insights",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblZiB3uCUJmuKaXr"
+        },
+        "filterByFormula": "=NOT({Reported to Daily Summary})",
+        "options": {
+          "view": {
+            "__rl": true,
+            "value": "viwhEq1YApMFwhw57",
+            "mode": "list",
+            "cachedResultName": "Slack Daily Feed",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblZiB3uCUJmuKaXr/viwhEq1YApMFwhw57"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        496,
+        848
+      ],
+      "id": "2af28aee-f3ed-4508-9abf-55155100c1f2",
+      "name": "Search records1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.html }}",
+        "css_content": "="
+      },
+      "type": "n8n-nodes-htmlcsstoimage.htmlCssToImage",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        752
+      ],
+      "id": "606dc7d6-0574-48b1-85f5-5989f7c0916b",
+      "name": "HTML/CSS to Image1",
+      "credentials": {
+        "htmlcsstoimgApi": {
+          "id": "RgVbijNCeobh79Gr",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        288,
+        848
+      ],
+      "id": "1f162844-6df4-439c-9b50-a9b16ba92998",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblZiB3uCUJmuKaXr",
+          "mode": "list",
+          "cachedResultName": "PE Insights",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblZiB3uCUJmuKaXr"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Reported to Daily Summary": true,
+            "id": "={{$json.id}}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email Category",
+              "displayName": "Email Category",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "MoM",
+                  "value": "MoM"
+                },
+                {
+                  "name": "Inquiry",
+                  "value": "Inquiry"
+                },
+                {
+                  "name": "Complaint",
+                  "value": "Complaint"
+                },
+                {
+                  "name": "Follow-up",
+                  "value": "Follow-up"
+                },
+                {
+                  "name": "Meeting Reminder",
+                  "value": "Meeting Reminder"
+                },
+                {
+                  "name": "For Approval",
+                  "value": "For Approval"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email Subject",
+              "displayName": "Email Subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email Sender",
+              "displayName": "Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Clients",
+              "displayName": "Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements Link",
+              "displayName": "PDEV Requirements Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Name (from Clients)",
+              "displayName": "Client Name (from Clients)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Insights",
+              "displayName": "Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Dated Insights",
+              "displayName": "Dated Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Process Engineer",
+              "displayName": "Process Engineer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Process Engineer Name",
+              "displayName": "Process Engineer Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements",
+              "displayName": "PDEV Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Clients Name",
+              "displayName": "Clients Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Reported to Daily Summary",
+              "displayName": "Reported to Daily Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2976,
+        1120
+      ],
+      "id": "a14e591c-563f-4e10-b76a-071715d70f1f",
+      "name": "Update record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2736,
+        1120
+      ],
+      "id": "58c15f5f-332b-47be-a5dc-6a7c52a415d1",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "content": "## Post-Reporting Record Update\nThis section ensures that all Airtable records included in the daily report are marked as processed to prevent duplicate reporting.",
+        "height": 320,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2464,
+        992
+      ],
+      "typeVersion": 1,
+      "id": "c9415f14-8975-480d-b356-2939e6d1f737",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This takes the list of projects from the Aggregate node\nconst aggregatedArray = $json.llmMarkdownContext; \n\n// It \"glues\" them together with a double newline for the AI\nreturn {\n  llmMarkdownContext: aggregatedArray.join('\\n\\n')\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        752
+      ],
+      "id": "cb64c70b-feb3-4740-951f-28183dd74569",
+      "name": "Aggregator Cleaner"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"C03MZJZU687\",\n  \"text\": \"Hi Team! Please see today's updates for the PDEV Requirements.\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Hi Team! Please see today's updates for the PDEV Requirements.\"\n      }\n    },\n    {\n      \"type\": \"image\",\n      \"image_url\": \"{{ $json.image_url }}\",\n      \"alt_text\": \"PDEV Insights Summary\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2272,
+        752
+      ],
+      "id": "a0453b86-952c-4e73-8c97-7ffc59a93c73",
+      "name": "Send Slack message"
+    }
+  ],
+  "connections": {
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Aggregator Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner": {
+      "main": [
+        [
+          {
+            "node": "HTML/CSS to Image1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML/CSS to Image1": {
+      "main": [
+        [
+          {
+            "node": "Send Slack message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Search records1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Update record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregator Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack message": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "gQZoWFB01klMg0wu",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    },
+    "node:Schedule Trigger1": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "0cd4749c-ee32-4560-975a-4f24b5567b61",
+  "activeVersionId": "0cd4749c-ee32-4560-975a-4f24b5567b61",
+  "versionCounter": 184,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-03-27T20:31:57.477Z",
+      "createdAt": "2026-03-27T20:31:57.477Z",
+      "role": "workflow:owner",
+      "workflowId": "7UeFXR7vWpM1XZW9",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    },
+    {
+      "updatedAt": "2026-04-29T22:14:43.442Z",
+      "createdAt": "2026-04-29T22:14:43.442Z",
+      "id": "syNcT4Uk2dB151Vd",
+      "name": "AI Agent"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T01:24:00.210Z",
+    "createdAt": "2026-07-04T01:24:00.210Z",
+    "versionId": "0cd4749c-ee32-4560-975a-4f24b5567b61",
+    "workflowId": "7UeFXR7vWpM1XZW9",
+    "nodes": [
+      {
+        "parameters": {
+          "jsCode": "// Retrieve the incoming items\nconst items = $input.all().map(item => item.json);\n\n// Helper function to safely grab a string from a field (handles Airtable arrays)\nfunction getVal(val) {\n  if (Array.isArray(val)) return val[0] || \"\";\n  return val || \"\";\n}\n\n// 1. Group the output per PDEV Requirements\nconst groupedData = items.reduce((acc, item) => {\n  const pdevReq = item[\"PDEV Requirements\"] || \"Unassigned\";\n  \n  // LOGIC: Prioritize the new 'Assigned Process Engineer Name' (Array)\n  // Fallback to legacy 'Process Engineer Name' (String) if the new one is empty\n  const primaryEngineer = getVal(item[\"Assigned Process Engineer Name\"]) || \n                          item[\"Process Engineer Name\"] || \n                          \"Unassigned\";\n\n  const insight = item[\"Dated Insights\"] || item[\"Insights\"] || \"No insight provided\";\n\n  // Initialize the group if it doesn't exist yet\n  if (!acc[pdevReq]) {\n    acc[pdevReq] = {\n      pdevRequirement: pdevReq,\n      assignedPE: primaryEngineer,\n      insights: []\n    };\n  }\n\n  // If we find the 'Assigned PE' in any record for this group, make sure it's the one we use\n  if (primaryEngineer !== \"Unassigned\" && acc[pdevReq].assignedPE === \"Unassigned\") {\n    acc[pdevReq].assignedPE = primaryEngineer;\n  }\n\n  // 2. Put the items into bullets\n  acc[pdevReq].insights.push(`- ${insight}`);\n\n  return acc;\n}, {});\n\n// 3. Put them into an LLM-ready structure\nconst llmReadyOutput = Object.values(groupedData).map(group => {\n  \n  // Create a clean Markdown block for the LLM context window\n  // We emphasize the \"Assigned PE\" so the LLM knows exactly who to credit\n  const markdownBlock = `### Requirement: ${group.pdevRequirement}\n* **Assigned PE:** ${group.assignedPE}\n* **Raw Insights for processing:**\n${group.insights.join(\"\\n\")}`;\n\n  return {\n    json: {\n      pdevRequirement: group.pdevRequirement,\n      assignedPE: group.assignedPE,\n      llmMarkdownContext: markdownBlock\n    }\n  };\n});\n\nreturn llmReadyOutput;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          736,
+          752
+        ],
+        "id": "e9d6decf-90ad-49c7-9623-8e9024bfce36",
+        "name": "Code in JavaScript1"
+      },
+      {
+        "parameters": {
+          "fieldsToAggregate": {
+            "fieldToAggregate": [
+              {
+                "fieldToAggregate": "llmMarkdownContext"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.aggregate",
+        "typeVersion": 1,
+        "position": [
+          944,
+          752
+        ],
+        "id": "f9a5a791-7d1d-41cc-844d-9edc8e20053a",
+        "name": "Aggregate"
+      },
+      {
+        "parameters": {
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+        "typeVersion": 1,
+        "position": [
+          928,
+          992
+        ],
+        "id": "60942ca8-f913-49e1-b2a5-78c2985ec41c",
+        "name": "Mistral Cloud Chat Model",
+        "credentials": {
+          "mistralCloudApi": {
+            "id": "fWP2CoyeCWozkuI2",
+            "name": "Mistral Cloud account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// 1. Get raw output and metadata from the Anthropic node\nconst firstItem = $input.first().json;\n\n// DYNAMIC MODEL NAME: Converts technical IDs to friendly names\nconst rawModel = firstItem.model || \"AI Model\";\nfunction getFriendlyModelName(id) {\n  if (id.includes('haiku')) return \"Haiku 4.5\";\n  if (id.includes('sonnet')) return \"Sonnet 3.5\";\n  if (id.includes('mistral')) return \"Mistral Large\";\n  if (id.includes('gpt-4o')) return \"GPT-4o\";\n  return id; \n}\nconst modelName = getFriendlyModelName(rawModel);\n\n// 2. Extract Token Usage\nlet totalTokens = 0;\nif (firstItem.usage) {\n  const input = firstItem.usage.input_tokens || 0;\n  const output = firstItem.usage.output_tokens || 0;\n  totalTokens = input + output;\n}\n\n// 3. Extract and Parse the JSON\nlet rawOutput = \"\";\nif (firstItem.content && firstItem.content.length > 0) {\n  rawOutput = firstItem.content[0].text || \"[]\";\n} else {\n  rawOutput = firstItem.text || \"[]\";\n}\n\nlet summaryData = [];\ntry {\n  const cleanedOutput = rawOutput.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n  summaryData = JSON.parse(cleanedOutput);\n} catch (error) {\n  return [{ json: { error: \"Failed to parse JSON\", rawOutput: rawOutput } }];\n}\n\n// 4. GROUPING LOGIC: Engineer -> Requirements\nconst engineerGroups = {};\n\nfor (const item of summaryData) {\n  const engName = item.engineer || \"Unassigned\";\n  const reqName = item.client || \"General Activity\";\n  \n  if (!engineerGroups[engName]) {\n    engineerGroups[engName] = {};\n  }\n  \n  if (!engineerGroups[engName][reqName]) {\n    engineerGroups[engName][reqName] = [];\n  }\n  \n  // Support multiple key names for bullet points\n  const newBullets = item.insights || item.updates || item.bullets || [];\n  engineerGroups[engName][reqName] = engineerGroups[engName][reqName].concat(newBullets);\n}\n\n// 5. Helper: Escape HTML\nfunction escapeHtml(text) {\n  return String(text || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\n// 6. Build the HTML Blocks\nlet groupedHtml = \"\";\nconst sortedEngineers = Object.keys(engineerGroups).sort();\n\nfor (const eng of sortedEngineers) {\n  let projectBlocks = \"\";\n  const projects = Object.keys(engineerGroups[eng]).sort();\n\n  for (const projName of projects) {\n    const bullets = engineerGroups[eng][projName]\n      .map(b => `<li>${escapeHtml(b)}</li>`)\n      .join(\"\");\n\n    projectBlocks += `\n      <div class=\"client-block\">\n        <div class=\"client-name\">${escapeHtml(projName)}</div>\n        <div class=\"client-insight\">\n          <ul>${bullets}</ul>\n        </div>\n      </div>\n    `;\n  }\n\n  // Each Engineer gets their own section\n  groupedHtml += `\n    <div class=\"engineer-section\">\n      <div class=\"engineer-header\">${escapeHtml(eng)}</div>\n      ${projectBlocks}\n    </div>\n  `;\n}\n\n// 7. CSS Styles (Exact match to image colors and spacing)\nconst cssStyles = `\n  <style>\n    body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }\n    .card { background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 850px; margin: 0 auto; overflow: hidden; }\n    \n    /* Main Header */\n    .header { background-color: #e67e22; padding: 30px; text-align: center; }\n    .header h1 { margin: 0; font-size: 26px; color: #fff; letter-spacing: 0.5px; }\n    .header p { margin: 8px 0 0; color: #fff; opacity: 0.9; font-size: 15px; }\n    \n    .body { padding: 30px; }\n    \n    /* Engineer Section Box */\n    .engineer-section { \n      margin-bottom: 25px; \n      padding: 20px; \n      border: 1px solid #e0e0e0; \n      border-radius: 12px; \n      background-color: #ffffff; \n    }\n    \n    /* Engineer Header */\n    .engineer-header { \n      font-size: 20px; \n      font-weight: bold; \n      color: #e67e22; \n      margin-bottom: 15px; \n      border-bottom: 1px solid #eee; \n      padding-bottom: 10px; \n    }\n    \n    /* Requirement Block with Blue Accent */\n    .client-block { \n      margin-bottom: 20px; \n      padding-left: 15px; \n      border-left: 4px solid #3498db; \n    }\n    .client-block:last-child { margin-bottom: 5px; }\n    \n    .client-name { \n      font-weight: bold; \n      font-size: 16px; \n      color: #2c3e50; \n      margin-bottom: 8px; \n    }\n    \n    .client-insight ul { margin: 0; padding-left: 20px; font-size: 14px; color: #555; line-height: 1.6; }\n    .client-insight li { margin-bottom: 6px; }\n    \n    .footer { padding: 15px; text-align: right; font-size: 10px; color: #95a5a6; border-top: 1px solid #eee; }\n  </style>\n`;\n\n// 8. Final Output\nreturn [{\n  json: {\n    html: `\n      ${cssStyles}\n      <div class=\"card\">\n        <div class=\"header\">\n          <h1>PDEV Daily Reporting</h1>\n          <p>Summary of today's activity</p>\n        </div>\n        <div class=\"body\">\n          ${groupedHtml}\n        </div>\n        <div class=\"footer\">\n          Powered by ${modelName} | Total Tokens Used: ${totalTokens.toLocaleString()}\n        </div>\n      </div>\n    `,\n    total_tokens: totalTokens\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1712,
+          752
+        ],
+        "id": "64417dea-d3e0-4e77-a12c-fa9a9b26fcd8",
+        "name": "Cleaner"
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "claude-haiku-4-5-20251001",
+            "mode": "list",
+            "cachedResultName": "claude-haiku-4-5-20251001"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "=Process and summarize the following daily reporting data into the required JSON format:\n\n{{ $json.llmMarkdownContext }}"
+              }
+            ]
+          },
+          "simplify": false,
+          "options": {
+            "system": "Role:\nYou are an expert technical assistant and data summarizer for a Process Development (PDEV) team. Your task is to process daily activity updates, summarize them into actionable insights, and output a strict JSON structure.\n\nInstructions:\n\nSource Mapping: Use the field \"Assigned Process Engineer Name\" as the primary owner (the engineer key). Use the \"PDEV Requirement\" name as the project identifier (the client key).\n\nSummarize & Refine: Condense the raw insights into short, punchy, actionable bullet points.\n\nFocus on: Progress made, blockers resolved, or upcoming milestones.\n\nRemove: Fluff, administrative filler, timestamps (e.g., \"[Apr 01, 2026]\"), and redundant \"Fiona is...\" or \"Alex decided to...\" prefixes.\n\nDeduplicate: Merge updates that describe the same activity into a single, cohesive bullet point.\n\nAttribution: If a requirement has no \"Assigned PE\", group it under \"Unassigned\". Strictly ignore any secondary or \"shadow\" engineers mentioned in the raw data.\n\nOutput Constraints: You MUST output ONLY a valid JSON array.\n\nCRITICAL: Do NOT include any introductory text, markdown fences (```json), or trailing explanations. The response must start with [ and end with ].",
+            "maxTokens": 4096
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.anthropic",
+        "typeVersion": 1,
+        "position": [
+          1360,
+          752
+        ],
+        "id": "58e518fd-3175-4293-917b-00cc79447f7b",
+        "name": "Message a model",
+        "credentials": {
+          "anthropicApi": {
+            "id": "eQfzvn3izR7ec2J1",
+            "name": "Solutions Anthropic"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblZiB3uCUJmuKaXr",
+            "mode": "list",
+            "cachedResultName": "PE Insights",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblZiB3uCUJmuKaXr"
+          },
+          "filterByFormula": "=NOT({Reported to Daily Summary})",
+          "options": {
+            "view": {
+              "__rl": true,
+              "value": "viwhEq1YApMFwhw57",
+              "mode": "list",
+              "cachedResultName": "Slack Daily Feed",
+              "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblZiB3uCUJmuKaXr/viwhEq1YApMFwhw57"
+            }
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          496,
+          848
+        ],
+        "id": "2af28aee-f3ed-4508-9abf-55155100c1f2",
+        "name": "Search records1",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "html_content": "={{ $json.html }}",
+          "css_content": "="
+        },
+        "type": "n8n-nodes-htmlcsstoimage.htmlCssToImage",
+        "typeVersion": 1,
+        "position": [
+          1968,
+          752
+        ],
+        "id": "606dc7d6-0574-48b1-85f5-5989f7c0916b",
+        "name": "HTML/CSS to Image1",
+        "credentials": {
+          "htmlcsstoimgApi": {
+            "id": "RgVbijNCeobh79Gr",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 5
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          288,
+          848
+        ],
+        "id": "1f162844-6df4-439c-9b50-a9b16ba92998",
+        "name": "Schedule Trigger1"
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblZiB3uCUJmuKaXr",
+            "mode": "list",
+            "cachedResultName": "PE Insights",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblZiB3uCUJmuKaXr"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Reported to Daily Summary": true,
+              "id": "={{$json.id}}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": false
+              },
+              {
+                "id": "Name",
+                "displayName": "Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Email Category",
+                "displayName": "Email Category",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "MoM",
+                    "value": "MoM"
+                  },
+                  {
+                    "name": "Inquiry",
+                    "value": "Inquiry"
+                  },
+                  {
+                    "name": "Complaint",
+                    "value": "Complaint"
+                  },
+                  {
+                    "name": "Follow-up",
+                    "value": "Follow-up"
+                  },
+                  {
+                    "name": "Meeting Reminder",
+                    "value": "Meeting Reminder"
+                  },
+                  {
+                    "name": "For Approval",
+                    "value": "For Approval"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Email Subject",
+                "displayName": "Email Subject",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Email Sender",
+                "displayName": "Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Clients",
+                "displayName": "Clients",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PDEV Requirements Link",
+                "displayName": "PDEV Requirements Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Client Name (from Clients)",
+                "displayName": "Client Name (from Clients)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Insights",
+                "displayName": "Insights",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Dated Insights",
+                "displayName": "Dated Insights",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Process Engineer",
+                "displayName": "Process Engineer",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Process Engineer Name",
+                "displayName": "Process Engineer Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PDEV Requirements",
+                "displayName": "PDEV Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Clients Name",
+                "displayName": "Clients Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Reported to Daily Summary",
+                "displayName": "Reported to Daily Summary",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          2976,
+          1120
+        ],
+        "id": "a14e591c-563f-4e10-b76a-071715d70f1f",
+        "name": "Update record1",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "chooseBranch"
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          2736,
+          1120
+        ],
+        "id": "58c15f5f-332b-47be-a5dc-6a7c52a415d1",
+        "name": "Merge1"
+      },
+      {
+        "parameters": {
+          "content": "## Post-Reporting Record Update\nThis section ensures that all Airtable records included in the daily report are marked as processed to prevent duplicate reporting.",
+          "height": 320,
+          "width": 480
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2464,
+          992
+        ],
+        "typeVersion": 1,
+        "id": "c9415f14-8975-480d-b356-2939e6d1f737",
+        "name": "Sticky Note1"
+      },
+      {
+        "parameters": {
+          "jsCode": "// This takes the list of projects from the Aggregate node\nconst aggregatedArray = $json.llmMarkdownContext; \n\n// It \"glues\" them together with a double newline for the AI\nreturn {\n  llmMarkdownContext: aggregatedArray.join('\\n\\n')\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1152,
+          752
+        ],
+        "id": "cb64c70b-feb3-4740-951f-28183dd74569",
+        "name": "Aggregator Cleaner"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.postMessage",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"channel\": \"C03MZJZU687\",\n  \"text\": \"Hi Team! Please see today's updates for the PDEV Requirements.\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Hi Team! Please see today's updates for the PDEV Requirements.\"\n      }\n    },\n    {\n      \"type\": \"image\",\n      \"image_url\": \"{{ $json.image_url }}\",\n      \"alt_text\": \"PDEV Insights Summary\"\n    }\n  ]\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          2272,
+          752
+        ],
+        "id": "a0453b86-952c-4e73-8c97-7ffc59a93c73",
+        "name": "Send Slack message"
+      }
+    ],
+    "connections": {
+      "Code in JavaScript1": {
+        "main": [
+          [
+            {
+              "node": "Aggregate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate": {
+        "main": [
+          [
+            {
+              "node": "Aggregator Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Cleaner": {
+        "main": [
+          [
+            {
+              "node": "HTML/CSS to Image1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Message a model": {
+        "main": [
+          [
+            {
+              "node": "Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search records1": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Code in JavaScript1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTML/CSS to Image1": {
+        "main": [
+          [
+            {
+              "node": "Send Slack message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger1": {
+        "main": [
+          [
+            {
+              "node": "Search records1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge1": {
+        "main": [
+          [
+            {
+              "node": "Update record1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregator Cleaner": {
+        "main": [
+          [
+            {
+              "node": "Message a model",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Slack message": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

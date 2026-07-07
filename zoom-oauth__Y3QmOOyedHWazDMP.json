@@ -1,0 +1,887 @@
+{
+  "updatedAt": "2026-07-04T12:58:08.409Z",
+  "createdAt": "2026-03-02T22:13:18.361Z",
+  "id": "Y3QmOOyedHWazDMP",
+  "name": "zoom oauth",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "zoom-oauth-callback",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -128
+      ],
+      "id": "9faeed31-77dd-4b41-8729-828433755544",
+      "name": "Webhook",
+      "webhookId": "4f913dca-06e8-4ebf-a2b5-d1db948e2e4d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zoom.us/oauth/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "authorization_code"
+            },
+            {
+              "name": "code",
+              "value": "={{ $json.query.code }}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "https://svsolutionarchitects.app.n8n.cloud/webhook/zoom-oauth-callback"
+            },
+            {
+              "name": "client_id",
+              "value": "akvSMOSCRE2XEEyIAkiiQQ"
+            },
+            {
+              "name": "client_secret",
+              "value": "jLLda1uJgzMgZRI1QQ1z6NnFMdDaAInU"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        -128
+      ],
+      "id": "b42df507-e3d3-41cd-8e9f-25da5643e302",
+      "name": "Exchange code for token"
+    },
+    {
+      "parameters": {
+        "url": "https://api.zoom.us/v2/users/me",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        -128
+      ],
+      "id": "361a603e-b2eb-4ec3-9452-fb85170705fb",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcuUr2mHvbjnHwt",
+          "mode": "list",
+          "cachedResultName": "Zoom OAuth",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblcuUr2mHvbjnHwt"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "access_token": "={{ $('Exchange code for token').item.json.access_token }}",
+            "refresh_token": "={{ $('Exchange code for token').item.json.refresh_token }}",
+            "zoom_user_id": "={{ $('HTTP Request').item.json.id }}",
+            "id": "={{ $json.id }}",
+            "first_name": "={{ $('HTTP Request').item.json.first_name }}",
+            "last_name": "={{ $('HTTP Request').item.json.last_name }}",
+            "account_id": "={{ $('HTTP Request').item.json.account_id }}",
+            "expires_at": "={{ DateTime.now().plus({ seconds: $('Exchange code for token').item.json.expires_in }).toISO() }}",
+            "email": "={{ $('HTTP Request').item.json.email }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "zoom_user_id",
+              "displayName": "zoom_user_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "access_token",
+              "displayName": "access_token",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "refresh_token",
+              "displayName": "refresh_token",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "expires_in",
+              "displayName": "expires_in",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "first_name",
+              "displayName": "first_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_name",
+              "displayName": "last_name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "expires_at",
+              "displayName": "expires_at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        -128
+      ],
+      "id": "11f14966-7550-4ada-bea3-433ecae095a9",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcuUr2mHvbjnHwt",
+          "mode": "list",
+          "cachedResultName": "Zoom OAuth",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblcuUr2mHvbjnHwt"
+        },
+        "filterByFormula": "=zoom_user_id = '{{ $json.id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        -128
+      ],
+      "id": "6742d930-6307-4b68-9d9c-5deb1bfd367a",
+      "name": "Search records",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Exchange code for token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exchange code for token": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-encoding": "gzip, br",
+            "accept-language": "en-US,en;q=0.9",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "136.158.65.250",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "PH",
+            "cf-ray": "9d6be1071efe03f2-HKG",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "cookie": "rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX1%2Ft7e19jjRRvfXi9ds70XfQKnFilyzGeT4%3D; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX18TQNg5gD%2FQ63qdKQgtZ%2BOqq2lVcPXEfKU%3D; _ga=GA1.1.998405515.1755551003; _fbp=fb.1.1755551002903.634173813438662356; _ga_0SC4FF2FH9=GS2.1.s1772567086$o41$g0$t1772567095$j51$l0$h0; rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX19Wa37SrHTRFvpLxaZIGFCXncNMMvbYQieP11hX%2B3bShinnsaANEQFICTjQ3kYNGXpYLo9d8vZTYg%3D%3D; rl_user_id=RudderEncrypt%3AU2FsdGVkX19w1hclWApZjZz0glIA08OZkxhC%2Biq9tS%2BeVqmiyW9wm6%2FYpp1etMbEhSD880swcohcvuUCdNaNiqOJyM%2FuXAijueUthnmzq9S4tcjfoc6kC0VHdxZYrUh0bjJqfTh6CeWhRvRwgL7KyUIS5vsWLBrjao3q0OF%2B%2Fls%3D; rl_trait=RudderEncrypt%3AU2FsdGVkX1%2B3L37lVNR7NZwrKMBlS8w%2BHipOJrkeovK7gHRiKrMBCbXuZoguEFHrRT1pTFnPYnx9XoxYLDjOVWdcYaqkF3y7OM%2BuIqUsiw6YTrzr06ElnWNWE9XC9Z0GdkyDhpAq%2FeJBIew16%2FWiTPWh1nx03LSnkmp2hBd%2FGoUVNl%2BNpmmOGzXC6WLwOGC0XH6L3zvHuo7s%2FTpLkLMbJA%3D%3D; rl_session=RudderEncrypt%3AU2FsdGVkX1%2BZPiU1lqy1Q4OD7W5preu7mR03tuhsVlpl0H699FP%2FiSXJXSP%2BxKlTRa3MyPA3K%2FCnhT%2Frv1tHPGJ3LCFPpYPn%2BYogE60hrk5C3cMyesozqBcx%2BPNOUtOyE60Id9zqkhs1itpsMaG2Lg%3D%3D; n8n_anonymous_id=d64b742c-b107-4efb-83df-b7a18fb4b5f4; ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog=%7B%22%24device_id%22%3A%22f688ef50aa55b316e6dbe9c43835c47ccf229a42ab6140f1cc1adedb7766dd1f%23eb39cc27-9024-47f2-929e-25cbbff8f24d%22%2C%22distinct_id%22%3A%22b06c82296e26ffae4ee1414f5f6f1fab985a46e1996657541736162432921043%2316f0560f-622c-469e-b224-0a5affca8f72%22%2C%22%24sesid%22%3A%5B1772574796185%2C%22019cb53a-bdc7-76c8-87d3-154668375c38%22%2C1772567051719%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22https%3A%2F%2Fpjscalevirtually.app.n8n.cloud%2Fworkflows%22%7D%2C%22%24user_state%22%3A%22identified%22%7D",
+            "priority": "u=0, i",
+            "referer": "https://marketplace.zoom.us/",
+            "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"Microsoft Edge\";v=\"145\", \"Chromium\";v=\"145\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"macOS\"",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "cross-site",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            "x-forwarded-for": "136.158.65.250, 162.159.98.118",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-6d69f46f85-6dpbk",
+            "x-is-trusted": "yes",
+            "x-real-ip": "136.158.65.250"
+          },
+          "params": {},
+          "query": {
+            "code": "Gewp3MNAanUEqYZsQNbTheveK9LAlGUYQ"
+          },
+          "body": {},
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/zoom-oauth-callback",
+          "executionMode": "production"
+        }
+      }
+    ],
+    "HTTP Request": [
+      {
+        "json": {
+          "id": "TyBMR10YQzqBuGplqu5IeQ",
+          "first_name": "Patrick Jansen",
+          "last_name": "Villanueva",
+          "display_name": "Patrick Jansen Villanueva",
+          "email": "pj@scalevirtually.com",
+          "type": 2,
+          "role_name": "Member",
+          "pmi": 2887970474,
+          "use_pmi": true,
+          "personal_meeting_url": "https://scalevirtually.zoom.us/j/2887970474?pwd=SANnpj4qT8I0Fda0GYgHlPaE7l5BYM.1",
+          "timezone": "",
+          "verified": 0,
+          "dept": "Process Development",
+          "created_at": "2025-07-24T12:46:57Z",
+          "last_login_time": "2026-03-03T21:53:28Z",
+          "last_client_version": "6.6.10.69071(mac)",
+          "pic_url": "https://scalevirtually.zoom.us/p/v2/66116165a78f7513250c7a9e08e07fcf125b2249d538fc51468fcb1382b933f0/eeb09715-0746-48f1-8dfc-ad05d86914df-4829",
+          "cms_user_id": "",
+          "jid": "tybmr10yqzqbugplqu5ieq@xmpp.zoom.us",
+          "group_ids": [
+            "5GuCwk6_T-WEP6Xsn00E9g"
+          ],
+          "im_group_ids": [],
+          "account_id": "jj0FwZbwT3-CKPmPD0sk9A",
+          "language": "en-US",
+          "phone_country": "",
+          "phone_number": "",
+          "status": "active",
+          "job_title": "Business Analyst",
+          "cost_center": "",
+          "location": "",
+          "login_types": [
+            100,
+            1
+          ],
+          "role_id": "2",
+          "account_number": 7027928258,
+          "manager": "aja@scalevirtually.com",
+          "cluster": "us06",
+          "zoom_one_type": 16,
+          "user_created_at": "2025-07-16T19:14:21Z"
+        }
+      }
+    ],
+    "Exchange code for token": [
+      {
+        "json": {
+          "access_token": "eyJzdiI6IjAwMDAwMiIsImFsZyI6IkhTNTEyIiwidiI6IjIuMCIsImtpZCI6IjI1MWFiYzU0LTRlYjktNGZjMC05ZTFmLWFiZDliZGFjYjRiZiJ9.eyJhdWQiOiJodHRwczovL29hdXRoLnpvb20udXMiLCJ1aWQiOiJUeUJNUjEwWVF6cUJ1R3BscXU1SWVRIiwidmVyIjoxMCwiYXVpZCI6IjdiOWY4MDk0YzQ0NGNmYjU2NGUwNzJmMDRlNmJkMDk0OGY3YjFkODZlM2U5NzNiOTdmZmE3OWIxMDU0NDkyYWMiLCJuYmYiOjE3NzI1NzU2MTcsImNvZGUiOiIyTlU2UlBqanE0V0hPMkNTWTM0UUg2aXRHZGdGUHZnamciLCJpc3MiOiJ6bTpjaWQ6YWt2U01PU0NSRTJYRUV5SUFraWlRUSIsImdubyI6MCwiZXhwIjoxNzcyNTc5MjE3LCJ0eXBlIjowLCJpYXQiOjE3NzI1NzU2MTcsImFpZCI6ImpqMEZ3WmJ3VDMtQ0tQbVBEMHNrOUEifQ.z05wmPuynb6cqDiED4b1J_PROZxKMYFmjwUJo6EyfLJ4apFCkXOK4039aSEroOT_zBqEWbLzFBzLq4mEivTitQ",
+          "token_type": "bearer",
+          "refresh_token": "eyJzdiI6IjAwMDAwMiIsImFsZyI6IkhTNTEyIiwidiI6IjIuMCIsImtpZCI6IjgxMmUyYThlLTliYWItNDI5Zi1iOTQ1LWMyZGVlMzE0NzM4MyJ9.eyJhdWQiOiJodHRwczovL29hdXRoLnpvb20udXMiLCJ1aWQiOiJUeUJNUjEwWVF6cUJ1R3BscXU1SWVRIiwidmVyIjoxMCwiYXVpZCI6IjdiOWY4MDk0YzQ0NGNmYjU2NGUwNzJmMDRlNmJkMDk0OGY3YjFkODZlM2U5NzNiOTdmZmE3OWIxMDU0NDkyYWMiLCJuYmYiOjE3NzI1NzU2MTcsImNvZGUiOiIyTlU2UlBqanE0V0hPMkNTWTM0UUg2aXRHZGdGUHZnamciLCJpc3MiOiJ6bTpjaWQ6YWt2U01PU0NSRTJYRUV5SUFraWlRUSIsImdubyI6MCwiZXhwIjoxNzgwMzUxNjE3LCJ0eXBlIjoxLCJpYXQiOjE3NzI1NzU2MTcsImFpZCI6ImpqMEZ3WmJ3VDMtQ0tQbVBEMHNrOUEifQ.K1SogIX-LRyS3IPTkc8LYmGDppk_skNvGJhMjrfQhO_KRCV1PhqXez5KdnyrkvjkjqIyXRpn7YjQwnao4Rxpjw",
+          "expires_in": 3599,
+          "scope": "user:read:user user:read:email meeting:read:meeting meeting:update:meeting meeting:read:list_registrants meeting:read:registrant meeting:read:list_registration_questions meeting:read:livestream meeting:update:livestream meeting:read:list_polls meeting:read:poll meeting:read:invitation meeting:read:list_templates meeting:read:summary meeting:read:past_meeting meeting:read:list_past_instances meeting:read:list_past_participants meeting:read:list_poll_results meeting:read:survey meeting:read:participant_feedback meeting:read:alert meeting:read:participant_sharing meeting:read:device meeting:read:risk_alert meeting:read:chat_message meeting:read:local_recording_token meeting:read:list_upcoming_meetings meeting:read:past_qa meeting:read:token marketplace:read:list_webhook_logs webinar:read:list_webinars webinar:read:webinar webinar:read:list_registrants webinar:read:registrant webinar:read:list_registration_questions webinar:read:list_panelists webinar:read:livestream webinar:read:list_polls webinar:read:poll webinar:read:list_tracking_sources webinar:read:list_templates webinar:read:list_past_instances webinar:read:list_absentees webinar:read:list_past_participants webinar:read:list_past_polls webinar:read:past_qa webinar:read:survey webinar:read:participant webinar:read:alert webinar:read:participant_sharing webinar:read:chat_message webinar:read:participant_feedback webinar:read:local_recording_token webinar:read:live_streaming_token cloud_recording:write:recording_registrant cloud_recording:read:recording_analytics_summary cloud_recording:read:list_recording_registrants cloud_recording:read:list_recording_files cloud_recording:read:registration_questions cloud_recording:read:meeting_transcript tsp:read:tsp_account tsp:read:list_tsp_accounts pac:read:list_pac_accounts webinar:write:resource_document meeting:update:participant_rtms_app_status meeting:delete:summary meeting:read:ai_companion",
+          "api_url": "https://scalevirtually.zoom.us"
+        }
+      }
+    ]
+  },
+  "versionId": "1cebf88d-d155-43cc-9d1c-357ca4ddc7d1",
+  "activeVersionId": "1cebf88d-d155-43cc-9d1c-357ca4ddc7d1",
+  "versionCounter": 187,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-03-02T22:13:18.364Z",
+      "createdAt": "2026-03-02T22:13:18.364Z",
+      "role": "workflow:owner",
+      "workflowId": "Y3QmOOyedHWazDMP",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-05-01T15:24:59.751Z",
+      "createdAt": "2026-05-01T15:24:59.751Z",
+      "id": "R2WGrSOtAkT7FXOA",
+      "name": "Sales AI"
+    },
+    {
+      "updatedAt": "2026-04-29T02:40:41.816Z",
+      "createdAt": "2026-04-29T02:40:41.816Z",
+      "id": "bVP681xsrIg2kaSR",
+      "name": "Ad Hoc"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T12:58:08.410Z",
+    "createdAt": "2026-07-04T12:58:08.410Z",
+    "versionId": "1cebf88d-d155-43cc-9d1c-357ca4ddc7d1",
+    "workflowId": "Y3QmOOyedHWazDMP",
+    "nodes": [
+      {
+        "parameters": {
+          "path": "zoom-oauth-callback",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          -128
+        ],
+        "id": "9faeed31-77dd-4b41-8729-828433755544",
+        "name": "Webhook",
+        "webhookId": "4f913dca-06e8-4ebf-a2b5-d1db948e2e4d"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://zoom.us/oauth/token",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ]
+          },
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "grant_type",
+                "value": "authorization_code"
+              },
+              {
+                "name": "code",
+                "value": "={{ $json.query.code }}"
+              },
+              {
+                "name": "redirect_uri",
+                "value": "https://svsolutionarchitects.app.n8n.cloud/webhook/zoom-oauth-callback"
+              },
+              {
+                "name": "client_id",
+                "value": "akvSMOSCRE2XEEyIAkiiQQ"
+              },
+              {
+                "name": "client_secret",
+                "value": "jLLda1uJgzMgZRI1QQ1z6NnFMdDaAInU"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          224,
+          -128
+        ],
+        "id": "b42df507-e3d3-41cd-8e9f-25da5643e302",
+        "name": "Exchange code for token"
+      },
+      {
+        "parameters": {
+          "url": "https://api.zoom.us/v2/users/me",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{ $json.access_token }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          448,
+          -128
+        ],
+        "id": "361a603e-b2eb-4ec3-9452-fb85170705fb",
+        "name": "HTTP Request"
+      },
+      {
+        "parameters": {
+          "operation": "upsert",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblcuUr2mHvbjnHwt",
+            "mode": "list",
+            "cachedResultName": "Zoom OAuth",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblcuUr2mHvbjnHwt"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "access_token": "={{ $('Exchange code for token').item.json.access_token }}",
+              "refresh_token": "={{ $('Exchange code for token').item.json.refresh_token }}",
+              "zoom_user_id": "={{ $('HTTP Request').item.json.id }}",
+              "id": "={{ $json.id }}",
+              "first_name": "={{ $('HTTP Request').item.json.first_name }}",
+              "last_name": "={{ $('HTTP Request').item.json.last_name }}",
+              "account_id": "={{ $('HTTP Request').item.json.account_id }}",
+              "expires_at": "={{ DateTime.now().plus({ seconds: $('Exchange code for token').item.json.expires_in }).toISO() }}",
+              "email": "={{ $('HTTP Request').item.json.email }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": false
+              },
+              {
+                "id": "zoom_user_id",
+                "displayName": "zoom_user_id",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "access_token",
+                "displayName": "access_token",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "refresh_token",
+                "displayName": "refresh_token",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "expires_in",
+                "displayName": "expires_in",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "first_name",
+                "displayName": "first_name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "last_name",
+                "displayName": "last_name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "account_id",
+                "displayName": "account_id",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "expires_at",
+                "displayName": "expires_at",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "email",
+                "displayName": "email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {
+            "typecast": true
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          896,
+          -128
+        ],
+        "id": "11f14966-7550-4ada-bea3-433ecae095a9",
+        "name": "Create or update a record",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblcuUr2mHvbjnHwt",
+            "mode": "list",
+            "cachedResultName": "Zoom OAuth",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblcuUr2mHvbjnHwt"
+          },
+          "filterByFormula": "=zoom_user_id = '{{ $json.id }}'",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          672,
+          -128
+        ],
+        "id": "6742d930-6307-4b68-9d9c-5deb1bfd367a",
+        "name": "Search records",
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Exchange code for token",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Exchange code for token": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request": {
+        "main": [
+          [
+            {
+              "node": "Search records",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search records": {
+        "main": [
+          [
+            {
+              "node": "Create or update a record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

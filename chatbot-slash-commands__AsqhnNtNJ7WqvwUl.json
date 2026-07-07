@@ -1,0 +1,318 @@
+{
+  "updatedAt": "2026-07-04T12:55:43.777Z",
+  "createdAt": "2026-05-19T17:36:40.376Z",
+  "id": "AsqhnNtNJ7WqvwUl",
+  "name": "Chatbot Slash Commands",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sv-portal-app-slash-commands",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bf05e602-59ba-4c22-b2ee-55da035b5e32",
+      "name": "Webhook",
+      "webhookId": "d8906246-7560-45fc-87f3-9f8b0dfdc34f"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"response_type\": \"ephemeral\",\n  \"text\": \"\u2705 Report received. The automation team has been notified.\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        208,
+        0
+      ],
+      "id": "7828940e-f70a-4ad0-938e-6c51b25bbbb9",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ALA9DN90Q",
+          "mode": "id"
+        },
+        "text": "=\ud83d\udea8 *Chatbot issue reported via slash command*\n\n*Reported by:* <@{{$json.body.user_id}}>\n*Concern:* {{$json.body.text || \"No details provided\"}}\n*Report time:* {{ DateTime.fromSeconds(Number($json.headers[\"x-slack-request-timestamp\"])).setZone(\"Asia/Manila\").toFormat(\"MMMM dd, yyyy, hh:mm:ss a\") + \" PHT\" }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8d60a145-33d2-4c63-b28a-cafc41ed07cb",
+      "name": "Send a message",
+      "webhookId": "a446e541-e3db-47ee-aaa0-8ce9b627878d",
+      "credentials": {
+        "slackApi": {
+          "id": "A7YJOHHCMdz06CkZ",
+          "name": "Slack Sandbox"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Slackbot 1.0 (+https://api.slack.com/robots)",
+            "content-length": "421",
+            "accept": "application/json,*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "100.55.91.120",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9fe4e766dc16202f-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/x-www-form-urlencoded",
+            "x-forwarded-for": "100.55.91.120, 172.70.35.75",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-58786f47b8-h4m5w",
+            "x-is-trusted": "yes",
+            "x-real-ip": "100.55.91.120",
+            "x-slack-request-timestamp": "1779212606",
+            "x-slack-signature": "v0=130cf3a5199e40bdfd8a7ea36a5f548416f17da4cbc43ce4d067caa30c3a3f14"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "token": "Rw1gKIJOX31tFwYv5MNWlOqU",
+            "team_id": "T0AL9RNQ9LY",
+            "team_domain": "sandbox-mmh4774",
+            "channel_id": "C0ALA9DN90Q",
+            "channel_name": "test",
+            "user_id": "U0AKDG01C30",
+            "user_name": "pj",
+            "command": "/reportbot",
+            "text": "Hello",
+            "api_app_id": "A0AKK665N68",
+            "is_enterprise_install": "false",
+            "response_url": "https://hooks.slack.com/commands/T0AL9RNQ9LY/11163096035926/lIIWHmLnjPc7lPoLfONtHdqj",
+            "trigger_id": "11161778600741.10689872825712.261e6dbf89df4cdc9b8f91e7950fcf94"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/sv-portal-app-slash-commands",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "2b21dac9-81e5-4731-9407-9c4d82b84dd2",
+  "activeVersionId": "2b21dac9-81e5-4731-9407-9c4d82b84dd2",
+  "versionCounter": 67,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-19T17:36:40.381Z",
+      "createdAt": "2026-05-19T17:36:40.381Z",
+      "role": "workflow:owner",
+      "workflowId": "AsqhnNtNJ7WqvwUl",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T12:55:43.777Z",
+    "createdAt": "2026-07-04T12:55:43.777Z",
+    "versionId": "2b21dac9-81e5-4731-9407-9c4d82b84dd2",
+    "workflowId": "AsqhnNtNJ7WqvwUl",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "sv-portal-app-slash-commands",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "bf05e602-59ba-4c22-b2ee-55da035b5e32",
+        "name": "Webhook",
+        "webhookId": "d8906246-7560-45fc-87f3-9f8b0dfdc34f"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\n  \"response_type\": \"ephemeral\",\n  \"text\": \"\u2705 Report received. The automation team has been notified.\"\n}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          208,
+          0
+        ],
+        "id": "7828940e-f70a-4ad0-938e-6c51b25bbbb9",
+        "name": "Respond to Webhook"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0ALA9DN90Q",
+            "mode": "id"
+          },
+          "text": "=\ud83d\udea8 *Chatbot issue reported via slash command*\n\n*Reported by:* <@{{$json.body.user_id}}>\n*Concern:* {{$json.body.text || \"No details provided\"}}\n*Report time:* {{ DateTime.fromSeconds(Number($json.headers[\"x-slack-request-timestamp\"])).setZone(\"Asia/Manila\").toFormat(\"MMMM dd, yyyy, hh:mm:ss a\") + \" PHT\" }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          416,
+          0
+        ],
+        "id": "8d60a145-33d2-4c63-b28a-cafc41ed07cb",
+        "name": "Send a message",
+        "webhookId": "a446e541-e3db-47ee-aaa0-8ce9b627878d",
+        "credentials": {
+          "slackApi": {
+            "id": "A7YJOHHCMdz06CkZ",
+            "name": "Slack Sandbox"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Respond to Webhook": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

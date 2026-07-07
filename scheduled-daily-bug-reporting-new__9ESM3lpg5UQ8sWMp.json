@@ -1,0 +1,1772 @@
+{
+  "updatedAt": "2026-07-04T13:05:10.068Z",
+  "createdAt": "2026-04-16T16:40:02.388Z",
+  "id": "9ESM3lpg5UQ8sWMp",
+  "name": "[Scheduled] Daily Bug Reporting (New)",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.clickup.com/api/v2/team/9014746495/space?archived=false",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -752,
+        112
+      ],
+      "id": "bdec3179-e422-493f-a3bc-6ea4c6514c59",
+      "name": "Fetch All Spaces"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/space/{{ $json.id }}/folder",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -752,
+        272
+      ],
+      "id": "ddc01e3b-b2ae-4f5c-b876-a71b51357641",
+      "name": "Fetch Folders"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/folder/{{ $json.id }}/list",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            },
+            {
+              "name": "archived",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -752,
+        432
+      ],
+      "id": "0f8e64c8-8f7f-4aa8-bc9f-c358aedd045d",
+      "name": "Fetch Lists"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "25f49a87-f01a-4bb1-8ca6-970a8235812c",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "Bugs",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -288,
+        432
+      ],
+      "id": "290b9a64-7209-443a-8e5c-493299a1026e",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "spaces",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        112
+      ],
+      "id": "953f96de-be79-4cb3-a059-9dd5062f6c61",
+      "name": "Split Out Spaces"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "folders",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        272
+      ],
+      "id": "d342a24d-427c-41d3-a875-25711b16fb7a",
+      "name": "Split Out Folders"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "lists",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        432
+      ],
+      "id": "8f08388b-0fdb-457e-a725-361b0ce400a9",
+      "name": "Split Out Lists"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "tasks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        592
+      ],
+      "id": "b1083e0d-0b4e-4718-b9e2-945a5396cd00",
+      "name": "Split Out Bugs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7affe2e6-74d8-419c-a1d7-891d7347d99c",
+              "name": "Bug Name",
+              "value": "={{ $(\"Split Out Bugs\").item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "24a594d3-26a2-45cf-a866-4bfc482dc675",
+              "name": "Folder Name",
+              "value": "={{ $(\"Split Out Bugs\").item.json.folder.name }}",
+              "type": "string"
+            },
+            {
+              "id": "d626aa40-49fe-4cec-9362-09c5295f03da",
+              "name": "Space ID",
+              "value": "={{ $(\"Split Out Bugs\").item.json.space.id }}",
+              "type": "string"
+            },
+            {
+              "id": "88318adf-efad-48b2-998e-2f7ed7f48fee",
+              "name": "Status",
+              "value": "={{ $(\"Split Out Bugs\").item.json.status.status }}",
+              "type": "string"
+            },
+            {
+              "id": "a14347f7-f9f7-4cab-a70f-6bc4f3f199d4",
+              "name": "Assignee",
+              "value": "={{ $(\"Split Out Bugs\").item.json.assignees[0]?.username }}",
+              "type": "string"
+            },
+            {
+              "id": "f355be56-17ae-4805-8f81-ea507cb2cedd",
+              "name": "Description",
+              "value": "={{ $(\"Split Out Bugs\").item.json.description || $(\"Split Out Bugs\").item.json.text_content }}",
+              "type": "string"
+            },
+            {
+              "id": "299f62da-30e1-423f-b397-695fa0bc3407",
+              "name": "Latest Comments",
+              "value": "={{ $json.flattened_comments }}",
+              "type": "string"
+            },
+            {
+              "id": "e9b9a314-6d26-49e0-9f7f-98e16711851a",
+              "name": "Created At",
+              "value": "={{ $('Split Out Bugs').item.json.date_created }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        752
+      ],
+      "id": "64221180-f2b5-49a6-908b-6985b83bf4ae",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/task/{{ $json.id }}/comment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 10,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -752,
+        752
+      ],
+      "id": "896906d9-c2df-4a88-b07c-a4402755536a",
+      "name": "Fetch Comments"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Map through each input item (each bug)\nreturn items.map(item => {\n  const bugComments = item.json.comments || [];\n  \n  // Create a readable string from the comments array\n  const flatComments = bugComments.map(c => {\n    const date = new Date(parseInt(c.date)).toLocaleDateString();\n    return `[${date}] ${c.user.username}: ${c.comment_text.trim()}`;\n  }).join('\\n---\\n');\n\n  return {\n    json: {\n      ...item.json,\n      flattened_comments: flatComments || \"No comments found.\"\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -512,
+        752
+      ],
+      "id": "6e82a8f8-b749-49b4-bd41-3a650c95bb19",
+      "name": "Flatten Comments"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/list/{{ $json.id }}/task?include_closed=true",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -752,
+        592
+      ],
+      "id": "e8ab8dfe-6584-43e1-96bd-a33be4c4d874",
+      "name": "Fetch Bugs Tasks"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get Chicago midnight using plain JS\nconst now = new Date();\nconst chicagoTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));\nchicagoTime.setHours(0, 0, 0, 0);\nconst chicagoMidnight = chicagoTime.getTime();\n\nreturn items.filter(item => {\n  const created = parseInt(item.json.date_created);\n  const status = item.json.status.status.toLowerCase();\n  \n  // EXCLUSION RULE: Drop the bug immediately if it is rejected\n  if (status === 'rejected') {\n      return false;\n  }\n\n  const isOpenStatus = ['reported', '\u2699\ufe0f in progress'].includes(status);\n  const isCreatedToday = created >= chicagoMidnight;\n\n  return isCreatedToday || isOpenStatus;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        592
+      ],
+      "id": "68a4acb6-aa9d-479c-9e30-a7adf071afd5",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "claude-haiku-4-5-20251001"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please generate today's daily QA summary based on your system instructions. \n\nHere is the raw data:\n{{$json.aggregated_text}}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "system": "You are a highly efficient QA Reporting Assistant for a technical team. Your objective is to analyze raw bug data and produce a clear, scannable, and actionable Daily Bug Report.\n\nStrict Reporting Rules:\n1. Overview: Start with a brief 1-2 sentence summary of the day's bug activity.\n2. Critical Flags: Highlight any bugs that seem urgent, blocking, or require immediate attention based on their status or comments.\n3. Project Breakdown: You MUST group all bugs by their Folder/Project name.\n4. Table Format: You MUST output these project groups using Markdown tables. Use exactly these column headers: | Bug Name | Status | Assignee | Notes/Updates |\n5. Accuracy: Keep notes concise. Do not invent data or assume missing details. If an assignee or note is missing, leave it blank or state \"Unassigned/No notes\"."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        1088
+      ],
+      "id": "5c380c08-7cd0-4a3e-bced-eba11c271bdc",
+      "name": "Message a model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst chicagoTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));\nchicagoTime.setHours(0, 0, 0, 0);\nconst chicagoMidnight = chicagoTime.getTime();\n\nconst bugs = items.map(item => {\n  const b = item.json;\n  return {\n    bug_name: b['Bug Name'],\n    folder: b['Folder Name'],\n    space_id: b['Space ID'],\n    status: b['Status'],\n    assignee: b['Assignee'] || 'Unassigned',\n    description: b['Description'] || 'No description',\n    comments: b['Latest Comments'],\n    created_at: b['Created At'] || null,\n    reported_date: now.toLocaleDateString('en-US', { timeZone: 'America/Chicago' })\n  };\n});\n\n// Breakdowns\nconst byStatus = bugs.reduce((acc, b) => {\n  acc[b.status] = (acc[b.status] || 0) + 1;\n  return acc;\n}, {});\n\nconst byAssignee = bugs.reduce((acc, b) => {\n  acc[b.assignee] = (acc[b.assignee] || 0) + 1;\n  return acc;\n}, {});\n\nconst byFolder = bugs.reduce((acc, b) => {\n  acc[b.folder] = (acc[b.folder] || 0) + 1;\n  return acc;\n}, {});\n\nconst newToday = bugs.filter(b => b.created_at && parseInt(b.created_at) >= chicagoMidnight).length;\nconst backlog = bugs.filter(b => b.created_at && parseInt(b.created_at) < chicagoMidnight).length;\n\n// Breakdown strings for LLM / email readability\nconst statusBreakdown = Object.entries(byStatus).map(([k, v]) => `  - ${k}: ${v}`).join('\\n');\nconst assigneeBreakdown = Object.entries(byAssignee).map(([k, v]) => `  - ${k}: ${v}`).join('\\n');\nconst folderBreakdown = Object.entries(byFolder).map(([k, v]) => `  - ${k}: ${v}`).join('\\n');\n\nconst aggregated_text = `\nDAILY BUG REPORT \u2014 ${now.toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}\n\n=== SUMMARY ===\nTotal Bugs: ${bugs.length}\nNew Today: ${newToday}\nFrom Backlog: ${backlog}\n\n=== BY STATUS ===\n${statusBreakdown}\n\n=== BY ASSIGNEE ===\n${assigneeBreakdown}\n\n=== BY FOLDER/PROJECT ===\n${folderBreakdown}\n\n=== BUG DETAILS ===\n${bugs.map(b => `\nBug: ${b.bug_name}\nFolder: ${b.folder}\nStatus: ${b.status}\nAssignee: ${b.assignee}\nDescription: ${b.description}\nComments: ${b.comments}\n`.trim()).join('\\n\\n---\\n\\n')}\n`.trim();\n\nreturn [{\n  json: {\n    report_date: now.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }),\n\n    // Counts\n    total_bugs: bugs.length,\n    new_today: newToday,\n    backlog: backlog,\n\n    // Breakdowns (structured \u2014 good for Sheets/Airtable)\n    by_status: byStatus,\n    by_assignee: byAssignee,\n    by_folder: byFolder,\n\n    // Breakdowns (stringified \u2014 good for Sheets columns)\n    by_status_text: statusBreakdown,\n    by_assignee_text: assigneeBreakdown,\n    by_folder_text: folderBreakdown,\n\n    // Full data\n    bugs: bugs,\n    aggregated_text: aggregated_text\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        992
+      ],
+      "id": "dc9accd9-b334-4c28-8aa8-7aa52fd912c3",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "=\u2705 Daily Bug Report \u2014 No Bugs Found ({{ $json.report_date }})  \n\nGood news! No open or new bugs were reported today.",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        -288,
+        1264
+      ],
+      "id": "5975f352-5f45-4b1c-9cc2-1064d6294032",
+      "name": "Send a message",
+      "webhookId": "3eb72d3e-0f5e-4d01-9cd2-4eba390c40fc",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl70cBMj2nl0hpJw",
+          "mode": "list",
+          "cachedResultName": "Bugs",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl70cBMj2nl0hpJw"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "backlogs": "={{ $json.backlog }}",
+            "new_today": "={{ $json.new_today }}",
+            "total_bugs": "={{ $json.total_bugs }}",
+            "reported_date": "={{ $json.report_date }}"
+          },
+          "matchingColumns": [
+            "Name"
+          ],
+          "schema": [
+            {
+              "id": "reported_date",
+              "displayName": "reported_date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "total_bugs",
+              "displayName": "total_bugs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "new_today",
+              "displayName": "new_today",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "backlogs",
+              "displayName": "backlogs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -448,
+        928
+      ],
+      "id": "38920249-3556-4d08-a6e2-2f60b8efc06f",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get raw output from LLM node\nconst firstItem = $input.first().json;\n\n// 2. Extract model name and tokens\nconst rawModel = firstItem.model || \"AI Model\";\nfunction getFriendlyModelName(id) {\n  if (id.includes('haiku')) return \"Haiku 4.5\";\n  if (id.includes('sonnet')) return \"Sonnet 4.5\";\n  if (id.includes('opus')) return \"Opus 4\";\n  return id;\n}\nconst modelName = getFriendlyModelName(rawModel);\n\nlet totalTokens = 0;\nif (firstItem.usage) {\n  totalTokens = (firstItem.usage.input_tokens || 0) + (firstItem.usage.output_tokens || 0);\n}\n\n// 3. Extract markdown text from LLM response\nconst markdownText = firstItem.content[0].text || \"\";\n\n// 4. Helper: Escape HTML\nfunction escapeHtml(text) {\n  return String(text || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\n// 5. Convert Markdown to HTML (BULLETPROOF TABLES)\nfunction markdownToHtml(md) {\n  // 1. Normalize all line endings to prevent regex failures\n  let html = md.replace(/\\r\\n/g, '\\n');\n\n  // 2. Aggressive Table Parser: Allows leading/trailing spaces around pipes\n  html = html.replace(/(?:^[ \\t]*\\|.*\\|[ \\t]*(?:\\n|$))+/gm, match => {\n    const rows = match.trim().split('\\n');\n    let tableHtml = '<div class=\"table-responsive\"><table class=\"data-table\">';\n    \n    rows.forEach((row, index) => {\n      // Clean up the row and skip the markdown separator (---|---)\n      const cleanRow = row.trim();\n      if (cleanRow.replace(/\\s/g, '').match(/^\\|?[-:|]+\\|?$/)) return;\n      \n      const isHeader = index === 0;\n      const tag = isHeader ? 'th' : 'td';\n      \n      // Slice off the first and last pipes safely, then split into cells\n      let innerRow = cleanRow;\n      if (innerRow.startsWith('|')) innerRow = innerRow.substring(1);\n      if (innerRow.endsWith('|')) innerRow = innerRow.substring(0, innerRow.length - 1);\n      \n      const cells = innerRow.split('|');\n      \n      tableHtml += '<tr>' + cells.map(cell => {\n        // Convert Markdown bold (**text**) inside table cells\n        let cellText = cell.trim().replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n        return `<${tag}>${cellText}</${tag}>`;\n      }).join('') + '</tr>';\n    });\n    \n    tableHtml += '</table></div>';\n    return tableHtml;\n  });\n\n  // 3. Parse the rest of the standard markdown\n  html = html\n    // Headers\n    .replace(/^### (.*$)/gm, '<h3>$1</h3>')\n    .replace(/^## (.*$)/gm, '<h2>$1</h2>')\n    .replace(/^# (.*$)/gm, '<h1>$1</h1>')\n    // Bold + Italic\n    .replace(/\\*\\*\\*(.*?)\\*\\*\\*/g, '<strong><em>$1</em></strong>')\n    // Bold (outside tables)\n    .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')\n    // Italic\n    .replace(/\\*(.*?)\\*/g, '<em>$1</em>')\n    // Horizontal rule\n    .replace(/^---$/gm, '<hr>')\n    // Numbered list items\n    .replace(/^\\d+\\.\\s+(.*$)/gm, '<li class=\"numbered\">$1</li>')\n    // Bullet list items\n    .replace(/^-\\s+(.*$)/gm, '<li class=\"bullet\">$1</li>')\n    // Wrap consecutive numbered items in <ol>\n    .replace(/(<li class=\"numbered\">.*<\\/li>\\n?)+/g, match => `<ol>${match}</ol>`)\n    // Wrap consecutive bullet items in <ul>\n    .replace(/(<li class=\"bullet\">.*<\\/li>\\n?)+/g, match => `<ul>${match}</ul>`)\n    // Paragraphs (Double line breaks)\n    .replace(/\\n\\n/g, '</p><p>')\n    // Single line breaks\n    .replace(/\\n/g, '<br>')\n    // CLEANUP: Remove stray tags around block elements\n    .replace(/<\\/h(\\d)><br>/g, '</h$1>')\n    .replace(/<\\/ul><br>/g, '</ul>')\n    .replace(/<\\/ol><br>/g, '</ol>')\n    .replace(/<\\/div><br>/g, '</div>')\n    .replace(/<br><ul/g, '<ul')\n    .replace(/<br><ol/g, '<ol')\n    .replace(/<p><div/g, '<div')\n    .replace(/<\\/div><\\/p>/g, '</div>');\n\n  return html;\n}\n\nconst bodyHtml = `<p>${markdownToHtml(escapeHtml(markdownText).replace(/&lt;br&gt;/g, '<br>'))}</p>`;\n\n// 6. Get today's date\nconst reportDate = new Date().toLocaleDateString('en-US', {\n  timeZone: 'America/Chicago',\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\n\n// 7. CSS Styles\nconst cssStyles = `\n  <style>\n    * { box-sizing: border-box; margin: 0; padding: 0; }\n    body { \n      font-family: 'Segoe UI', Arial, sans-serif; \n      background-color: #f4f7f6; \n      padding: 20px; \n      color: #333; \n    }\n    .card { \n      background: #fff; \n      border-radius: 8px; \n      box-shadow: 0 4px 15px rgba(0,0,0,0.1); \n      max-width: 850px; \n      margin: 0 auto; \n      overflow: hidden; \n    }\n\n    /* Header */\n    .header { \n      background-color: #c0392b; \n      padding: 30px; \n      text-align: center; \n    }\n    .header h1 { \n      margin: 0; \n      font-size: 26px; \n      color: #fff; \n      letter-spacing: 0.5px; \n    }\n    .header p { \n      margin: 8px 0 0; \n      color: #fff; \n      opacity: 0.9; \n      font-size: 15px; \n    }\n\n    /* Body */\n    .body { padding: 30px; }\n\n    /* Markdown Styles */\n    h1 { font-size: 22px; color: #c0392b; margin: 20px 0 10px; border-bottom: 2px solid #c0392b; padding-bottom: 6px; }\n    h2 { font-size: 18px; color: #2c3e50; margin: 20px 0 10px; }\n    h3 { \n      font-size: 15px; \n      color: #e67e22; \n      margin: 16px 0 8px; \n      padding: 8px 12px; \n      background: #fef9f0; \n      border-left: 4px solid #e67e22; \n      border-radius: 4px; \n    }\n    hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }\n    p { font-size: 14px; line-height: 1.7; color: #555; margin-bottom: 12px; }\n    \n    /* Lists */\n    ul { padding-left: 20px; margin: 8px 0 12px; list-style-type: disc; }\n    ol { padding-left: 20px; margin: 8px 0 12px; list-style-type: decimal; }\n    li { font-size: 14px; line-height: 1.7; color: #555; margin-bottom: 5px; }\n    \n    /* Tables */\n    .table-responsive { \n      overflow-x: auto; \n      margin: 15px 0; \n    }\n    .data-table { \n      width: 100%; \n      border-collapse: collapse; \n      font-size: 13px; \n    }\n    .data-table th, .data-table td { \n      padding: 10px 12px; \n      border: 1px solid #e0e0e0; \n      text-align: left; \n    }\n    .data-table th { \n      background-color: #f8f9fa; \n      color: #2c3e50; \n      font-weight: bold; \n      border-bottom: 2px solid #cbd5e1;\n    }\n    .data-table tr:nth-child(even) { \n      background-color: #f8fafc; \n    }\n\n    strong { color: #2c3e50; }\n    em { color: #7f8c8d; }\n\n    /* Footer */\n    .footer { \n      padding: 15px 20px; \n      text-align: right; \n      font-size: 11px; \n      color: #95a5a6; \n      border-top: 1px solid #eee; \n    }\n  </style>\n`;\n\n// 8. Final HTML Output\nconst fullHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  ${cssStyles}\n</head>\n<body>\n  <div class=\"card\">\n    <div class=\"header\">\n      <h1>\ud83d\udc1b Daily Bug Report</h1>\n      <p>${reportDate}</p>\n    </div>\n    <div class=\"body\">\n      ${bodyHtml}\n    </div>\n    <div class=\"footer\">\n      Powered by ${modelName} &nbsp;|&nbsp; Total Tokens Used: ${totalTokens.toLocaleString()}\n    </div>\n  </div>\n</body>\n</html>\n`.trim();\n\nreturn [{\n  json: {\n    html_report: fullHtml,\n    plain_text: markdownText,\n    total_tokens: totalTokens,\n    report_date: reportDate\n  },\n  pairedItem: { item: 0 }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        1088
+      ],
+      "id": "715a109a-24b4-4b00-8355-2989c51d72a6",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.html_report }}"
+      },
+      "type": "n8n-nodes-htmlcsstoimage.htmlCssToImage",
+      "typeVersion": 1,
+      "position": [
+        384,
+        1088
+      ],
+      "id": "a5f657af-e6c9-4458-8163-44b59c5023bc",
+      "name": "HTML/CSS to Image",
+      "credentials": {
+        "htmlcsstoimgApi": {
+          "id": "RgVbijNCeobh79Gr",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"C09ESC12MA5\",\n  \"text\": \"Hi Team! Please see today's bug report.\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Hi Team! Please see today's bug report.\"\n      }\n    },\n    {\n      \"type\": \"image\",\n      \"image_url\": \"{{ $json.image_url }}\",\n      \"alt_text\": \"Bug Reporting\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        640,
+        1088
+      ],
+      "id": "b0829f9c-6ce8-461f-8b70-bd1e92a9bfc9",
+      "name": "Send Slack message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c396ca02-dfa3-4602-993c-d4c37f964c78",
+              "leftValue": "={{ $json.total_bugs > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -528,
+        1104
+      ],
+      "id": "5ea02a86-1d41-45c8-a808-a4d93722761b",
+      "name": "With Bugs?"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "5 6 * * 2-6"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -960,
+        112
+      ],
+      "id": "6ec469ac-3469-47c5-84d9-d6ae17190a60",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "connections": {
+    "Fetch All Spaces": {
+      "main": [
+        [
+          {
+            "node": "Split Out Spaces",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Folders": {
+      "main": [
+        [
+          {
+            "node": "Split Out Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Lists": {
+      "main": [
+        [
+          {
+            "node": "Split Out Lists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Spaces": {
+      "main": [
+        [
+          {
+            "node": "Fetch Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Folders": {
+      "main": [
+        [
+          {
+            "node": "Fetch Lists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Lists": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Fetch Bugs Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Bugs": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Comments": {
+      "main": [
+        [
+          {
+            "node": "Flatten Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Comments": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Bugs Tasks": {
+      "main": [
+        [
+          {
+            "node": "Split Out Bugs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Fetch Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "With Bugs?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTML/CSS to Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML/CSS to Image": {
+      "main": [
+        [
+          {
+            "node": "Send Slack message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "With Bugs?": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Spaces",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "rGzixtwYBsqnFWBo",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Message a model": [
+      {
+        "json": {
+          "model": "claude-haiku-4-5-20251001",
+          "id": "msg_011b6iEygLgDgTEinpHrimwB",
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "# Daily QA Report \u2014 4/17/2026\n\n## Overview\n6 total bugs tracked across 2 projects with moderate activity: 3 new bugs reported today and 3 from backlog. Currently 3 bugs in progress and 3 newly reported requiring triage.\n\n## \u26a0\ufe0f Critical Flags\n- **[Slack] Slack Chatbot - Classifier Error** (reported): Anthropic API error blocking message processing \u2014 requires immediate investigation\n- **Slack Chatbot V.02 - POST: Bryan API Error** (reported): Credentials missing \u2014 potential deployment blocker\n- Patrick Jansen Villanueva is heavily loaded with 5 of 6 bugs\n\n---\n\n## By Project\n\n### Placements Interface\n\n| Bug Name | Status | Assignee | Notes/Updates |\n|----------|--------|----------|----------------|\n| [Fathom] Transcript Workflow - Client Interview Prompt Error (n8n version) | \u2699\ufe0f in progress | Patrick Jansen Villanueva | Currently on n8n Cloud v1.123.27. Migration to v2.x not urgent; no blocking dependencies identified for current workflows. Awaiting confirmation from Jenneiline Marie Manuel on version strategy. |\n| [Fathom] Transcript Workflow - Client Interview Prompt Error (Gemini API) | \u2699\ufe0f in progress | Patrick Jansen Villanueva | Switched to Mistral's mistral-large-latest model to avoid Gemini rate limiting. Mistral tokens refresh monthly. |\n| Create a supplemental SOP | reported | Aja Mojica | No description provided. No comments. |\n\n### SV Portal Chatbot v0.2\n\n| Bug Name | Status | Assignee | Notes/Updates |\n|----------|--------|----------|----------------|\n| [Slack] Slack Chatbot - Classifier Error | reported | Patrick Jansen Villanueva | Anthropic API error: empty content in user messages. No workaround logged. |\n| Slack Chatbot V.02 - POST: Bryan API Error | reported | Patrick Jansen Villanueva | Credentials not found. No investigation notes. |\n| Error notification from separate workflows | \u2699\ufe0f in progress | Patrick Jansen Villanueva | **RESOLVED (4/16)**: Modified button_clicks handler to ignore non-Airtable feedback buttons. Testing complete \u2014 no errors encountered. |"
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 1391,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 567,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "671ed179-95be-44fe-b532-afb7a4861eae",
+  "activeVersionId": "671ed179-95be-44fe-b532-afb7a4861eae",
+  "versionCounter": 193,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-04-16T16:40:02.393Z",
+      "createdAt": "2026-04-16T16:40:02.393Z",
+      "role": "workflow:owner",
+      "workflowId": "9ESM3lpg5UQ8sWMp",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:05:10.069Z",
+    "createdAt": "2026-07-04T13:05:10.069Z",
+    "versionId": "671ed179-95be-44fe-b532-afb7a4861eae",
+    "workflowId": "9ESM3lpg5UQ8sWMp",
+    "nodes": [
+      {
+        "parameters": {
+          "url": "https://api.clickup.com/api/v2/team/9014746495/space?archived=false",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -752,
+          112
+        ],
+        "id": "bdec3179-e422-493f-a3bc-6ea4c6514c59",
+        "name": "Fetch All Spaces"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.clickup.com/api/v2/space/{{ $json.id }}/folder",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -752,
+          272
+        ],
+        "id": "ddc01e3b-b2ae-4f5c-b876-a71b51357641",
+        "name": "Fetch Folders"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.clickup.com/api/v2/folder/{{ $json.id }}/list",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              },
+              {
+                "name": "archived",
+                "value": "true"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -752,
+          432
+        ],
+        "id": "0f8e64c8-8f7f-4aa8-bc9f-c358aedd045d",
+        "name": "Fetch Lists"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "25f49a87-f01a-4bb1-8ca6-970a8235812c",
+                "leftValue": "={{ $json.name }}",
+                "rightValue": "Bugs",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          -288,
+          432
+        ],
+        "id": "290b9a64-7209-443a-8e5c-493299a1026e",
+        "name": "Filter"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "spaces",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          -512,
+          112
+        ],
+        "id": "953f96de-be79-4cb3-a059-9dd5062f6c61",
+        "name": "Split Out Spaces"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "folders",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          -512,
+          272
+        ],
+        "id": "d342a24d-427c-41d3-a875-25711b16fb7a",
+        "name": "Split Out Folders"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "lists",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          -512,
+          432
+        ],
+        "id": "8f08388b-0fdb-457e-a725-361b0ce400a9",
+        "name": "Split Out Lists"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "tasks",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          -512,
+          592
+        ],
+        "id": "b1083e0d-0b4e-4718-b9e2-945a5396cd00",
+        "name": "Split Out Bugs"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "7affe2e6-74d8-419c-a1d7-891d7347d99c",
+                "name": "Bug Name",
+                "value": "={{ $(\"Split Out Bugs\").item.json.name }}",
+                "type": "string"
+              },
+              {
+                "id": "24a594d3-26a2-45cf-a866-4bfc482dc675",
+                "name": "Folder Name",
+                "value": "={{ $(\"Split Out Bugs\").item.json.folder.name }}",
+                "type": "string"
+              },
+              {
+                "id": "d626aa40-49fe-4cec-9362-09c5295f03da",
+                "name": "Space ID",
+                "value": "={{ $(\"Split Out Bugs\").item.json.space.id }}",
+                "type": "string"
+              },
+              {
+                "id": "88318adf-efad-48b2-998e-2f7ed7f48fee",
+                "name": "Status",
+                "value": "={{ $(\"Split Out Bugs\").item.json.status.status }}",
+                "type": "string"
+              },
+              {
+                "id": "a14347f7-f9f7-4cab-a70f-6bc4f3f199d4",
+                "name": "Assignee",
+                "value": "={{ $(\"Split Out Bugs\").item.json.assignees[0]?.username }}",
+                "type": "string"
+              },
+              {
+                "id": "f355be56-17ae-4805-8f81-ea507cb2cedd",
+                "name": "Description",
+                "value": "={{ $(\"Split Out Bugs\").item.json.description || $(\"Split Out Bugs\").item.json.text_content }}",
+                "type": "string"
+              },
+              {
+                "id": "299f62da-30e1-423f-b397-695fa0bc3407",
+                "name": "Latest Comments",
+                "value": "={{ $json.flattened_comments }}",
+                "type": "string"
+              },
+              {
+                "id": "e9b9a314-6d26-49e0-9f7f-98e16711851a",
+                "name": "Created At",
+                "value": "={{ $('Split Out Bugs').item.json.date_created }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -288,
+          752
+        ],
+        "id": "64221180-f2b5-49a6-908b-6985b83bf4ae",
+        "name": "Edit Fields"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.clickup.com/api/v2/task/{{ $json.id }}/comment",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {
+            "batching": {
+              "batch": {
+                "batchSize": 10,
+                "batchInterval": 2000
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -752,
+          752
+        ],
+        "id": "896906d9-c2df-4a88-b07c-a4402755536a",
+        "name": "Fetch Comments"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Map through each input item (each bug)\nreturn items.map(item => {\n  const bugComments = item.json.comments || [];\n  \n  // Create a readable string from the comments array\n  const flatComments = bugComments.map(c => {\n    const date = new Date(parseInt(c.date)).toLocaleDateString();\n    return `[${date}] ${c.user.username}: ${c.comment_text.trim()}`;\n  }).join('\\n---\\n');\n\n  return {\n    json: {\n      ...item.json,\n      flattened_comments: flatComments || \"No comments found.\"\n    }\n  };\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -512,
+          752
+        ],
+        "id": "6e82a8f8-b749-49b4-bd41-3a650c95bb19",
+        "name": "Flatten Comments"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.clickup.com/api/v2/list/{{ $json.id }}/task?include_closed=true",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {}
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -752,
+          592
+        ],
+        "id": "e8ab8dfe-6584-43e1-96bd-a33be4c4d874",
+        "name": "Fetch Bugs Tasks"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get Chicago midnight using plain JS\nconst now = new Date();\nconst chicagoTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));\nchicagoTime.setHours(0, 0, 0, 0);\nconst chicagoMidnight = chicagoTime.getTime();\n\nreturn items.filter(item => {\n  const created = parseInt(item.json.date_created);\n  const status = item.json.status.status.toLowerCase();\n  \n  // EXCLUSION RULE: Drop the bug immediately if it is rejected\n  if (status === 'rejected') {\n      return false;\n  }\n\n  const isOpenStatus = ['reported', '\u2699\ufe0f in progress'].includes(status);\n  const isCreatedToday = created >= chicagoMidnight;\n\n  return isCreatedToday || isOpenStatus;\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -288,
+          592
+        ],
+        "id": "68a4acb6-aa9d-479c-9e30-a7adf071afd5",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "claude-haiku-4-5-20251001",
+            "mode": "list",
+            "cachedResultName": "claude-haiku-4-5-20251001"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "=Please generate today's daily QA summary based on your system instructions. \n\nHere is the raw data:\n{{$json.aggregated_text}}"
+              }
+            ]
+          },
+          "simplify": false,
+          "options": {
+            "system": "You are a highly efficient QA Reporting Assistant for a technical team. Your objective is to analyze raw bug data and produce a clear, scannable, and actionable Daily Bug Report.\n\nStrict Reporting Rules:\n1. Overview: Start with a brief 1-2 sentence summary of the day's bug activity.\n2. Critical Flags: Highlight any bugs that seem urgent, blocking, or require immediate attention based on their status or comments.\n3. Project Breakdown: You MUST group all bugs by their Folder/Project name.\n4. Table Format: You MUST output these project groups using Markdown tables. Use exactly these column headers: | Bug Name | Status | Assignee | Notes/Updates |\n5. Accuracy: Keep notes concise. Do not invent data or assume missing details. If an assignee or note is missing, leave it blank or state \"Unassigned/No notes\"."
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.anthropic",
+        "typeVersion": 1,
+        "position": [
+          -176,
+          1088
+        ],
+        "id": "5c380c08-7cd0-4a3e-bced-eba11c271bdc",
+        "name": "Message a model",
+        "credentials": {
+          "anthropicApi": {
+            "id": "eQfzvn3izR7ec2J1",
+            "name": "Solutions Anthropic"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const now = new Date();\nconst chicagoTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));\nchicagoTime.setHours(0, 0, 0, 0);\nconst chicagoMidnight = chicagoTime.getTime();\n\nconst bugs = items.map(item => {\n  const b = item.json;\n  return {\n    bug_name: b['Bug Name'],\n    folder: b['Folder Name'],\n    space_id: b['Space ID'],\n    status: b['Status'],\n    assignee: b['Assignee'] || 'Unassigned',\n    description: b['Description'] || 'No description',\n    comments: b['Latest Comments'],\n    created_at: b['Created At'] || null,\n    reported_date: now.toLocaleDateString('en-US', { timeZone: 'America/Chicago' })\n  };\n});\n\n// Breakdowns\nconst byStatus = bugs.reduce((acc, b) => {\n  acc[b.status] = (acc[b.status] || 0) + 1;\n  return acc;\n}, {});\n\nconst byAssignee = bugs.reduce((acc, b) => {\n  acc[b.assignee] = (acc[b.assignee] || 0) + 1;\n  return acc;\n}, {});\n\nconst byFolder = bugs.reduce((acc, b) => {\n  acc[b.folder] = (acc[b.folder] || 0) + 1;\n  return acc;\n}, {});\n\nconst newToday = bugs.filter(b => b.created_at && parseInt(b.created_at) >= chicagoMidnight).length;\nconst backlog = bugs.filter(b => b.created_at && parseInt(b.created_at) < chicagoMidnight).length;\n\n// Breakdown strings for LLM / email readability\nconst statusBreakdown = Object.entries(byStatus).map(([k, v]) => `  - ${k}: ${v}`).join('\\n');\nconst assigneeBreakdown = Object.entries(byAssignee).map(([k, v]) => `  - ${k}: ${v}`).join('\\n');\nconst folderBreakdown = Object.entries(byFolder).map(([k, v]) => `  - ${k}: ${v}`).join('\\n');\n\nconst aggregated_text = `\nDAILY BUG REPORT \u2014 ${now.toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}\n\n=== SUMMARY ===\nTotal Bugs: ${bugs.length}\nNew Today: ${newToday}\nFrom Backlog: ${backlog}\n\n=== BY STATUS ===\n${statusBreakdown}\n\n=== BY ASSIGNEE ===\n${assigneeBreakdown}\n\n=== BY FOLDER/PROJECT ===\n${folderBreakdown}\n\n=== BUG DETAILS ===\n${bugs.map(b => `\nBug: ${b.bug_name}\nFolder: ${b.folder}\nStatus: ${b.status}\nAssignee: ${b.assignee}\nDescription: ${b.description}\nComments: ${b.comments}\n`.trim()).join('\\n\\n---\\n\\n')}\n`.trim();\n\nreturn [{\n  json: {\n    report_date: now.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }),\n\n    // Counts\n    total_bugs: bugs.length,\n    new_today: newToday,\n    backlog: backlog,\n\n    // Breakdowns (structured \u2014 good for Sheets/Airtable)\n    by_status: byStatus,\n    by_assignee: byAssignee,\n    by_folder: byFolder,\n\n    // Breakdowns (stringified \u2014 good for Sheets columns)\n    by_status_text: statusBreakdown,\n    by_assignee_text: assigneeBreakdown,\n    by_folder_text: folderBreakdown,\n\n    // Full data\n    bugs: bugs,\n    aggregated_text: aggregated_text\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -752,
+          992
+        ],
+        "id": "dc9accd9-b334-4c28-8aa8-7aa52fd912c3",
+        "name": "Aggregate"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C09ESC12MA5",
+            "mode": "id"
+          },
+          "text": "=\u2705 Daily Bug Report \u2014 No Bugs Found ({{ $json.report_date }})  \n\nGood news! No open or new bugs were reported today.",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          -288,
+          1264
+        ],
+        "id": "5975f352-5f45-4b1c-9cc2-1064d6294032",
+        "name": "Send a message",
+        "webhookId": "3eb72d3e-0f5e-4d01-9cd2-4eba390c40fc",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tbl70cBMj2nl0hpJw",
+            "mode": "list",
+            "cachedResultName": "Bugs",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl70cBMj2nl0hpJw"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "backlogs": "={{ $json.backlog }}",
+              "new_today": "={{ $json.new_today }}",
+              "total_bugs": "={{ $json.total_bugs }}",
+              "reported_date": "={{ $json.report_date }}"
+            },
+            "matchingColumns": [
+              "Name"
+            ],
+            "schema": [
+              {
+                "id": "reported_date",
+                "displayName": "reported_date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "total_bugs",
+                "displayName": "total_bugs",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "new_today",
+                "displayName": "new_today",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "backlogs",
+                "displayName": "backlogs",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          -448,
+          928
+        ],
+        "id": "38920249-3556-4d08-a6e2-2f60b8efc06f",
+        "name": "Create a record",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// 1. Get raw output from LLM node\nconst firstItem = $input.first().json;\n\n// 2. Extract model name and tokens\nconst rawModel = firstItem.model || \"AI Model\";\nfunction getFriendlyModelName(id) {\n  if (id.includes('haiku')) return \"Haiku 4.5\";\n  if (id.includes('sonnet')) return \"Sonnet 4.5\";\n  if (id.includes('opus')) return \"Opus 4\";\n  return id;\n}\nconst modelName = getFriendlyModelName(rawModel);\n\nlet totalTokens = 0;\nif (firstItem.usage) {\n  totalTokens = (firstItem.usage.input_tokens || 0) + (firstItem.usage.output_tokens || 0);\n}\n\n// 3. Extract markdown text from LLM response\nconst markdownText = firstItem.content[0].text || \"\";\n\n// 4. Helper: Escape HTML\nfunction escapeHtml(text) {\n  return String(text || \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\n// 5. Convert Markdown to HTML (BULLETPROOF TABLES)\nfunction markdownToHtml(md) {\n  // 1. Normalize all line endings to prevent regex failures\n  let html = md.replace(/\\r\\n/g, '\\n');\n\n  // 2. Aggressive Table Parser: Allows leading/trailing spaces around pipes\n  html = html.replace(/(?:^[ \\t]*\\|.*\\|[ \\t]*(?:\\n|$))+/gm, match => {\n    const rows = match.trim().split('\\n');\n    let tableHtml = '<div class=\"table-responsive\"><table class=\"data-table\">';\n    \n    rows.forEach((row, index) => {\n      // Clean up the row and skip the markdown separator (---|---)\n      const cleanRow = row.trim();\n      if (cleanRow.replace(/\\s/g, '').match(/^\\|?[-:|]+\\|?$/)) return;\n      \n      const isHeader = index === 0;\n      const tag = isHeader ? 'th' : 'td';\n      \n      // Slice off the first and last pipes safely, then split into cells\n      let innerRow = cleanRow;\n      if (innerRow.startsWith('|')) innerRow = innerRow.substring(1);\n      if (innerRow.endsWith('|')) innerRow = innerRow.substring(0, innerRow.length - 1);\n      \n      const cells = innerRow.split('|');\n      \n      tableHtml += '<tr>' + cells.map(cell => {\n        // Convert Markdown bold (**text**) inside table cells\n        let cellText = cell.trim().replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n        return `<${tag}>${cellText}</${tag}>`;\n      }).join('') + '</tr>';\n    });\n    \n    tableHtml += '</table></div>';\n    return tableHtml;\n  });\n\n  // 3. Parse the rest of the standard markdown\n  html = html\n    // Headers\n    .replace(/^### (.*$)/gm, '<h3>$1</h3>')\n    .replace(/^## (.*$)/gm, '<h2>$1</h2>')\n    .replace(/^# (.*$)/gm, '<h1>$1</h1>')\n    // Bold + Italic\n    .replace(/\\*\\*\\*(.*?)\\*\\*\\*/g, '<strong><em>$1</em></strong>')\n    // Bold (outside tables)\n    .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')\n    // Italic\n    .replace(/\\*(.*?)\\*/g, '<em>$1</em>')\n    // Horizontal rule\n    .replace(/^---$/gm, '<hr>')\n    // Numbered list items\n    .replace(/^\\d+\\.\\s+(.*$)/gm, '<li class=\"numbered\">$1</li>')\n    // Bullet list items\n    .replace(/^-\\s+(.*$)/gm, '<li class=\"bullet\">$1</li>')\n    // Wrap consecutive numbered items in <ol>\n    .replace(/(<li class=\"numbered\">.*<\\/li>\\n?)+/g, match => `<ol>${match}</ol>`)\n    // Wrap consecutive bullet items in <ul>\n    .replace(/(<li class=\"bullet\">.*<\\/li>\\n?)+/g, match => `<ul>${match}</ul>`)\n    // Paragraphs (Double line breaks)\n    .replace(/\\n\\n/g, '</p><p>')\n    // Single line breaks\n    .replace(/\\n/g, '<br>')\n    // CLEANUP: Remove stray tags around block elements\n    .replace(/<\\/h(\\d)><br>/g, '</h$1>')\n    .replace(/<\\/ul><br>/g, '</ul>')\n    .replace(/<\\/ol><br>/g, '</ol>')\n    .replace(/<\\/div><br>/g, '</div>')\n    .replace(/<br><ul/g, '<ul')\n    .replace(/<br><ol/g, '<ol')\n    .replace(/<p><div/g, '<div')\n    .replace(/<\\/div><\\/p>/g, '</div>');\n\n  return html;\n}\n\nconst bodyHtml = `<p>${markdownToHtml(escapeHtml(markdownText).replace(/&lt;br&gt;/g, '<br>'))}</p>`;\n\n// 6. Get today's date\nconst reportDate = new Date().toLocaleDateString('en-US', {\n  timeZone: 'America/Chicago',\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric'\n});\n\n// 7. CSS Styles\nconst cssStyles = `\n  <style>\n    * { box-sizing: border-box; margin: 0; padding: 0; }\n    body { \n      font-family: 'Segoe UI', Arial, sans-serif; \n      background-color: #f4f7f6; \n      padding: 20px; \n      color: #333; \n    }\n    .card { \n      background: #fff; \n      border-radius: 8px; \n      box-shadow: 0 4px 15px rgba(0,0,0,0.1); \n      max-width: 850px; \n      margin: 0 auto; \n      overflow: hidden; \n    }\n\n    /* Header */\n    .header { \n      background-color: #c0392b; \n      padding: 30px; \n      text-align: center; \n    }\n    .header h1 { \n      margin: 0; \n      font-size: 26px; \n      color: #fff; \n      letter-spacing: 0.5px; \n    }\n    .header p { \n      margin: 8px 0 0; \n      color: #fff; \n      opacity: 0.9; \n      font-size: 15px; \n    }\n\n    /* Body */\n    .body { padding: 30px; }\n\n    /* Markdown Styles */\n    h1 { font-size: 22px; color: #c0392b; margin: 20px 0 10px; border-bottom: 2px solid #c0392b; padding-bottom: 6px; }\n    h2 { font-size: 18px; color: #2c3e50; margin: 20px 0 10px; }\n    h3 { \n      font-size: 15px; \n      color: #e67e22; \n      margin: 16px 0 8px; \n      padding: 8px 12px; \n      background: #fef9f0; \n      border-left: 4px solid #e67e22; \n      border-radius: 4px; \n    }\n    hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }\n    p { font-size: 14px; line-height: 1.7; color: #555; margin-bottom: 12px; }\n    \n    /* Lists */\n    ul { padding-left: 20px; margin: 8px 0 12px; list-style-type: disc; }\n    ol { padding-left: 20px; margin: 8px 0 12px; list-style-type: decimal; }\n    li { font-size: 14px; line-height: 1.7; color: #555; margin-bottom: 5px; }\n    \n    /* Tables */\n    .table-responsive { \n      overflow-x: auto; \n      margin: 15px 0; \n    }\n    .data-table { \n      width: 100%; \n      border-collapse: collapse; \n      font-size: 13px; \n    }\n    .data-table th, .data-table td { \n      padding: 10px 12px; \n      border: 1px solid #e0e0e0; \n      text-align: left; \n    }\n    .data-table th { \n      background-color: #f8f9fa; \n      color: #2c3e50; \n      font-weight: bold; \n      border-bottom: 2px solid #cbd5e1;\n    }\n    .data-table tr:nth-child(even) { \n      background-color: #f8fafc; \n    }\n\n    strong { color: #2c3e50; }\n    em { color: #7f8c8d; }\n\n    /* Footer */\n    .footer { \n      padding: 15px 20px; \n      text-align: right; \n      font-size: 11px; \n      color: #95a5a6; \n      border-top: 1px solid #eee; \n    }\n  </style>\n`;\n\n// 8. Final HTML Output\nconst fullHtml = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  ${cssStyles}\n</head>\n<body>\n  <div class=\"card\">\n    <div class=\"header\">\n      <h1>\ud83d\udc1b Daily Bug Report</h1>\n      <p>${reportDate}</p>\n    </div>\n    <div class=\"body\">\n      ${bodyHtml}\n    </div>\n    <div class=\"footer\">\n      Powered by ${modelName} &nbsp;|&nbsp; Total Tokens Used: ${totalTokens.toLocaleString()}\n    </div>\n  </div>\n</body>\n</html>\n`.trim();\n\nreturn [{\n  json: {\n    html_report: fullHtml,\n    plain_text: markdownText,\n    total_tokens: totalTokens,\n    report_date: reportDate\n  },\n  pairedItem: { item: 0 }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          176,
+          1088
+        ],
+        "id": "715a109a-24b4-4b00-8355-2989c51d72a6",
+        "name": "Code in JavaScript1"
+      },
+      {
+        "parameters": {
+          "html_content": "={{ $json.html_report }}"
+        },
+        "type": "n8n-nodes-htmlcsstoimage.htmlCssToImage",
+        "typeVersion": 1,
+        "position": [
+          384,
+          1088
+        ],
+        "id": "a5f657af-e6c9-4458-8163-44b59c5023bc",
+        "name": "HTML/CSS to Image",
+        "credentials": {
+          "htmlcsstoimgApi": {
+            "id": "RgVbijNCeobh79Gr",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.postMessage",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"channel\": \"C09ESC12MA5\",\n  \"text\": \"Hi Team! Please see today's bug report.\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"Hi Team! Please see today's bug report.\"\n      }\n    },\n    {\n      \"type\": \"image\",\n      \"image_url\": \"{{ $json.image_url }}\",\n      \"alt_text\": \"Bug Reporting\"\n    }\n  ]\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          640,
+          1088
+        ],
+        "id": "b0829f9c-6ce8-461f-8b70-bd1e92a9bfc9",
+        "name": "Send Slack message"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "c396ca02-dfa3-4602-993c-d4c37f964c78",
+                "leftValue": "={{ $json.total_bugs > 0 }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          -528,
+          1104
+        ],
+        "id": "5ea02a86-1d41-45c8-a808-a4d93722761b",
+        "name": "With Bugs?"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "5 6 * * 2-6"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -960,
+          112
+        ],
+        "id": "6ec469ac-3469-47c5-84d9-d6ae17190a60",
+        "name": "Schedule Trigger"
+      }
+    ],
+    "connections": {
+      "Fetch All Spaces": {
+        "main": [
+          [
+            {
+              "node": "Split Out Spaces",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Folders": {
+        "main": [
+          [
+            {
+              "node": "Split Out Folders",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Lists": {
+        "main": [
+          [
+            {
+              "node": "Split Out Lists",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out Spaces": {
+        "main": [
+          [
+            {
+              "node": "Fetch Folders",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out Folders": {
+        "main": [
+          [
+            {
+              "node": "Fetch Lists",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out Lists": {
+        "main": [
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter": {
+        "main": [
+          [
+            {
+              "node": "Fetch Bugs Tasks",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out Bugs": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Comments": {
+        "main": [
+          [
+            {
+              "node": "Flatten Comments",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Flatten Comments": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Bugs Tasks": {
+        "main": [
+          [
+            {
+              "node": "Split Out Bugs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Fetch Comments",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields": {
+        "main": [
+          [
+            {
+              "node": "Aggregate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate": {
+        "main": [
+          [
+            {
+              "node": "With Bugs?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Create a record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Message a model": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript1": {
+        "main": [
+          [
+            {
+              "node": "HTML/CSS to Image",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTML/CSS to Image": {
+        "main": [
+          [
+            {
+              "node": "Send Slack message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "With Bugs?": {
+        "main": [
+          [
+            {
+              "node": "Message a model",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Fetch All Spaces",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

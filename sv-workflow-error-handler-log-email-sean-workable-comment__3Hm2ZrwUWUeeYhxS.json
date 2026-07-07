@@ -1,0 +1,466 @@
+{
+  "updatedAt": "2026-05-22T15:00:10.000Z",
+  "createdAt": "2026-05-05T22:33:18.791Z",
+  "id": "3Hm2ZrwUWUeeYhxS",
+  "name": "SV Workflow ERROR HANDLER \u2014 Log + Email Sean + Workable Comment",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "errTrigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1100,
+        0
+      ],
+      "parameters": {},
+      "notes": "Set as errorWorkflow on every production workflow's settings. Receives execution.id + execution.error.* + workflow.id + workflow.name on any unhandled node failure."
+    },
+    {
+      "id": "extractErrCtx",
+      "name": "Extract Error Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const ex = $json.execution || {};\nconst wf = $json.workflow || {};\nconst err = ex.error || {};\nconst name = wf.name || '';\n// Derive workflow_label from name pattern 'SV Workflow X \u2014 ...'\nlet label = 'unknown';\nconst m = name.match(/SV Workflow ([A-Z][a-zA-Z\\-]*)/i);\nif (m) label = m[1];\nelse if (/Pre-A/i.test(name)) label = 'Pre-A';\nconst execUrl = `https://svsolutionarchitects.app.n8n.cloud/workflow/${wf.id || ''}/executions/${ex.id || ''}`;\nreturn [{ json: {\n  execution_id: ex.id || 'unknown',\n  workflow_n8n_id: wf.id || null,\n  workflow_n8n_name: name,\n  workflow_label: label,\n  failed_node: ex.lastNodeExecuted || null,\n  error_message: err.message || 'no message',\n  error_stack: err.stack || null,\n  execution_url: execUrl,\n  timestamp_utc: new Date().toISOString(),\n} }];"
+      },
+      "notes": "Normalize the n8n error trigger payload into our schema."
+    },
+    {
+      "id": "lookupCtx",
+      "name": "Lookup Execution Context (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -700,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/execution_context?execution_id=eq.{{ $json.execution_id }}&select=*",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "7oGunnIT3yrs7idL",
+          "name": "Supabase service-role"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Fetch candidate_id/email/session_id from execution_context table by execution_id. Empty result is OK \u2014 error handler still fires email."
+    },
+    {
+      "id": "mergeCtx",
+      "name": "Merge Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const errCtx = $('Extract Error Context').item.json;\nconst upstream = $input.first().json;\nlet ctx = null;\nif (Array.isArray(upstream)) ctx = upstream[0] || null;\nelse if (upstream && (upstream.execution_id || upstream.candidate_id)) ctx = upstream;\nreturn [{ json: {\n  ...errCtx,\n  candidate_id: ctx?.candidate_id || null,\n  candidate_email: ctx?.candidate_email || null,\n  session_id: ctx?.session_id || null,\n  trigger_event: ctx?.trigger_event || null,\n  trigger_payload: ctx?.trigger_payload || null,\n} }];"
+      },
+      "notes": "Combine error metadata + execution context into a single record."
+    },
+    {
+      "id": "insertErrRow",
+      "name": "Insert workflow_errors Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -300,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workflow_errors",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"workflow_label\": \"{{ $json.workflow_label }}\",\n  \"workflow_n8n_id\": \"{{ $json.workflow_n8n_id }}\",\n  \"workflow_n8n_name\": {{ JSON.stringify($json.workflow_n8n_name) }},\n  \"execution_id\": \"{{ $json.execution_id }}\",\n  \"candidate_id\": {{ $json.candidate_id ? '\"' + $json.candidate_id + '\"' : 'null' }},\n  \"candidate_email\": {{ $json.candidate_email ? JSON.stringify($json.candidate_email) : 'null' }},\n  \"session_id\": {{ $json.session_id ? '\"' + $json.session_id + '\"' : 'null' }},\n  \"failed_node\": {{ $json.failed_node ? JSON.stringify($json.failed_node) : 'null' }},\n  \"error_message\": {{ JSON.stringify($json.error_message) }},\n  \"error_stack\": {{ $json.error_stack ? JSON.stringify($json.error_stack) : 'null' }},\n  \"trigger_payload\": {{ $json.trigger_payload ? JSON.stringify($json.trigger_payload) : 'null' }}\n}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "supabaseApi": {
+          "id": "7oGunnIT3yrs7idL",
+          "name": "Supabase service-role"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Log the error row. neverError=true so email still sends even if Supabase write fails."
+    },
+    {
+      "id": "renderEmail",
+      "name": "Render Error Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -100,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const c = $('Merge Context').item.json;\nconst subject = `[SV Pipeline ALERT] Workflow ${c.workflow_label} failed \u2014 ${c.failed_node || 'unknown node'}`;\nconst lines = [\n  `A production workflow failed. A candidate may need manual processing.`,\n  ``,\n  `Workflow: ${c.workflow_n8n_name} (${c.workflow_label})`,\n  `Execution: ${c.execution_id}`,\n  `Failed at: ${c.failed_node || '(unknown)'}`,\n  `Error: ${c.error_message}`,\n  ``,\n];\nif (c.candidate_id) {\n  lines.push(`Candidate: ${c.candidate_id} (${c.candidate_email || 'no email'})`);\n  if (c.session_id) lines.push(`Session: ${c.session_id}`);\n  lines.push('');\n}\nlines.push(`n8n execution: ${c.execution_url}`);\nlines.push('');\nlines.push('Next steps:');\nlines.push(' 1. Open the execution URL above to diagnose the failed node.');\nlines.push(' 2. If the candidate is stuck (no comment, no stage move, no email sent),');\nlines.push('    manually process them via Workable UI or re-fire the workflow.');\nlines.push(' 3. Mark resolved in workflow_errors when complete:');\nlines.push(`    UPDATE workflow_errors SET resolved_at=NOW(), resolution_note='...' WHERE execution_id='${c.execution_id}';`);\nif (c.candidate_id) {\n  lines.push('');\n  lines.push('A notification comment has also been posted on the candidate in Workable.');\n}\nconst body = lines.join('\\n');\nreturn [{ json: { ...c, email_subject: subject, email_body: body, email_subject_json_str: JSON.stringify(subject), email_body_json_str: JSON.stringify(body) } }];"
+      },
+      "notes": "Render the email subject + body."
+    },
+    {
+      "id": "sendEmail",
+      "name": "Send Error Email via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"SV Pipeline Alerts <sean@thehalangroup.com>\",\n  \"to\": [\"sean@thehalangroup.com\"],\n  \"subject\": {{ $json.email_subject_json_str }},\n  \"text\": {{ $json.email_body_json_str }},\n  \"reply_to\": \"sean@thehalangroup.com\",\n  \"tags\": [{ \"name\": \"template\", \"value\": \"pipeline_error_alert\" }]\n}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "a3YNqeLlZUXQ0h3U",
+          "name": "SV Resend"
+        }
+      },
+      "alwaysOutputData": true,
+      "notes": "Email Sean. neverError so downstream Workable post still attempts."
+    },
+    {
+      "id": "ifHasCand",
+      "name": "Has Candidate ID?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        300,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "hascand1",
+              "leftValue": "={{ $('Merge Context').item.json.candidate_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "notes": "Skip Workable comment if no candidate_id (e.g., trigger error before context written)."
+    },
+    {
+      "id": "renderWkComment",
+      "name": "Render Workable Comment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "const c = $('Merge Context').item.json;\nconst body = [\n  '\u26a0\ufe0f Automated screening encountered a technical error and could not complete this evaluation. The talent acquisition team has been notified and will manually review this candidate.',\n  '',\n  `Error reference: WF-${c.workflow_label} / Exec ${c.execution_id} / ${c.timestamp_utc}`,\n].join('\\n');\nreturn [{ json: { ...c, comment_body: body, comment_body_json_str: JSON.stringify(body) } }];"
+      },
+      "notes": "Workable comment text \u2014 neutral, talent-team-friendly. Posted under Screen Bot member_id 1e62f0."
+    },
+    {
+      "id": "postWkComment",
+      "name": "Post Workable Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        700,
+        -100
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $json.candidate_id }}/comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"comment\": {\n    \"body\": {{ $json.comment_body_json_str }}\n  }\n}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "1Hv2yuydVuri7fKY",
+          "name": "SV Workable Bearer"
+        }
+      },
+      "notes": "Workable POST /candidates/:id/comments. SCREENBOT_MEMBER_ID 1e62f0 hardcoded per CLAUDE.md \u00a714."
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Error Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Error Context": {
+      "main": [
+        [
+          {
+            "node": "Lookup Execution Context (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Execution Context (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Merge Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Context": {
+      "main": [
+        [
+          {
+            "node": "Insert workflow_errors Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert workflow_errors Row": {
+      "main": [
+        [
+          {
+            "node": "Render Error Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Error Email": {
+      "main": [
+        [
+          {
+            "node": "Send Error Email via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Error Email via Resend": {
+      "main": [
+        [
+          {
+            "node": "Has Candidate ID?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Candidate ID?": {
+      "main": [
+        [
+          {
+            "node": "Render Workable Comment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Render Workable Comment": {
+      "main": [
+        [
+          {
+            "node": "Post Workable Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "f1fbee58-1cc3-42b3-92c2-65f6d11a1882",
+  "activeVersionId": null,
+  "versionCounter": 16,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-05T22:33:18.799Z",
+      "createdAt": "2026-05-05T22:33:18.799Z",
+      "role": "workflow:owner",
+      "workflowId": "3Hm2ZrwUWUeeYhxS",
+      "projectId": "JTL5cjRrfk6BoF7w",
+      "project": {
+        "updatedAt": "2026-04-22T13:17:17.390Z",
+        "createdAt": "2026-04-21T19:18:41.031Z",
+        "id": "JTL5cjRrfk6BoF7w",
+        "name": "Sean Cook <seancook@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2026-04-21T19:18:41.034Z",
+            "createdAt": "2026-04-21T19:18:41.034Z",
+            "userId": "46159d8b-0f64-48b5-9803-93b79c6f60d6",
+            "projectId": "JTL5cjRrfk6BoF7w",
+            "user": {
+              "updatedAt": "2026-07-03T20:44:42.000Z",
+              "createdAt": "2026-04-21T19:18:41.022Z",
+              "id": "46159d8b-0f64-48b5-9803-93b79c6f60d6",
+              "email": "seancook@scalevirtually.com",
+              "firstName": "Sean",
+              "lastName": "Cook",
+              "personalizationAnswers": null,
+              "settings": {
+                "firstSuccessfulWorkflowId": "xxrchvYnRk9mI65k",
+                "userActivated": true,
+                "userActivatedAt": 1777743425530,
+                "npsSurvey": {
+                  "waitingForResponse": true,
+                  "ignoredCount": 1,
+                  "lastShownAt": 1778079051072
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-03",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

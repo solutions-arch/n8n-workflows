@@ -1,0 +1,731 @@
+{
+  "updatedAt": "2026-07-06T19:14:42.568Z",
+  "createdAt": "2026-05-04T13:04:09.373Z",
+  "id": "Rgyo7AwtoGl6kwYY",
+  "name": "[Fathom] Internal MoM Generator",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "89c91232-953f-4e45-85b7-a68e880ae068",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        -160
+      ],
+      "id": "1fedc48e-0268-45ec-b289-785742ce1f90",
+      "name": "Webhook",
+      "webhookId": "89c91232-953f-4e45-85b7-a68e880ae068"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This script normalizes the Fathom webhook payload you pasted and enriches it with timing info.\n// - Adds meeting start/end in UTC and Asia/Manila (+08:00)\n// - Converts webhook/created_at timestamps\n// - For each transcript line, adds an absolute local RFC3339 time using recording_start_time + relative [HH:MM:SS]\n\n/** Helpers **/\nconst isArr = Array.isArray;\nlet root = $json;\nif (isArr(root)) root = root[0] || {};\nconst body = root.body || root;\nconst headers = (root.headers || {});\n\n// --- Time helpers ---\nconst OFFSET_HOURS = 8; // Asia/Manila\nconst pad = (n) => String(n).padStart(2, \"0\");\n\nfunction toDate(x) {\n  try { return x ? new Date(x) : null; } catch { return null; }\n}\n\nfunction fromEpochSeconds(sec) {\n  if (!sec) return null;\n  const n = Number(sec);\n  if (!Number.isFinite(n)) return null;\n  return new Date(n * 1000);\n}\n\nfunction addHours(date, hours) {\n  if (!date) return null;\n  return new Date(date.getTime() + hours * 3600 * 1000);\n}\n\nfunction toRFC3339WithOffset(dateUTC, offsetHours = OFFSET_HOURS) {\n  if (!dateUTC) return null;\n  // Convert UTC -> local (+offset), then format with explicit +HH:MM\n  const local = addHours(dateUTC, offsetHours);\n  const y = local.getFullYear();\n  const m = pad(local.getMonth() + 1);\n  const d = pad(local.getDate());\n  const hh = pad(local.getHours());\n  const mm = pad(local.getMinutes());\n  const ss = pad(local.getSeconds());\n  const sign = offsetHours >= 0 ? \"+\" : \"-\";\n  const oh = pad(Math.floor(Math.abs(offsetHours)));\n  const om = pad(Math.abs(offsetHours * 60) % 60);\n  return `${y}-${m}-${d}T${hh}:${mm}:${ss}${sign}${oh}:${om}`;\n}\n\nfunction toISOZ(date) {\n  return date ? date.toISOString() : null;\n}\n\n// Parse [HH:MM:SS] into seconds\nfunction hmsToSeconds(hms) {\n  if (!hms) return null;\n  const m = String(hms).match(/^(\\d{1,2}):(\\d{2}):(\\d{2})$/);\n  if (!m) return null;\n  const h = Number(m[1]), mi = Number(m[2]), s = Number(m[3]);\n  if ([h, mi, s].some(n => !Number.isFinite(n))) return null;\n  return h * 3600 + mi * 60 + s;\n}\n\nfunction addSeconds(date, seconds) {\n  if (!date || seconds == null) return null;\n  return new Date(date.getTime() + seconds * 1000);\n}\n\n/** Core fields **/\nconst meetingTitle = body.meeting_title || body.title || null;\nconst meetingId = body.recording_id ?? null;\nconst meetingUrl = body.share_url || body.url || null;\nconst transcriptLanguage = body.transcript_language || null;\n\n// Times from payload\nconst recordingStartUtc = toDate(body.recording_start_time); // ISO Z\nconst recordingEndUtc   = toDate(body.recording_end_time);\nconst createdAtUtc      = toDate(body.created_at);\nconst webhookTsUtc      = fromEpochSeconds(headers[\"webhook-timestamp\"]); // seconds epoch\n\n// Local (+08:00) strings\nconst meetingStartUtc = toISOZ(recordingStartUtc);\nconst meetingEndUtc   = toISOZ(recordingEndUtc);\nconst createdAtIsoUtc = toISOZ(createdAtUtc);\nconst webhookIsoUtc   = toISOZ(webhookTsUtc);\n\nconst meetingStartLocal = toRFC3339WithOffset(recordingStartUtc, OFFSET_HOURS);\nconst meetingEndLocal   = toRFC3339WithOffset(recordingEndUtc, OFFSET_HOURS);\nconst createdAtLocal    = toRFC3339WithOffset(createdAtUtc, OFFSET_HOURS);\nconst webhookLocal      = toRFC3339WithOffset(webhookTsUtc, OFFSET_HOURS);\n\n// Invitees\nconst invitees = (body.calendar_invitees || []).map(i => ({\n  name: i.name || i.matched_speaker_display_name || \"Unknown\",\n  email: i.email || \"N/A\",\n}));\n\n// Transcript with absolute local times (if recordingStartUtc + [HH:MM:SS] available)\nconst transcriptLines = (body.transcript || []).map(t => {\n  const speaker = (t.speaker && t.speaker.display_name) || \"Unknown\";\n  const rel = t.timestamp || null; // HH:MM:SS\n  let absLocal = null;\n\n  if (recordingStartUtc && rel) {\n    const sec = hmsToSeconds(rel);\n    if (sec != null) {\n      const absUtc = addSeconds(recordingStartUtc, sec);\n      absLocal = toRFC3339WithOffset(absUtc, OFFSET_HOURS);\n    }\n  }\n\n  const tsRel = rel ? `[${rel}]` : \"\";\n  const tsAbs = absLocal ? `[${absLocal}]` : \"\";\n  // Include both relative and absolute if available\n  return `${tsRel}${tsAbs} ${speaker}: ${t.text}`;\n});\n\n// Summary\nconst summary = (body.default_summary && body.default_summary.markdown_formatted) || null;\n\n/** Output **/\nreturn {\n  meetingId,\n  meetingTitle,\n  invitees,\n  transcriptLanguage,\n  summary,\n  transcript: transcriptLines.join(\"\\n\"),\n  meetingUrl,\n\n  // Extra timing context\n  timing: {\n    timezone: \"Asia/Manila (+08:00)\",\n    meetingStartUtc,\n    meetingEndUtc,\n    meetingStartLocal,\n    meetingEndLocal,\n    createdAtUtc: createdAtIsoUtc,\n    createdAtLocal,\n    webhookTimestampUtc: webhookIsoUtc,\n    webhookTimestampLocal: webhookLocal,\n  },\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        -448
+      ],
+      "id": "4830e13b-5ad1-4b0b-a8b4-47bf361ffdf7",
+      "name": "Transcript Cleaner"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"meta_input\": {\n    \"meetingId\": \"{{$json.meetingId}}\",\n    \"meetingTitle\": {{$json.meetingTitle ? JSON.stringify($json.meetingTitle) : \"\\\"TBD\\\"\"}},\n    \"invitees\": {{$json.invitees ? JSON.stringify($json.invitees) : \"[]\"}},\n    \"transcriptLanguage\": {{$json.transcriptLanguage ? JSON.stringify($json.transcriptLanguage) : \"\\\"en\\\"\"}},\n    \"meetingUrl\": {{$json.meetingUrl ? JSON.stringify($json.meetingUrl) : \"\\\"\\\"\"}}\n  },\n  \"source\": {\n    \"summary\": {{$json.summary ? JSON.stringify($json.summary) : \"\\\"\\\"\"}},\n    \"transcript\": {{$json.transcript ? JSON.stringify($json.transcript) : \"\\\"\\\"\"}}\n  },\n  \"task\": \"Using ONLY the information in source.summary and source.transcript, populate the schema described in the system message for an internal meeting (e.g., team sync, standup, 1:1, internal project review). Assume that ALL participants and email addresses are internal to the company; do NOT infer or create any external clients or organizations. Map the fields as follows: meta.meetingId from meta_input.meetingId, meta.meetingTitle from meta_input.meetingTitle, meta.meetingUrl from meta_input.meetingUrl, meta.language from meta_input.transcriptLanguage, meta.invitees as an array of strings in the format 'Name <email>'. If the schema requires a client or stakeholder field (e.g., meta.clientName), treat it as the primary internal stakeholder, team, or project owner. If you cannot identify one, set that field to 'TBD'. Follow all hard requirements from the system message and return only the final JSON object.\"\n}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You will receive JSON containing meeting metadata, a summary, and a transcript for an internal meeting (e.g., team sync, standup, internal project review, 1:1, planning session).\nAssume that all participants and email addresses are internal to the company. Do NOT infer or create any external clients or organizations beyond what is explicitly mentioned.\nYou MUST output ONE JSON object that conforms exactly to this structure:\n{\n\"meta\": {\n\"meetingId\": \"string\",\n\"meetingTitle\": \"string\",\n\"clientName\": \"string\",\n\"meetingUrl\": \"string\",\n\"language\": \"string\",\n\"invitees\": [\"string\"]\n},\n\"email\": {\n\"subject\": \"string\",\n\"body\": \"string\"\n},\n\"sections\": {\n\"tasks\": [\n{\n\"title\": \"string\",\n\"description\": \"string\",\n\"owner\": \"string\",\n\"status\": \"Planned\" | \"In Progress\" | \"Blocked\" | \"Done\" | \"TBD\",\n\"due_date\": \"YYYY-MM-DD or \"TBD\"\",\n\"related_challenges\": [\"string\"]\n}\n],\n\"challenges\": [\n{\n\"summary\": \"string\",\n\"details\": \"string\",\n\"owner\": \"string\",\n\"timestamp\": \"string\",\n\"related_task\": \"string\"\n}\n],\n\"others\": {\n\"notes\": [\"string\"],\n\"logistics\": [\"string\"],\n\"unresolved_questions\": [\"string\"]\n}\n}\n}\n\nHard structural rules\n\n\nThe top-level object MUST have exactly these keys:\n\n\nmeta, email, sections.\n\n\n\n\nmeta MUST contain:\n\n\nmeetingId, meetingTitle, clientName, meetingUrl, language, invitees.\n\n\nHere:\n\n\nclientName represents the primary internal stakeholder, team, project, or (if clearly mentioned) external client being discussed.\n\n\n\n\nemail MUST contain:\n\n\nsubject, body.\n\n\n\n\nsections MUST contain ALL of the following keys, even if they are effectively empty:\n\n\ntasks, challenges, others.\n\n\n\n\nsections.tasks MUST be an array of objects with ALL of:\n\n\ntitle, description, owner, status, due_date, related_challenges.\n\n\n\n\nsections.challenges MUST be an array of objects with ALL of:\n\n\nsummary, details, owner, timestamp, related_task.\n\n\n\n\nsections.others MUST be an object with ALL of:\n\n\nnotes, logistics, unresolved_questions \u2014 each an array of strings.\n\n\n\n\nFor any section that is truly not discussed:\n\n\nUse the required structure and set the most relevant text field to \"None discussed.\" inside the object/array, rather than omitting the section.\n\n\nExample: if there are no clear tasks, create a single task object with title set to \"None discussed.\" and other fields set to reasonable defaults (e.g., owner: \"TBD\", status: \"TBD\", due_date: \"TBD\", related_challenges: []).\n\n\n\n\n\nContent rules\nUse ONLY information from the provided summary and transcript.\nIf information is missing, default to:\n\n\nmeta.clientName: \"TBD\" (for primary internal stakeholder, team, project, or external client being discussed).\n\n\nmeta.language: \"en\" by default.\n\n\nsections.tasks[*].owner: \"TBD\" if not clear.\n\n\nsections.tasks[*].status: \"TBD\" if you cannot infer the state.\n\n\nsections.tasks[*].due_date: \"TBD\" if no date is stated.\n\n\nsections.challenges[*].owner: \"TBD\" if not clear.\n\n\nsections.challenges[*].timestamp: \"TBD\" if no timestamp is available.\n\n\nFor list-like fields in sections.others (notes, logistics, unresolved_questions): use an array with a single string \"None discussed.\" if nothing relevant is mentioned.\n\n\nFor related_challenges and related_task:\n\n\nIf no specific challenge is tied to a task, use [] for related_challenges.\n\n\nIf a challenge is not clearly tied to a single task, set related_task to \"TBD\".\n\n\n\n\nAssume all invitees are internal participants. Do NOT infer external organizations based only on email domains.\nDo NOT include any \u201cclient quotes\u201d in the structure; this schema does not use a client_quote field.\n\nTasks (minutes of the meeting \u2013 action-oriented)\nTreat sections.tasks as the core minutes of the meeting focused on concrete tasks and asks captured during the call.\nEach task object:\n\n\ntitle:\n\n\nShort 3\u201310 word label summarizing the task or ask.\n\n\nExample: \"Update Airtable PEC schema\", \"Draft SOP for intake process\".\n\n\n\n\ndescription:\n\n\n1\u20133 sentences describing what needs to be done, including any relevant context or expectations discussed.\n\n\n\n\nowner:\n\n\nThe person, role, or team responsible for the task (e.g., a named participant, \"Ops Team\", \"PDEV\", \"Tech\").\n\n\nUse \"TBD\" if unclear.\n\n\n\n\nstatus:\n\n\nOne of \"Planned\", \"In Progress\", \"Blocked\", \"Done\", \"TBD\":\n\n\n\"Done\": clearly completed.\n\n\n\"In Progress\": already being worked on.\n\n\n\"Planned\": clearly future work.\n\n\n\"Blocked\": explicitly described as blocked or dependent on some other condition.\n\n\n\"TBD\": state is unclear.\n\n\n\n\n\n\ndue_date:\n\n\n\"YYYY-MM-DD\" if an explicit date is mentioned.\n\n\n\"TBD\" if timing is mentioned only vaguely or not mentioned at all.\n\n\n\n\nrelated_challenges:\n\n\nArray of short descriptions of any challenges, blockers, or risks discussed specifically for this task or ask.\n\n\nExample items: \"Waiting on access to client Airtable base\", \"Unclear owner for approval workflow\".\n\n\nUse [] if no challenges were discussed for this task.\n\n\n\n\n\nChallenges (issues/risks per ask or theme)\nTreat sections.challenges as a focused list of challenges, blockers, and issues raised during the meeting, especially those tied to specific asks or tasks.\nEach challenge object:\n\n\nsummary:\n\n\n1\u20132 sentences summarizing the challenge or blocker at a high level.\n\n\n\n\ndetails:\n\n\n1\u20133 sentences providing more context (what is impacted, why it matters, and any key nuance).\n\n\nYou may reference specific tools, teams, or processes mentioned.\n\n\n\n\nowner:\n\n\nThe person, role, or team most associated with resolving this challenge (e.g., \"Ops Team\", \"Tech\", a named participant).\n\n\nUse \"TBD\" if unclear.\n\n\n\n\ntimestamp:\n\n\nA timestamp from the transcript such as \"00:12:34\" when this challenge is discussed.\n\n\nIf the transcript format does not provide timestamps, use \"TBD\".\n\n\n\n\nrelated_task:\n\n\nThe title of a related task from sections.tasks when clearly linked.\n\n\nIf a challenge is broader or not clearly tied to a single task, use \"TBD\".\n\n\n\n\nChallenges should be written in a constructive, opportunity-focused way, emphasizing what needs to be unblocked or clarified, not blaming individuals.\n\nOthers\nIn sections.others:\n\n\nnotes:\n\n\nImportant contextual information, decisions, or background that may influence the work but does not belong directly in tasks or challenges.\n\n\nExamples: \"Team prefers asynchronous updates via Slack\", \"Weekly check-ins to remain on Mondays\".\n\n\n\n\nlogistics:\n\n\nItems like tools used, access constraints, cadence, time zones, and scheduling notes.\n\n\nExamples: \"All documentation to be stored in Notion\", \"Team operates in PH Time\".\n\n\n\n\nunresolved_questions:\n\n\nOpen questions and uncertainties raised in the meeting that were not resolved.\n\n\nExamples: \"Who will own integration monitoring?\", \"Do we need a separate workflow for legacy clients?\"\n\n\n\n\nIf any of these sub-sections are not discussed, use: [\"None discussed.\"].\n\nTone and wording guidelines\n\n\nFrame tasks and challenges in a neutral, collaborative, and solution-focused tone.\n\n\nUse language that emphasizes progress and clarity, not blame.\n\n\nExamples of helpful phrasing:\n\n\n\"There is an opportunity to clarify\u2026\"\n\n\n\"This task depends on\u2026\"\n\n\n\"This challenge may impact\u2026 unless\u2026\"\n\n\n\n\nAvoid strong negative or judgmental language such as:\n\n\n\"poor job\", \"bad\", \"weak\", \"major problem\", \"not functional\".\n\n\nInstead, describe impact and next moves in a neutral way, e.g.:\n\n\n\"This currently relies on manual updates, which may create delays if volume increases.\"\n\n\n\nAnti-fabrication rules\n\n\nDo NOT invent person names, team names, companies, or additional attendees.\n\n\nIf you cannot infer a name, use \"TBD\".\n\n\n\n\nDo NOT invent quotes, timestamps, dates, or metrics.\n\n\nOnly use timestamps and dates that actually appear in the transcript or summary.\n\n\n\n\nDo NOT invent tasks, challenges, or decisions that were not discussed.\n\n\nIt is better to have fewer items than fabricated ones.\n\n\n\n\nWhen in doubt, use \"TBD\" or \"None discussed.\" instead of guessing.\n\n\n\nEmail rules (for internal meeting summary email)\n\n\nemail.body must be plain text (no HTML, no Markdown, no bullet characters like \"-\" or \"\u2022\").\n\n\nTone: concise, professional, and internal-facing, emphasizing alignment and next actions.\n\n\nDo NOT include any sign-off or closing signature in email.body:\n\n\nDo not write \"Best,\", \"Best regards,\", \"Thanks,\", \"Sincerely,\" or any name/team.\n\n\nThe system will handle the sign-off separately.\n\n\nStructure of email.body:\n\n\nOpening sentence or two:\n\n\nAcknowledge the internal meeting and restate the purpose at a high level.\n\n\nExample:\n\"Thank you for joining today\u2019s internal meeting. It was helpful to review our current workflows and align on key tasks and priorities.\"\n\n\n\n\nOne short paragraph (2\u20133 sentences):\n\n\nProvide a high-level overview of the discussion (e.g., main themes, types of tasks identified, any high-level challenges or dependencies).\n\n\nDo NOT list detailed tasks or challenges here; those belong in the structured sections.\n\n\n\n\nClosing line:\n\n\nOne sentence that notes follow-up or next actions, e.g.:\n\"We will proceed with the agreed tasks and timelines and continue to align as work progresses.\"\n\n\n\n\nDo NOT:\n\n\nInclude explicit section headings such as \"Tasks:\", \"Challenges:\", \"Others:\" in email.body.\n\n\nInclude bullet lists or numbered lists in email.body.\n\n\nRestate individual tasks or challenges inside email.body. These details will come from the structured JSON sections.\n\n\nemail.subject:\n\n\nShould clearly reflect this as an internal meeting summary. Examples:\n\n\n\"Internal Meeting Summary - [Team/Project Name] - [Meeting Title]\"\n\n\n\"Meeting Summary - [Team/Project] - [Date/Topic]\"\n\n\n\n\n\nOutput rules\n\n\nReturn ONLY the final JSON object described above.\n\n\nDo NOT include any explanatory text, comments, or labels.\n\n\nDo NOT wrap the JSON in backticks or a code fence.\n\n\nDo NOT prefix it with json or any other language tag.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        480,
+        -448
+      ],
+      "id": "414cd60a-4c29-48fd-a1f9-604f559e9a67",
+      "name": "AI Agent2",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// This Function node expects the AI Agent's result in item.json.output\n// Node type MUST be \"Function\" (not \"Function Item\")\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nconst newItems = [];\n\nfor (const item of items) {\n  let data;\n\n  // 1) Get the agent output\n  let raw = item.json.output;\n\n  if (raw && typeof raw === 'object') {\n    // already parsed\n    data = raw;\n  } else if (typeof raw === 'string') {\n    raw = raw.trim();\n\n    // strip ```json fences if present\n    if (raw.startsWith('```')) {\n      raw = raw.replace(/^```[a-zA-Z]*\\s*/m, '');\n      raw = raw.replace(/```[\\s]*$/m, '');\n      raw = raw.trim();\n    }\n\n    if (!raw) {\n      newItems.push(item);\n      continue;\n    }\n\n    try {\n      data = JSON.parse(raw);\n    } catch (err) {\n      newItems.push({\n        json: {\n          ...item.json,\n          _parseError: 'Failed to parse AI output as JSON',\n          _rawOutput: raw,\n          _errorMessage: err.message,\n        },\n      });\n      continue;\n    }\n  } else {\n    // no usable output\n    newItems.push(item);\n    continue;\n  }\n\n  // 2) Pull pieces out (INTERNAL MEETING SCHEMA)\n  const meta     = data.meta || {};\n  const sections = data.sections || {};\n  const email    = data.email || {};\n\n  const tasks      = Array.isArray(sections.tasks) ? sections.tasks : [];\n  const challenges = Array.isArray(sections.challenges) ? sections.challenges : [];\n  const others     = sections.others || {};\n\n  const bodyText = email.body || '';\n\n  // 3) Subject: keep AI subject if present, otherwise build a sensible internal summary\n  const clientName   = meta.clientName || meta.client || '';\n  const meetingTitle = meta.meetingTitle || '';\n  let subjectOut     = email.subject || '';\n\n  if (!subjectOut && (clientName || meetingTitle)) {\n    const clientLabel = clientName || 'Team';\n    const titleLabel  = meetingTitle || 'Internal Meeting';\n    subjectOut = `Internal Meeting Summary - ${clientLabel} - ${titleLabel}`;\n  }\n\n  // 4) Intro paragraphs from plain-text body (no headings expected)\n  const lines = String(bodyText || '').split('\\n');\n  const paragraphs = [];\n  let buffer = [];\n\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (!trimmed) {\n      if (buffer.length) {\n        paragraphs.push(buffer.join(' '));\n        buffer = [];\n      }\n    } else {\n      buffer.push(trimmed);\n    }\n  }\n  if (buffer.length) {\n    paragraphs.push(buffer.join(' '));\n  }\n\n  const introParts = paragraphs.map(p =>\n    `<p style=\"margin:0 0 16px 0; font-size:14px; line-height:20px;\">${escapeHtml(p)}</p>`\n  );\n\n  // 5) Tasks table (core action items)\n  let tasksSection = '';\n  const realTasks = tasks.filter(t => {\n    const title = (t.title || '').trim().toLowerCase();\n    const desc  = (t.description || '').trim().toLowerCase();\n    if (!title && !desc) return false;\n    if (title === 'none discussed.' || desc === 'none discussed.') return false;\n    return true;\n  });\n\n  if (realTasks.length > 0) {\n    tasksSection = `\n      <div style=\"margin-top:16px; margin-bottom:16px;\">\n        <h3 style=\"margin:0 0 8px 0;\">Action Items</h3>\n        <table border=\"1\" cellpadding=\"6\" cellspacing=\"0\"\n               style=\"border-collapse:collapse; width:100%; border:1px solid #e5e7eb; table-layout:fixed; font-size:14px;line-height:20px;\">\n          <colgroup>\n            <col style=\"width:35%;\">  <!-- Task -->\n            <col style=\"width:15%;\">  <!-- Owner -->\n            <col style=\"width:15%;\">  <!-- Status -->\n            <col style=\"width:15%;\">  <!-- Due Date -->\n            <col style=\"width:20%;\">  <!-- Challenges -->\n          </colgroup>\n          <thead>\n            <tr style=\"background:#f9fafb;\">\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Task</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Owner</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Status</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Due Date</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Challenges</th>\n            </tr>\n          </thead>\n          <tbody>\n            ${realTasks.map(t => {\n              const title = (t.title || '').trim() || 'Untitled task';\n              const desc  = (t.description || '').trim();\n              const owner = t.owner || 'TBD';\n              const status = t.status || 'TBD';\n              const dueDate = t.due_date || 'TBD';\n\n              const relChallengesRaw = Array.isArray(t.related_challenges) ? t.related_challenges : [];\n              const relChallenges = relChallengesRaw\n                .map(c => String(c || '').trim())\n                .filter(c => c.length > 0);\n\n              const challengesHtml = relChallenges.length\n                ? `<div style=\"margin:0;font-size:13px;line-height:18px;\">\n                     ${relChallenges.map(c => escapeHtml(c)).join('<br />')}\n                   </div>`\n                : `<span style=\"font-size:13px;line-height:18px;color:#9ca3af;\">\u2014</span>`;\n\n              const descHtml = desc\n                ? `<div style=\"margin-top:4px;font-size:14px;line-height:20px;color:#4b5563;\">\n                     ${escapeHtml(desc)}\n                   </div>`\n                : '';\n\n              return `\n                <tr>\n                  <td style=\"vertical-align:top;font-size:14px;line-height:20px;\">\n                    <strong>${escapeHtml(title)}</strong>\n                    ${descHtml}\n                  </td>\n                  <td style=\"vertical-align:top; text-align:center;font-size:14px;line-height:20px;\">${escapeHtml(owner)}</td>\n                  <td style=\"vertical-align:top; text-align:center;font-size:14px;line-height:20px;\">${escapeHtml(status)}</td>\n                  <td style=\"vertical-align:top; text-align:center;font-size:14px;line-height:20px;\">${escapeHtml(dueDate)}</td>\n                  <td style=\"vertical-align:top; text-align:left;font-size:14px;line-height:20px;\">\n                    ${challengesHtml}\n                  </td>\n                </tr>\n              `;\n            }).join('')}\n          </tbody>\n        </table>\n      </div>\n    `;\n  }\n\n  // 6) Challenges list (overall issues / blockers)\n  let challengesSection = '';\n  const realChallenges = challenges.filter(ch => {\n    const summary = (ch.summary || '').trim().toLowerCase();\n    const details = (ch.details || '').trim().toLowerCase();\n    if (!summary && !details) return false;\n    if (summary === 'none discussed.' || details === 'none discussed.') return false;\n    return true;\n  });\n\n  if (realChallenges.length > 0) {\n    const listItems = realChallenges.map(ch => {\n      const summary = ch.summary || '';\n      const details = ch.details || '';\n      const owner   = ch.owner || 'TBD';\n      const related = ch.related_task || '';\n\n      const metaBits = [];\n      if (owner && owner !== 'TBD') metaBits.push(`Owner: ${owner}`);\n      if (related && related !== 'TBD') metaBits.push(`Related task: ${related}`);\n      // timestamp intentionally NOT shown in the email anymore\n\n      const metaText = metaBits.length\n        ? `<div style=\"margin-top:2px;font-size:12px;line-height:16px;color:#6b7280;\">${escapeHtml(metaBits.join(' \u2022 '))}</div>`\n        : '';\n\n      return `\n        <li style=\"margin-bottom:8px;font-size:14px;line-height:20px;\">\n          <strong>${escapeHtml(summary)}</strong>\n          ${details ? ` \u2013 ${escapeHtml(details)}` : ''}\n          ${metaText}\n        </li>\n      `;\n    });\n\n    challengesSection = `\n      <div style=\"margin-top:16px; margin-bottom:16px;\">\n        <h3 style=\"margin:0 0 8px 0;\">Challenges &amp; Blockers</h3>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${listItems.join('')}\n        </ul>\n      </div>\n    `;\n  }\n\n\n  // 7) Others (notes, logistics, unresolved questions)\n  let othersSection = '';\n\n  const notes = Array.isArray(others.notes) ? others.notes : [];\n  const logistics = Array.isArray(others.logistics) ? others.logistics : [];\n  const unresolved = Array.isArray(others.unresolved_questions) ? others.unresolved_questions : [];\n\n  function hasRealContent(arr) {\n    if (!arr || arr.length === 0) return false;\n    if (arr.length === 1 && typeof arr[0] === 'string' &&\n        arr[0].trim().toLowerCase() === 'none discussed.') {\n      return false;\n    }\n    return true;\n  }\n\n  const hasNotes      = hasRealContent(notes);\n  const hasLogistics  = hasRealContent(logistics);\n  const hasUnresolved = hasRealContent(unresolved);\n\n  if (hasNotes || hasLogistics || hasUnresolved) {\n    const notesHtml = hasNotes\n      ? `\n        <p style=\"margin:8px 0 4px 0;font-size:14px;line-height:20px;\"><strong>Notes</strong></p>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${notes.map(n => `<li style=\"font-size:14px;line-height:20px;\">${escapeHtml(n)}</li>`).join('')}\n        </ul>\n      `\n      : '';\n\n    const logisticsHtml = hasLogistics\n      ? `\n        <p style=\"margin:8px 0 4px 0;font-size:14px;line-height:20px;\"><strong>Logistics</strong></p>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${logistics.map(l => `<li style=\"font-size:14px;line-height:20px;\">${escapeHtml(l)}</li>`).join('')}\n        </ul>\n      `\n      : '';\n\n    const unresolvedHtml = hasUnresolved\n      ? `\n        <p style=\"margin:8px 0 4px 0;font-size:14px;line-height:20px;\"><strong>Unresolved Questions</strong></p>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${unresolved.map(q => `<li style=\"font-size:14px;line-height:20px;\">${escapeHtml(q)}</li>`).join('')}\n        </ul>\n      `\n      : '';\n\n    othersSection = `\n      <div style=\"margin-top:16px; margin-bottom:16px;\">\n        <h3 style=\"margin:0 0 8px 0;\">Additional Notes &amp; Logistics</h3>\n        ${notesHtml}\n        ${logisticsHtml}\n        ${unresolvedHtml}\n      </div>\n    `;\n  }\n\n  // 8) Custom closing + signoff (HTML only, not in plain-text body)\n  const customClosing = `<p style=\"margin:16px 0 12px 0; font-size:14px; line-height:20px;\">If there is anything I missed or if you would like to adjust any of the tasks or priorities, please feel free to let me know.</p>`;\n\n  const signName = 'Scale Virtually Team';\n  const signoffHtml = [\n    `<p style=\"margin:0 0 12px 0; font-size:14px; line-height:20px;\">Best regards,</p>`,\n    `<p style=\"margin:0 0 12px 0; font-size:14px; line-height:20px;\">${escapeHtml(signName)}</p>`\n  ].join('\\n');\n\n  // 9) Combine all sections into main content\n  const detailSections = [\n    tasksSection,\n    challengesSection,\n    othersSection,\n  ].filter(Boolean).join('\\n');\n\n  let finalHtml = '';\n\n  if (introParts.length) {\n    finalHtml += introParts.join('\\n');\n  }\n\n  if (detailSections) {\n    finalHtml += '\\n' + detailSections;\n  }\n\n  finalHtml += '\\n' + customClosing;\n  finalHtml += '\\n' + signoffHtml;\n\n  // 10) Wrap in card layout with wider header (900px)\n  const safeMeetingTitle = meetingTitle || 'Internal Meeting';\n\n  const headerBlock = `\n    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:24px;\">\n          <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"900\" style=\"max-width:900px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;\">\n            <tr>\n              <td style=\"background:#ea7b21;color:#ffffff;padding:20px 28px;border-radius:12px 12px 0 0;text-align:center;\">\n                <h1 style=\"margin:0 0 4px 0;font-size:22px;line-height:28px;font-weight:700;font-family:Arial,Helvetica,sans-serif;\">\n                  Internal Meeting Minutes\n                </h1>\n                <p style=\"margin:0;font-size:13px;line-height:18px;font-family:Arial,Helvetica,sans-serif;\">\n                  ${escapeHtml(safeMeetingTitle)}\n                </p>\n              </td>\n            </tr>\n            <tr>\n              <td style=\"padding:24px 28px 28px 28px;background:#ffffff;font-size:14px;line-height:20px;\">\n                ${finalHtml.trim()}\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </table>\n  `.trim();\n\n  const fullHtml = `\n<!DOCTYPE html>\n<html>\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>${escapeHtml(subjectOut || '')}</title>\n  </head>\n  <body style=\"margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;\">\n    ${headerBlock}\n  </body>\n</html>\n  `.trim();\n\n  // 11) Push final structured item\n  newItems.push({\n    json: {\n      meta,\n      sections,\n      email: {\n        subject: subjectOut || '',\n        body_text: bodyText,\n        body_html: fullHtml,\n      },\n      raw: data,\n    },\n  });\n}\n\nreturn newItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -448
+      ],
+      "id": "50fa2f9c-c6ef-4e94-9c26-7097b0d7444a",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "devstral-2512",
+          "mode": "list",
+          "cachedResultName": "devstral-2512"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        -224
+      ],
+      "id": "45eeebf0-3159-4b90-b99b-4e1301417fa6",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "pmTl8tr3gScO6C5P",
+          "name": "Portkey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst meta = item.meta ?? {};\nconst sections = item.sections ?? {};\nconst email = item.email ?? {};\nconst raw = item.raw ?? {};\nconst transcript = $items('Transcript Cleaner', 0, 0)[0]?.json ?? {};\nconst timing = transcript.timing ?? {};\nconst occurredAt = timing.meetingStartUtc || timing.createdAtUtc || new Date().toISOString();\nconst meetingId = meta.meetingId ?? null;\nconst meetingUrl = meta.meetingUrl || transcript.meetingUrl || null;\n\nreturn [{\n  json: {\n    source_id: null,\n    journal_date: String(occurredAt).slice(0, 10),\n    occurred_at: occurredAt,\n    entry_type: 'meeting_note',\n    importance: 'normal',\n    actor_name: null,\n    project_id: null,\n    project_name: meta.clientName ?? null,\n    team_name: 'Solution Architects',\n    title: email.subject || meta.meetingTitle || 'Internal Meeting Summary',\n    summary: email.body_text || 'Internal meeting summary generated from Fathom transcript.',\n    details: {\n      source_type: 'fathom_mom',\n      external_source_id: meetingId,\n      meeting_title: meta.meetingTitle ?? null,\n      meeting_url: meetingUrl,\n      invitees: meta.invitees ?? [],\n      sections,\n      raw,\n      transcript_source: transcript\n    },\n    links: {\n      source_url: meetingUrl,\n      unique_key: meetingId ? ('fathom_mom_' + meetingId) : null\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        -352
+      ],
+      "id": "f589bc1b-7c04-49ba-811f-464181e8534f",
+      "name": "Parser for Supabase"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "89c91232-953f-4e45-85b7-a68e880ae068",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        -736
+      ],
+      "id": "b9a8f4a9-5af2-4cb3-9715-854eab7adcf3",
+      "name": "Patrick",
+      "webhookId": "89c91232-953f-4e45-85b7-a68e880ae068"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a9cde8f3-4f30-4511-b0b6-7bd7ae685e55",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        -544
+      ],
+      "id": "750dc6b4-f165-4bc6-a1b9-2063ef52fa0a",
+      "name": "Jia",
+      "webhookId": "a9cde8f3-4f30-4511-b0b6-7bd7ae685e55"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "10dccec8-f8f4-4b09-8695-24b3d97f13bc",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -128,
+        -352
+      ],
+      "id": "2d59c87e-4232-4fa4-a91b-ba3cce25b899",
+      "name": "Aja",
+      "webhookId": "10dccec8-f8f4-4b09-8695-24b3d97f13bc",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://zfewidusllwwparlxctr.supabase.co/rest/v1/journal_entries?on_conflict=unique_key",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=ignore-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Write Journal Entry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1280,
+        -352
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com, jianna@scalevirtually.com, aja@scalevirtually.com, janssen@scalevirtually.com, jenn@scalevirtually.com",
+        "subject": "={{ $json.email.subject }}",
+        "message": "={{ $json[\"email\"][\"body_html\"] }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1056,
+        -544
+      ],
+      "id": "a99c0698-a7eb-4492-bf15-adfcfc3c03bd",
+      "name": "Send a message3",
+      "webhookId": "aa632b6f-c0d1-4e0a-8574-8acacfa0dc7d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Transcript Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcript Cleaner": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Parser for Supabase",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Patrick": {
+      "main": [
+        [
+          {
+            "node": "Transcript Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Jia": {
+      "main": [
+        [
+          {
+            "node": "Transcript Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aja": {
+      "main": [
+        [
+          {
+            "node": "Transcript Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser for Supabase": {
+      "main": [
+        [
+          {
+            "node": "Write Journal Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionOrder": "v0",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "5256ec21-e445-476c-807e-8bc77c88604e",
+  "activeVersionId": "5256ec21-e445-476c-807e-8bc77c88604e",
+  "versionCounter": 110,
+  "triggerCount": 3,
+  "shared": [
+    {
+      "updatedAt": "2026-05-04T13:04:09.376Z",
+      "createdAt": "2026-05-04T13:04:09.376Z",
+      "role": "workflow:owner",
+      "workflowId": "Rgyo7AwtoGl6kwYY",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-06T18:40:18.148Z",
+    "createdAt": "2026-07-06T18:40:18.148Z",
+    "versionId": "5256ec21-e445-476c-807e-8bc77c88604e",
+    "workflowId": "Rgyo7AwtoGl6kwYY",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "89c91232-953f-4e45-85b7-a68e880ae068",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          32,
+          -160
+        ],
+        "id": "1fedc48e-0268-45ec-b289-785742ce1f90",
+        "name": "Webhook",
+        "webhookId": "89c91232-953f-4e45-85b7-a68e880ae068"
+      },
+      {
+        "parameters": {
+          "jsCode": "// This script normalizes the Fathom webhook payload you pasted and enriches it with timing info.\n// - Adds meeting start/end in UTC and Asia/Manila (+08:00)\n// - Converts webhook/created_at timestamps\n// - For each transcript line, adds an absolute local RFC3339 time using recording_start_time + relative [HH:MM:SS]\n\n/** Helpers **/\nconst isArr = Array.isArray;\nlet root = $json;\nif (isArr(root)) root = root[0] || {};\nconst body = root.body || root;\nconst headers = (root.headers || {});\n\n// --- Time helpers ---\nconst OFFSET_HOURS = 8; // Asia/Manila\nconst pad = (n) => String(n).padStart(2, \"0\");\n\nfunction toDate(x) {\n  try { return x ? new Date(x) : null; } catch { return null; }\n}\n\nfunction fromEpochSeconds(sec) {\n  if (!sec) return null;\n  const n = Number(sec);\n  if (!Number.isFinite(n)) return null;\n  return new Date(n * 1000);\n}\n\nfunction addHours(date, hours) {\n  if (!date) return null;\n  return new Date(date.getTime() + hours * 3600 * 1000);\n}\n\nfunction toRFC3339WithOffset(dateUTC, offsetHours = OFFSET_HOURS) {\n  if (!dateUTC) return null;\n  // Convert UTC -> local (+offset), then format with explicit +HH:MM\n  const local = addHours(dateUTC, offsetHours);\n  const y = local.getFullYear();\n  const m = pad(local.getMonth() + 1);\n  const d = pad(local.getDate());\n  const hh = pad(local.getHours());\n  const mm = pad(local.getMinutes());\n  const ss = pad(local.getSeconds());\n  const sign = offsetHours >= 0 ? \"+\" : \"-\";\n  const oh = pad(Math.floor(Math.abs(offsetHours)));\n  const om = pad(Math.abs(offsetHours * 60) % 60);\n  return `${y}-${m}-${d}T${hh}:${mm}:${ss}${sign}${oh}:${om}`;\n}\n\nfunction toISOZ(date) {\n  return date ? date.toISOString() : null;\n}\n\n// Parse [HH:MM:SS] into seconds\nfunction hmsToSeconds(hms) {\n  if (!hms) return null;\n  const m = String(hms).match(/^(\\d{1,2}):(\\d{2}):(\\d{2})$/);\n  if (!m) return null;\n  const h = Number(m[1]), mi = Number(m[2]), s = Number(m[3]);\n  if ([h, mi, s].some(n => !Number.isFinite(n))) return null;\n  return h * 3600 + mi * 60 + s;\n}\n\nfunction addSeconds(date, seconds) {\n  if (!date || seconds == null) return null;\n  return new Date(date.getTime() + seconds * 1000);\n}\n\n/** Core fields **/\nconst meetingTitle = body.meeting_title || body.title || null;\nconst meetingId = body.recording_id ?? null;\nconst meetingUrl = body.share_url || body.url || null;\nconst transcriptLanguage = body.transcript_language || null;\n\n// Times from payload\nconst recordingStartUtc = toDate(body.recording_start_time); // ISO Z\nconst recordingEndUtc   = toDate(body.recording_end_time);\nconst createdAtUtc      = toDate(body.created_at);\nconst webhookTsUtc      = fromEpochSeconds(headers[\"webhook-timestamp\"]); // seconds epoch\n\n// Local (+08:00) strings\nconst meetingStartUtc = toISOZ(recordingStartUtc);\nconst meetingEndUtc   = toISOZ(recordingEndUtc);\nconst createdAtIsoUtc = toISOZ(createdAtUtc);\nconst webhookIsoUtc   = toISOZ(webhookTsUtc);\n\nconst meetingStartLocal = toRFC3339WithOffset(recordingStartUtc, OFFSET_HOURS);\nconst meetingEndLocal   = toRFC3339WithOffset(recordingEndUtc, OFFSET_HOURS);\nconst createdAtLocal    = toRFC3339WithOffset(createdAtUtc, OFFSET_HOURS);\nconst webhookLocal      = toRFC3339WithOffset(webhookTsUtc, OFFSET_HOURS);\n\n// Invitees\nconst invitees = (body.calendar_invitees || []).map(i => ({\n  name: i.name || i.matched_speaker_display_name || \"Unknown\",\n  email: i.email || \"N/A\",\n}));\n\n// Transcript with absolute local times (if recordingStartUtc + [HH:MM:SS] available)\nconst transcriptLines = (body.transcript || []).map(t => {\n  const speaker = (t.speaker && t.speaker.display_name) || \"Unknown\";\n  const rel = t.timestamp || null; // HH:MM:SS\n  let absLocal = null;\n\n  if (recordingStartUtc && rel) {\n    const sec = hmsToSeconds(rel);\n    if (sec != null) {\n      const absUtc = addSeconds(recordingStartUtc, sec);\n      absLocal = toRFC3339WithOffset(absUtc, OFFSET_HOURS);\n    }\n  }\n\n  const tsRel = rel ? `[${rel}]` : \"\";\n  const tsAbs = absLocal ? `[${absLocal}]` : \"\";\n  // Include both relative and absolute if available\n  return `${tsRel}${tsAbs} ${speaker}: ${t.text}`;\n});\n\n// Summary\nconst summary = (body.default_summary && body.default_summary.markdown_formatted) || null;\n\n/** Output **/\nreturn {\n  meetingId,\n  meetingTitle,\n  invitees,\n  transcriptLanguage,\n  summary,\n  transcript: transcriptLines.join(\"\\n\"),\n  meetingUrl,\n\n  // Extra timing context\n  timing: {\n    timezone: \"Asia/Manila (+08:00)\",\n    meetingStartUtc,\n    meetingEndUtc,\n    meetingStartLocal,\n    meetingEndLocal,\n    createdAtUtc: createdAtIsoUtc,\n    createdAtLocal,\n    webhookTimestampUtc: webhookIsoUtc,\n    webhookTimestampLocal: webhookLocal,\n  },\n};\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          256,
+          -448
+        ],
+        "id": "4830e13b-5ad1-4b0b-a8b4-47bf361ffdf7",
+        "name": "Transcript Cleaner"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={\n  \"meta_input\": {\n    \"meetingId\": \"{{$json.meetingId}}\",\n    \"meetingTitle\": {{$json.meetingTitle ? JSON.stringify($json.meetingTitle) : \"\\\"TBD\\\"\"}},\n    \"invitees\": {{$json.invitees ? JSON.stringify($json.invitees) : \"[]\"}},\n    \"transcriptLanguage\": {{$json.transcriptLanguage ? JSON.stringify($json.transcriptLanguage) : \"\\\"en\\\"\"}},\n    \"meetingUrl\": {{$json.meetingUrl ? JSON.stringify($json.meetingUrl) : \"\\\"\\\"\"}}\n  },\n  \"source\": {\n    \"summary\": {{$json.summary ? JSON.stringify($json.summary) : \"\\\"\\\"\"}},\n    \"transcript\": {{$json.transcript ? JSON.stringify($json.transcript) : \"\\\"\\\"\"}}\n  },\n  \"task\": \"Using ONLY the information in source.summary and source.transcript, populate the schema described in the system message for an internal meeting (e.g., team sync, standup, 1:1, internal project review). Assume that ALL participants and email addresses are internal to the company; do NOT infer or create any external clients or organizations. Map the fields as follows: meta.meetingId from meta_input.meetingId, meta.meetingTitle from meta_input.meetingTitle, meta.meetingUrl from meta_input.meetingUrl, meta.language from meta_input.transcriptLanguage, meta.invitees as an array of strings in the format 'Name <email>'. If the schema requires a client or stakeholder field (e.g., meta.clientName), treat it as the primary internal stakeholder, team, or project owner. If you cannot identify one, set that field to 'TBD'. Follow all hard requirements from the system message and return only the final JSON object.\"\n}\n",
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "You will receive JSON containing meeting metadata, a summary, and a transcript for an internal meeting (e.g., team sync, standup, internal project review, 1:1, planning session).\nAssume that all participants and email addresses are internal to the company. Do NOT infer or create any external clients or organizations beyond what is explicitly mentioned.\nYou MUST output ONE JSON object that conforms exactly to this structure:\n{\n\"meta\": {\n\"meetingId\": \"string\",\n\"meetingTitle\": \"string\",\n\"clientName\": \"string\",\n\"meetingUrl\": \"string\",\n\"language\": \"string\",\n\"invitees\": [\"string\"]\n},\n\"email\": {\n\"subject\": \"string\",\n\"body\": \"string\"\n},\n\"sections\": {\n\"tasks\": [\n{\n\"title\": \"string\",\n\"description\": \"string\",\n\"owner\": \"string\",\n\"status\": \"Planned\" | \"In Progress\" | \"Blocked\" | \"Done\" | \"TBD\",\n\"due_date\": \"YYYY-MM-DD or \"TBD\"\",\n\"related_challenges\": [\"string\"]\n}\n],\n\"challenges\": [\n{\n\"summary\": \"string\",\n\"details\": \"string\",\n\"owner\": \"string\",\n\"timestamp\": \"string\",\n\"related_task\": \"string\"\n}\n],\n\"others\": {\n\"notes\": [\"string\"],\n\"logistics\": [\"string\"],\n\"unresolved_questions\": [\"string\"]\n}\n}\n}\n\nHard structural rules\n\n\nThe top-level object MUST have exactly these keys:\n\n\nmeta, email, sections.\n\n\n\n\nmeta MUST contain:\n\n\nmeetingId, meetingTitle, clientName, meetingUrl, language, invitees.\n\n\nHere:\n\n\nclientName represents the primary internal stakeholder, team, project, or (if clearly mentioned) external client being discussed.\n\n\n\n\nemail MUST contain:\n\n\nsubject, body.\n\n\n\n\nsections MUST contain ALL of the following keys, even if they are effectively empty:\n\n\ntasks, challenges, others.\n\n\n\n\nsections.tasks MUST be an array of objects with ALL of:\n\n\ntitle, description, owner, status, due_date, related_challenges.\n\n\n\n\nsections.challenges MUST be an array of objects with ALL of:\n\n\nsummary, details, owner, timestamp, related_task.\n\n\n\n\nsections.others MUST be an object with ALL of:\n\n\nnotes, logistics, unresolved_questions \u2014 each an array of strings.\n\n\n\n\nFor any section that is truly not discussed:\n\n\nUse the required structure and set the most relevant text field to \"None discussed.\" inside the object/array, rather than omitting the section.\n\n\nExample: if there are no clear tasks, create a single task object with title set to \"None discussed.\" and other fields set to reasonable defaults (e.g., owner: \"TBD\", status: \"TBD\", due_date: \"TBD\", related_challenges: []).\n\n\n\n\n\nContent rules\nUse ONLY information from the provided summary and transcript.\nIf information is missing, default to:\n\n\nmeta.clientName: \"TBD\" (for primary internal stakeholder, team, project, or external client being discussed).\n\n\nmeta.language: \"en\" by default.\n\n\nsections.tasks[*].owner: \"TBD\" if not clear.\n\n\nsections.tasks[*].status: \"TBD\" if you cannot infer the state.\n\n\nsections.tasks[*].due_date: \"TBD\" if no date is stated.\n\n\nsections.challenges[*].owner: \"TBD\" if not clear.\n\n\nsections.challenges[*].timestamp: \"TBD\" if no timestamp is available.\n\n\nFor list-like fields in sections.others (notes, logistics, unresolved_questions): use an array with a single string \"None discussed.\" if nothing relevant is mentioned.\n\n\nFor related_challenges and related_task:\n\n\nIf no specific challenge is tied to a task, use [] for related_challenges.\n\n\nIf a challenge is not clearly tied to a single task, set related_task to \"TBD\".\n\n\n\n\nAssume all invitees are internal participants. Do NOT infer external organizations based only on email domains.\nDo NOT include any \u201cclient quotes\u201d in the structure; this schema does not use a client_quote field.\n\nTasks (minutes of the meeting \u2013 action-oriented)\nTreat sections.tasks as the core minutes of the meeting focused on concrete tasks and asks captured during the call.\nEach task object:\n\n\ntitle:\n\n\nShort 3\u201310 word label summarizing the task or ask.\n\n\nExample: \"Update Airtable PEC schema\", \"Draft SOP for intake process\".\n\n\n\n\ndescription:\n\n\n1\u20133 sentences describing what needs to be done, including any relevant context or expectations discussed.\n\n\n\n\nowner:\n\n\nThe person, role, or team responsible for the task (e.g., a named participant, \"Ops Team\", \"PDEV\", \"Tech\").\n\n\nUse \"TBD\" if unclear.\n\n\n\n\nstatus:\n\n\nOne of \"Planned\", \"In Progress\", \"Blocked\", \"Done\", \"TBD\":\n\n\n\"Done\": clearly completed.\n\n\n\"In Progress\": already being worked on.\n\n\n\"Planned\": clearly future work.\n\n\n\"Blocked\": explicitly described as blocked or dependent on some other condition.\n\n\n\"TBD\": state is unclear.\n\n\n\n\n\n\ndue_date:\n\n\n\"YYYY-MM-DD\" if an explicit date is mentioned.\n\n\n\"TBD\" if timing is mentioned only vaguely or not mentioned at all.\n\n\n\n\nrelated_challenges:\n\n\nArray of short descriptions of any challenges, blockers, or risks discussed specifically for this task or ask.\n\n\nExample items: \"Waiting on access to client Airtable base\", \"Unclear owner for approval workflow\".\n\n\nUse [] if no challenges were discussed for this task.\n\n\n\n\n\nChallenges (issues/risks per ask or theme)\nTreat sections.challenges as a focused list of challenges, blockers, and issues raised during the meeting, especially those tied to specific asks or tasks.\nEach challenge object:\n\n\nsummary:\n\n\n1\u20132 sentences summarizing the challenge or blocker at a high level.\n\n\n\n\ndetails:\n\n\n1\u20133 sentences providing more context (what is impacted, why it matters, and any key nuance).\n\n\nYou may reference specific tools, teams, or processes mentioned.\n\n\n\n\nowner:\n\n\nThe person, role, or team most associated with resolving this challenge (e.g., \"Ops Team\", \"Tech\", a named participant).\n\n\nUse \"TBD\" if unclear.\n\n\n\n\ntimestamp:\n\n\nA timestamp from the transcript such as \"00:12:34\" when this challenge is discussed.\n\n\nIf the transcript format does not provide timestamps, use \"TBD\".\n\n\n\n\nrelated_task:\n\n\nThe title of a related task from sections.tasks when clearly linked.\n\n\nIf a challenge is broader or not clearly tied to a single task, use \"TBD\".\n\n\n\n\nChallenges should be written in a constructive, opportunity-focused way, emphasizing what needs to be unblocked or clarified, not blaming individuals.\n\nOthers\nIn sections.others:\n\n\nnotes:\n\n\nImportant contextual information, decisions, or background that may influence the work but does not belong directly in tasks or challenges.\n\n\nExamples: \"Team prefers asynchronous updates via Slack\", \"Weekly check-ins to remain on Mondays\".\n\n\n\n\nlogistics:\n\n\nItems like tools used, access constraints, cadence, time zones, and scheduling notes.\n\n\nExamples: \"All documentation to be stored in Notion\", \"Team operates in PH Time\".\n\n\n\n\nunresolved_questions:\n\n\nOpen questions and uncertainties raised in the meeting that were not resolved.\n\n\nExamples: \"Who will own integration monitoring?\", \"Do we need a separate workflow for legacy clients?\"\n\n\n\n\nIf any of these sub-sections are not discussed, use: [\"None discussed.\"].\n\nTone and wording guidelines\n\n\nFrame tasks and challenges in a neutral, collaborative, and solution-focused tone.\n\n\nUse language that emphasizes progress and clarity, not blame.\n\n\nExamples of helpful phrasing:\n\n\n\"There is an opportunity to clarify\u2026\"\n\n\n\"This task depends on\u2026\"\n\n\n\"This challenge may impact\u2026 unless\u2026\"\n\n\n\n\nAvoid strong negative or judgmental language such as:\n\n\n\"poor job\", \"bad\", \"weak\", \"major problem\", \"not functional\".\n\n\nInstead, describe impact and next moves in a neutral way, e.g.:\n\n\n\"This currently relies on manual updates, which may create delays if volume increases.\"\n\n\n\nAnti-fabrication rules\n\n\nDo NOT invent person names, team names, companies, or additional attendees.\n\n\nIf you cannot infer a name, use \"TBD\".\n\n\n\n\nDo NOT invent quotes, timestamps, dates, or metrics.\n\n\nOnly use timestamps and dates that actually appear in the transcript or summary.\n\n\n\n\nDo NOT invent tasks, challenges, or decisions that were not discussed.\n\n\nIt is better to have fewer items than fabricated ones.\n\n\n\n\nWhen in doubt, use \"TBD\" or \"None discussed.\" instead of guessing.\n\n\n\nEmail rules (for internal meeting summary email)\n\n\nemail.body must be plain text (no HTML, no Markdown, no bullet characters like \"-\" or \"\u2022\").\n\n\nTone: concise, professional, and internal-facing, emphasizing alignment and next actions.\n\n\nDo NOT include any sign-off or closing signature in email.body:\n\n\nDo not write \"Best,\", \"Best regards,\", \"Thanks,\", \"Sincerely,\" or any name/team.\n\n\nThe system will handle the sign-off separately.\n\n\nStructure of email.body:\n\n\nOpening sentence or two:\n\n\nAcknowledge the internal meeting and restate the purpose at a high level.\n\n\nExample:\n\"Thank you for joining today\u2019s internal meeting. It was helpful to review our current workflows and align on key tasks and priorities.\"\n\n\n\n\nOne short paragraph (2\u20133 sentences):\n\n\nProvide a high-level overview of the discussion (e.g., main themes, types of tasks identified, any high-level challenges or dependencies).\n\n\nDo NOT list detailed tasks or challenges here; those belong in the structured sections.\n\n\n\n\nClosing line:\n\n\nOne sentence that notes follow-up or next actions, e.g.:\n\"We will proceed with the agreed tasks and timelines and continue to align as work progresses.\"\n\n\n\n\nDo NOT:\n\n\nInclude explicit section headings such as \"Tasks:\", \"Challenges:\", \"Others:\" in email.body.\n\n\nInclude bullet lists or numbered lists in email.body.\n\n\nRestate individual tasks or challenges inside email.body. These details will come from the structured JSON sections.\n\n\nemail.subject:\n\n\nShould clearly reflect this as an internal meeting summary. Examples:\n\n\n\"Internal Meeting Summary - [Team/Project Name] - [Meeting Title]\"\n\n\n\"Meeting Summary - [Team/Project] - [Date/Topic]\"\n\n\n\n\n\nOutput rules\n\n\nReturn ONLY the final JSON object described above.\n\n\nDo NOT include any explanatory text, comments, or labels.\n\n\nDo NOT wrap the JSON in backticks or a code fence.\n\n\nDo NOT prefix it with json or any other language tag.\n"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          480,
+          -448
+        ],
+        "id": "414cd60a-4c29-48fd-a1f9-604f559e9a67",
+        "name": "AI Agent2",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000
+      },
+      {
+        "parameters": {
+          "jsCode": "// This Function node expects the AI Agent's result in item.json.output\n// Node type MUST be \"Function\" (not \"Function Item\")\n\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nconst newItems = [];\n\nfor (const item of items) {\n  let data;\n\n  // 1) Get the agent output\n  let raw = item.json.output;\n\n  if (raw && typeof raw === 'object') {\n    // already parsed\n    data = raw;\n  } else if (typeof raw === 'string') {\n    raw = raw.trim();\n\n    // strip ```json fences if present\n    if (raw.startsWith('```')) {\n      raw = raw.replace(/^```[a-zA-Z]*\\s*/m, '');\n      raw = raw.replace(/```[\\s]*$/m, '');\n      raw = raw.trim();\n    }\n\n    if (!raw) {\n      newItems.push(item);\n      continue;\n    }\n\n    try {\n      data = JSON.parse(raw);\n    } catch (err) {\n      newItems.push({\n        json: {\n          ...item.json,\n          _parseError: 'Failed to parse AI output as JSON',\n          _rawOutput: raw,\n          _errorMessage: err.message,\n        },\n      });\n      continue;\n    }\n  } else {\n    // no usable output\n    newItems.push(item);\n    continue;\n  }\n\n  // 2) Pull pieces out (INTERNAL MEETING SCHEMA)\n  const meta     = data.meta || {};\n  const sections = data.sections || {};\n  const email    = data.email || {};\n\n  const tasks      = Array.isArray(sections.tasks) ? sections.tasks : [];\n  const challenges = Array.isArray(sections.challenges) ? sections.challenges : [];\n  const others     = sections.others || {};\n\n  const bodyText = email.body || '';\n\n  // 3) Subject: keep AI subject if present, otherwise build a sensible internal summary\n  const clientName   = meta.clientName || meta.client || '';\n  const meetingTitle = meta.meetingTitle || '';\n  let subjectOut     = email.subject || '';\n\n  if (!subjectOut && (clientName || meetingTitle)) {\n    const clientLabel = clientName || 'Team';\n    const titleLabel  = meetingTitle || 'Internal Meeting';\n    subjectOut = `Internal Meeting Summary - ${clientLabel} - ${titleLabel}`;\n  }\n\n  // 4) Intro paragraphs from plain-text body (no headings expected)\n  const lines = String(bodyText || '').split('\\n');\n  const paragraphs = [];\n  let buffer = [];\n\n  for (const line of lines) {\n    const trimmed = line.trim();\n    if (!trimmed) {\n      if (buffer.length) {\n        paragraphs.push(buffer.join(' '));\n        buffer = [];\n      }\n    } else {\n      buffer.push(trimmed);\n    }\n  }\n  if (buffer.length) {\n    paragraphs.push(buffer.join(' '));\n  }\n\n  const introParts = paragraphs.map(p =>\n    `<p style=\"margin:0 0 16px 0; font-size:14px; line-height:20px;\">${escapeHtml(p)}</p>`\n  );\n\n  // 5) Tasks table (core action items)\n  let tasksSection = '';\n  const realTasks = tasks.filter(t => {\n    const title = (t.title || '').trim().toLowerCase();\n    const desc  = (t.description || '').trim().toLowerCase();\n    if (!title && !desc) return false;\n    if (title === 'none discussed.' || desc === 'none discussed.') return false;\n    return true;\n  });\n\n  if (realTasks.length > 0) {\n    tasksSection = `\n      <div style=\"margin-top:16px; margin-bottom:16px;\">\n        <h3 style=\"margin:0 0 8px 0;\">Action Items</h3>\n        <table border=\"1\" cellpadding=\"6\" cellspacing=\"0\"\n               style=\"border-collapse:collapse; width:100%; border:1px solid #e5e7eb; table-layout:fixed; font-size:14px;line-height:20px;\">\n          <colgroup>\n            <col style=\"width:35%;\">  <!-- Task -->\n            <col style=\"width:15%;\">  <!-- Owner -->\n            <col style=\"width:15%;\">  <!-- Status -->\n            <col style=\"width:15%;\">  <!-- Due Date -->\n            <col style=\"width:20%;\">  <!-- Challenges -->\n          </colgroup>\n          <thead>\n            <tr style=\"background:#f9fafb;\">\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Task</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Owner</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Status</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Due Date</th>\n              <th style=\"text-align:center;font-size:14px;line-height:20px;\">Challenges</th>\n            </tr>\n          </thead>\n          <tbody>\n            ${realTasks.map(t => {\n              const title = (t.title || '').trim() || 'Untitled task';\n              const desc  = (t.description || '').trim();\n              const owner = t.owner || 'TBD';\n              const status = t.status || 'TBD';\n              const dueDate = t.due_date || 'TBD';\n\n              const relChallengesRaw = Array.isArray(t.related_challenges) ? t.related_challenges : [];\n              const relChallenges = relChallengesRaw\n                .map(c => String(c || '').trim())\n                .filter(c => c.length > 0);\n\n              const challengesHtml = relChallenges.length\n                ? `<div style=\"margin:0;font-size:13px;line-height:18px;\">\n                     ${relChallenges.map(c => escapeHtml(c)).join('<br />')}\n                   </div>`\n                : `<span style=\"font-size:13px;line-height:18px;color:#9ca3af;\">\u2014</span>`;\n\n              const descHtml = desc\n                ? `<div style=\"margin-top:4px;font-size:14px;line-height:20px;color:#4b5563;\">\n                     ${escapeHtml(desc)}\n                   </div>`\n                : '';\n\n              return `\n                <tr>\n                  <td style=\"vertical-align:top;font-size:14px;line-height:20px;\">\n                    <strong>${escapeHtml(title)}</strong>\n                    ${descHtml}\n                  </td>\n                  <td style=\"vertical-align:top; text-align:center;font-size:14px;line-height:20px;\">${escapeHtml(owner)}</td>\n                  <td style=\"vertical-align:top; text-align:center;font-size:14px;line-height:20px;\">${escapeHtml(status)}</td>\n                  <td style=\"vertical-align:top; text-align:center;font-size:14px;line-height:20px;\">${escapeHtml(dueDate)}</td>\n                  <td style=\"vertical-align:top; text-align:left;font-size:14px;line-height:20px;\">\n                    ${challengesHtml}\n                  </td>\n                </tr>\n              `;\n            }).join('')}\n          </tbody>\n        </table>\n      </div>\n    `;\n  }\n\n  // 6) Challenges list (overall issues / blockers)\n  let challengesSection = '';\n  const realChallenges = challenges.filter(ch => {\n    const summary = (ch.summary || '').trim().toLowerCase();\n    const details = (ch.details || '').trim().toLowerCase();\n    if (!summary && !details) return false;\n    if (summary === 'none discussed.' || details === 'none discussed.') return false;\n    return true;\n  });\n\n  if (realChallenges.length > 0) {\n    const listItems = realChallenges.map(ch => {\n      const summary = ch.summary || '';\n      const details = ch.details || '';\n      const owner   = ch.owner || 'TBD';\n      const related = ch.related_task || '';\n\n      const metaBits = [];\n      if (owner && owner !== 'TBD') metaBits.push(`Owner: ${owner}`);\n      if (related && related !== 'TBD') metaBits.push(`Related task: ${related}`);\n      // timestamp intentionally NOT shown in the email anymore\n\n      const metaText = metaBits.length\n        ? `<div style=\"margin-top:2px;font-size:12px;line-height:16px;color:#6b7280;\">${escapeHtml(metaBits.join(' \u2022 '))}</div>`\n        : '';\n\n      return `\n        <li style=\"margin-bottom:8px;font-size:14px;line-height:20px;\">\n          <strong>${escapeHtml(summary)}</strong>\n          ${details ? ` \u2013 ${escapeHtml(details)}` : ''}\n          ${metaText}\n        </li>\n      `;\n    });\n\n    challengesSection = `\n      <div style=\"margin-top:16px; margin-bottom:16px;\">\n        <h3 style=\"margin:0 0 8px 0;\">Challenges &amp; Blockers</h3>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${listItems.join('')}\n        </ul>\n      </div>\n    `;\n  }\n\n\n  // 7) Others (notes, logistics, unresolved questions)\n  let othersSection = '';\n\n  const notes = Array.isArray(others.notes) ? others.notes : [];\n  const logistics = Array.isArray(others.logistics) ? others.logistics : [];\n  const unresolved = Array.isArray(others.unresolved_questions) ? others.unresolved_questions : [];\n\n  function hasRealContent(arr) {\n    if (!arr || arr.length === 0) return false;\n    if (arr.length === 1 && typeof arr[0] === 'string' &&\n        arr[0].trim().toLowerCase() === 'none discussed.') {\n      return false;\n    }\n    return true;\n  }\n\n  const hasNotes      = hasRealContent(notes);\n  const hasLogistics  = hasRealContent(logistics);\n  const hasUnresolved = hasRealContent(unresolved);\n\n  if (hasNotes || hasLogistics || hasUnresolved) {\n    const notesHtml = hasNotes\n      ? `\n        <p style=\"margin:8px 0 4px 0;font-size:14px;line-height:20px;\"><strong>Notes</strong></p>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${notes.map(n => `<li style=\"font-size:14px;line-height:20px;\">${escapeHtml(n)}</li>`).join('')}\n        </ul>\n      `\n      : '';\n\n    const logisticsHtml = hasLogistics\n      ? `\n        <p style=\"margin:8px 0 4px 0;font-size:14px;line-height:20px;\"><strong>Logistics</strong></p>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${logistics.map(l => `<li style=\"font-size:14px;line-height:20px;\">${escapeHtml(l)}</li>`).join('')}\n        </ul>\n      `\n      : '';\n\n    const unresolvedHtml = hasUnresolved\n      ? `\n        <p style=\"margin:8px 0 4px 0;font-size:14px;line-height:20px;\"><strong>Unresolved Questions</strong></p>\n        <ul style=\"margin:0 0 10px 20px; padding:0 0 0 18px; list-style-type:disc;\">\n          ${unresolved.map(q => `<li style=\"font-size:14px;line-height:20px;\">${escapeHtml(q)}</li>`).join('')}\n        </ul>\n      `\n      : '';\n\n    othersSection = `\n      <div style=\"margin-top:16px; margin-bottom:16px;\">\n        <h3 style=\"margin:0 0 8px 0;\">Additional Notes &amp; Logistics</h3>\n        ${notesHtml}\n        ${logisticsHtml}\n        ${unresolvedHtml}\n      </div>\n    `;\n  }\n\n  // 8) Custom closing + signoff (HTML only, not in plain-text body)\n  const customClosing = `<p style=\"margin:16px 0 12px 0; font-size:14px; line-height:20px;\">If there is anything I missed or if you would like to adjust any of the tasks or priorities, please feel free to let me know.</p>`;\n\n  const signName = 'Scale Virtually Team';\n  const signoffHtml = [\n    `<p style=\"margin:0 0 12px 0; font-size:14px; line-height:20px;\">Best regards,</p>`,\n    `<p style=\"margin:0 0 12px 0; font-size:14px; line-height:20px;\">${escapeHtml(signName)}</p>`\n  ].join('\\n');\n\n  // 9) Combine all sections into main content\n  const detailSections = [\n    tasksSection,\n    challengesSection,\n    othersSection,\n  ].filter(Boolean).join('\\n');\n\n  let finalHtml = '';\n\n  if (introParts.length) {\n    finalHtml += introParts.join('\\n');\n  }\n\n  if (detailSections) {\n    finalHtml += '\\n' + detailSections;\n  }\n\n  finalHtml += '\\n' + customClosing;\n  finalHtml += '\\n' + signoffHtml;\n\n  // 10) Wrap in card layout with wider header (900px)\n  const safeMeetingTitle = meetingTitle || 'Internal Meeting';\n\n  const headerBlock = `\n    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:24px;\">\n          <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"900\" style=\"max-width:900px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;\">\n            <tr>\n              <td style=\"background:#ea7b21;color:#ffffff;padding:20px 28px;border-radius:12px 12px 0 0;text-align:center;\">\n                <h1 style=\"margin:0 0 4px 0;font-size:22px;line-height:28px;font-weight:700;font-family:Arial,Helvetica,sans-serif;\">\n                  Internal Meeting Minutes\n                </h1>\n                <p style=\"margin:0;font-size:13px;line-height:18px;font-family:Arial,Helvetica,sans-serif;\">\n                  ${escapeHtml(safeMeetingTitle)}\n                </p>\n              </td>\n            </tr>\n            <tr>\n              <td style=\"padding:24px 28px 28px 28px;background:#ffffff;font-size:14px;line-height:20px;\">\n                ${finalHtml.trim()}\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </table>\n  `.trim();\n\n  const fullHtml = `\n<!DOCTYPE html>\n<html>\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>${escapeHtml(subjectOut || '')}</title>\n  </head>\n  <body style=\"margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;\">\n    ${headerBlock}\n  </body>\n</html>\n  `.trim();\n\n  // 11) Push final structured item\n  newItems.push({\n    json: {\n      meta,\n      sections,\n      email: {\n        subject: subjectOut || '',\n        body_text: bodyText,\n        body_html: fullHtml,\n      },\n      raw: data,\n    },\n  });\n}\n\nreturn newItems;\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          832,
+          -448
+        ],
+        "id": "50fa2f9c-c6ef-4e94-9c26-7097b0d7444a",
+        "name": "Code in JavaScript3"
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "value": "devstral-2512",
+            "mode": "list",
+            "cachedResultName": "devstral-2512"
+          },
+          "builtInTools": {},
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          384,
+          -224
+        ],
+        "id": "45eeebf0-3159-4b90-b99b-4e1301417fa6",
+        "name": "OpenAI Chat Model1",
+        "credentials": {
+          "openAiApi": {
+            "id": "pmTl8tr3gScO6C5P",
+            "name": "Portkey"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.first().json;\nconst meta = item.meta ?? {};\nconst sections = item.sections ?? {};\nconst email = item.email ?? {};\nconst raw = item.raw ?? {};\nconst transcript = $items('Transcript Cleaner', 0, 0)[0]?.json ?? {};\nconst timing = transcript.timing ?? {};\nconst occurredAt = timing.meetingStartUtc || timing.createdAtUtc || new Date().toISOString();\nconst meetingId = meta.meetingId ?? null;\nconst meetingUrl = meta.meetingUrl || transcript.meetingUrl || null;\n\nreturn [{\n  json: {\n    source_id: null,\n    journal_date: String(occurredAt).slice(0, 10),\n    occurred_at: occurredAt,\n    entry_type: 'meeting_note',\n    importance: 'normal',\n    actor_name: null,\n    project_id: null,\n    project_name: meta.clientName ?? null,\n    team_name: 'Solution Architects',\n    title: email.subject || meta.meetingTitle || 'Internal Meeting Summary',\n    summary: email.body_text || 'Internal meeting summary generated from Fathom transcript.',\n    details: {\n      source_type: 'fathom_mom',\n      external_source_id: meetingId,\n      meeting_title: meta.meetingTitle ?? null,\n      meeting_url: meetingUrl,\n      invitees: meta.invitees ?? [],\n      sections,\n      raw,\n      transcript_source: transcript\n    },\n    links: {\n      source_url: meetingUrl,\n      unique_key: meetingId ? ('fathom_mom_' + meetingId) : null\n    }\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1056,
+          -352
+        ],
+        "id": "f589bc1b-7c04-49ba-811f-464181e8534f",
+        "name": "Parser for Supabase"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "89c91232-953f-4e45-85b7-a68e880ae068",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          32,
+          -736
+        ],
+        "id": "b9a8f4a9-5af2-4cb3-9715-854eab7adcf3",
+        "name": "Patrick",
+        "webhookId": "89c91232-953f-4e45-85b7-a68e880ae068"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "a9cde8f3-4f30-4511-b0b6-7bd7ae685e55",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          32,
+          -544
+        ],
+        "id": "750dc6b4-f165-4bc6-a1b9-2063ef52fa0a",
+        "name": "Jia",
+        "webhookId": "a9cde8f3-4f30-4511-b0b6-7bd7ae685e55"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "10dccec8-f8f4-4b09-8695-24b3d97f13bc",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -128,
+          -352
+        ],
+        "id": "2d59c87e-4232-4fa4-a91b-ba3cce25b899",
+        "name": "Aja",
+        "webhookId": "10dccec8-f8f4-4b09-8695-24b3d97f13bc",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://zfewidusllwwparlxctr.supabase.co/rest/v1/journal_entries?on_conflict=unique_key",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+              },
+              {
+                "name": "Prefer",
+                "value": "resolution=ignore-duplicates,return=minimal"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json }}",
+          "options": {}
+        },
+        "id": "11111111-1111-4111-8111-111111111111",
+        "name": "Write Journal Entry",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1280,
+          -352
+        ]
+      },
+      {
+        "parameters": {
+          "sendTo": "pj@scalevirtually.com, jianna@scalevirtually.com, aja@scalevirtually.com, janssen@scalevirtually.com, jenn@scalevirtually.com",
+          "subject": "={{ $json.email.subject }}",
+          "message": "={{ $json[\"email\"][\"body_html\"] }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          1056,
+          -544
+        ],
+        "id": "a99c0698-a7eb-4492-bf15-adfcfc3c03bd",
+        "name": "Send a message3",
+        "webhookId": "aa632b6f-c0d1-4e0a-8574-8acacfa0dc7d",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "QdsxfF1pgD1hbNDT",
+            "name": "Solutions"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Transcript Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Transcript Cleaner": {
+        "main": [
+          [
+            {
+              "node": "AI Agent2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent2": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript3": {
+        "main": [
+          [
+            {
+              "node": "Parser for Supabase",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Send a message3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Chat Model1": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent2",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Patrick": {
+        "main": [
+          [
+            {
+              "node": "Transcript Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Jia": {
+        "main": [
+          [
+            {
+              "node": "Transcript Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aja": {
+        "main": [
+          [
+            {
+              "node": "Transcript Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parser for Supabase": {
+        "main": [
+          [
+            {
+              "node": "Write Journal Entry",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Patrick Jansen Villanueva",
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "updatedAt": "2026-04-14T13:07:59.000Z",
+  "createdAt": "2025-11-21T22:35:46.379Z",
+  "id": "8IChPin0erY6oVov",
+  "name": "Weekly STP Reporting",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "38d54e7f-9988-4d88-9e86-80e00b9df75d",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltJ5qVMmfYA6xnS",
+          "mode": "list",
+          "cachedResultName": "PL - STP Requests",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbltJ5qVMmfYA6xnS"
+        },
+        "filterByFormula": "AND({Requisition Status} = 'STP - Ongoing', {Requisition Date} != '')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e2aa0967-7969-40ef-9be7-b3ab95aa4a16",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================\n// CONFIGURATION\n// ==========================================\nconst TARGET_PER_STP = 2; // Bawat STP ay nagdadagdag ng 2 sa backlog\n\n// ==========================================\n// MAIN LOGIC\n// ==========================================\nconst ledger = {}; \nconst allWeeksSet = new Set();\nlet totalEndorsementsAllTime = 0;\n\n// 1. PROCESS DATA\nfor (const item of items) {\n  const json = item.json;\n\n  // --- A. RECORD NEW DEMAND (Pumasok na Trabaho) ---\n  const reqWeek = json[\"Week Commencing\"];\n  const reqDate = json[\"Requisition Date\"];\n  \n  // Kung may Req Date, idagdag sa demand ng linggong iyon\n  if (reqWeek && reqDate) {\n    if (!ledger[reqWeek]) ledger[reqWeek] = { new_demand: 0, completed: 0 };\n    ledger[reqWeek].new_demand += TARGET_PER_STP;\n    allWeeksSet.add(reqWeek);\n  }\n\n  // --- B. RECORD ACTUALS (Natapos na Trabaho) ---\n  const endorsedWeeks = json[\"Week Commencing (from Endorsed VAs)\"];\n  \n  if (endorsedWeeks && Array.isArray(endorsedWeeks)) {\n    endorsedWeeks.forEach(week => {\n      if (!ledger[week]) ledger[week] = { new_demand: 0, completed: 0 };\n      ledger[week].completed += 1;\n      allWeeksSet.add(week);\n      totalEndorsementsAllTime++;\n    });\n  }\n}\n\n// 2. CALCULATE AVERAGE VELOCITY (Speed)\nconst activeWeeksCount = Object.keys(ledger).length;\nconst avgVelocity = activeWeeksCount > 0 \n  ? (totalEndorsementsAllTime / activeWeeksCount).toFixed(1) \n  : 0;\n\n// 3. GENERATE ROLLING REPORT\nconst sortedWeeks = Array.from(allWeeksSet).sort();\nlet runningTotalBacklog = 0; // Eto ang \"Timba\" na nagca-carry over\n\nreturn sortedWeeks.map(week => {\n  const data = ledger[week] || { new_demand: 0, completed: 0 };\n  \n  // MATH: (Laman ng Timba Dati) + (Bagong Buhos) - (Inigib na Tubig)\n  runningTotalBacklog = runningTotalBacklog + data.new_demand - data.completed;\n\n  // Status Label\n  let status = \"Stable\";\n  if (runningTotalBacklog > 8) status = \"High Backlog \ud83d\udea8\";\n  if (data.completed > avgVelocity) status = \"Good Performance \ud83d\ude80\";\n\n  return {\n    json: {\n      week_commencing: week,\n      \n      // Column 1: ACTUALS (Ilan ang natapos niyo?)\n      actual_endorsements: data.completed,\n      \n      // Column 2: SPEED (Mabilis ba kayo vs history?)\n      average_weekly_rate: parseFloat(avgVelocity),\n      \n      // Column 3: NEW WORK (Ilan ang pumasok LANG ngayong week na 'to?)\n      new_requirements_entered: data.new_demand,\n      \n      // Column 4: TOTAL ACTIVE BACKLOG (Ito ang gusto mo!)\n      // Kasama dito ang Week 36, Week 37, etc. na hindi pa tapos.\n      total_active_backlog: runningTotalBacklog, \n      \n      status: status\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "6c7f0f6e-0845-41d2-8168-698aa409da37",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. GET THE LATEST WEEK DATA\n// We assume the previous node output is sorted by date.\n// We take the last item (Current Week).\nconst latestData = items[items.length - 1].json;\n\n// 2. EXTRACT VARIABLES\nconst week = latestData.week_commencing;\nconst actual = latestData.actual_endorsements;\nconst newReq = latestData.new_requirements_entered;\nconst backlog = latestData.total_active_backlog;\nconst avg = latestData.average_weekly_rate;\nconst status = latestData.status;\n\n// 3. DETERMINE COLORS BASED ON PERFORMANCE\n// Backlog: Negative is Green (Surplus), High Positive is Red (Warning)\nlet backlogColor = \"#e11d48\"; // Red (Default: Work piling up)\nlet backlogText = \"Pending\";\n\nif (backlog <= 0) {\n    backlogColor = \"#16a34a\"; // Green (Surplus/Clear)\n    backlogText = \"Surplus (Ahead)\";\n} else if (backlog < 5) {\n    backlogColor = \"#f59e0b\"; // Orange (Manageable)\n}\n\n// 4. GENERATE HTML\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f3f4f6; }\n  .card {\n    width: 600px;\n    background-color: #ffffff;\n    border-radius: 12px;\n    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);\n    overflow: hidden;\n    border: 1px solid #e5e7eb;\n  }\n  .header {\n    background-color: #1e293b;\n    color: #ffffff;\n    padding: 20px;\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n  }\n  .header h1 { margin: 0; font-size: 24px; font-weight: 700; }\n  .header .badge {\n    background-color: #3b82f6;\n    color: white;\n    padding: 5px 12px;\n    border-radius: 20px;\n    font-size: 14px;\n    font-weight: 600;\n    text-transform: uppercase;\n  }\n  .grid {\n    display: grid;\n    grid-template-columns: 1fr 1fr;\n    gap: 1px;\n    background-color: #e5e7eb; /* Creates borders between cells */\n    border-bottom: 1px solid #e5e7eb;\n  }\n  .stat-box {\n    background-color: #ffffff;\n    padding: 25px 20px;\n    text-align: center;\n  }\n  .stat-label { color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 8px; }\n  .stat-value { font-size: 36px; font-weight: 800; color: #0f172a; }\n  .stat-sub { font-size: 14px; color: #64748b; margin-top: 4px; }\n  \n  .footer {\n    padding: 15px 20px;\n    background-color: #f8fafc;\n    color: #64748b;\n    font-size: 12px;\n    text-align: right;\n    border-top: 1px solid #e5e7eb;\n  }\n  \n  /* Dynamic Colors */\n  .text-green { color: #16a34a; }\n  .text-red { color: #e11d48; }\n</style>\n</head>\n<body>\n\n<div class=\"card\">\n  <div class=\"header\">\n    <h1>Week ${week.split('-')[1]} Report</h1> <span class=\"badge\">${status}</span>\n  </div>\n\n  <div class=\"grid\">\n    <div class=\"stat-box\">\n      <div class=\"stat-label\">Actual Endorsements</div>\n      <div class=\"stat-value\">${actual}</div>\n      <div class=\"stat-sub\">Target Velocity: ${avg}/wk</div>\n    </div>\n\n    <div class=\"stat-box\">\n      <div class=\"stat-label\">Total Active Backlog</div>\n      <div class=\"stat-value\" style=\"color: ${backlogColor}\">\n        ${backlog > 0 ? backlog : Math.abs(backlog)}\n      </div>\n      <div class=\"stat-sub\" style=\"color: ${backlogColor}\">${backlogText}</div>\n    </div>\n  </div>\n\n  <div class=\"grid\">\n    <div class=\"stat-box\" style=\"padding: 15px;\">\n      <div class=\"stat-label\">New Requirements</div>\n      <div class=\"stat-value\" style=\"font-size: 24px;\">+${newReq}</div>\n    </div>\n    <div class=\"stat-box\" style=\"padding: 15px;\">\n      <div class=\"stat-label\">Net Variance</div>\n      <div class=\"stat-value\" style=\"font-size: 24px;\">${newReq - actual > 0 ? '\u2191' : '\u2193'} ${newReq - actual}</div>\n    </div>\n  </div>\n\n  <div class=\"footer\">\n    Generated via n8n \u2022 Data Source: Airtable\n  </div>\n</div>\n\n</body>\n</html>\n`;\n\nreturn {\n    json: {\n        html: html,\n        week_id: week\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "493e53c2-9f1a-4e92-8c16-baf555aa53f7",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.html }}"
+      },
+      "type": "n8n-nodes-htmlcsstoimage.htmlCssToImage",
+      "typeVersion": 1,
+      "position": [
+        832,
+        0
+      ],
+      "id": "7e6a808e-e1e9-45cf-b581-00a985b6a30b",
+      "name": "HTML/CSS to Image",
+      "credentials": {
+        "htmlcsstoimgApi": {
+          "id": "RgVbijNCeobh79Gr",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09KTPH4WHJ",
+          "mode": "id"
+        },
+        "messageType": "block",
+        "blocksUi": "={\n\t\"blocks\": [\n\t\t{\n\t\t\t\"type\": \"header\",\n\t\t\t\"text\": {\n\t\t\t\t\"type\": \"plain_text\",\n\t\t\t\t\"text\": \"\ud83d\udcca Weekly Endorsement Scorecard\",\n\t\t\t\t\"emoji\": true\n\t\t\t}\n\t\t},\n\t\t{\n\t\t\t\"type\": \"section\",\n\t\t\t\"text\": {\n\t\t\t\t\"type\": \"mrkdwn\",\n\t\t\t\t\"text\": \"*The latest recruitment data has been processed.* \\nHere is the snapshot of our Actuals vs. Backlog for the current week.\"\n\t\t\t}\n\t\t},\n\t\t{\n\t\t\t\"type\": \"image\",\n\t\t\t\"image_url\": \"{{ $json.image_url }}\",\n\t\t\t\"alt_text\": \"Weekly Recruitment Scorecard\"\n\t\t},\n\t\t{\n\t\t\t\"type\": \"context\",\n\t\t\t\"elements\": [\n\t\t\t\t{\n\t\t\t\t\t\"type\": \"mrkdwn\",\n\t\t\t\t\t\"text\": \"\u2705 *Generated Successfully* in {{ ($json.execution_time_ms / 1000).toFixed(2) }}s  |  \ud83d\udcbe {{ ($json.file_size_bytes / 1024).toFixed(1) }} KB  |  \ud83c\udd94 Ref: `{{ $json.request_id.substring(0,8) }}`\"\n\t\t\t\t}\n\t\t\t]\n\t\t}\n\t]\n}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "8c1c281d-2612-4e1c-974d-9ec74f56b34a",
+      "name": "Send a message",
+      "webhookId": "214fa478-b9a5-4b8c-91bb-68822f3f630f",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTML/CSS to Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML/CSS to Image": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "9653f6b9-2387-4f10-bb06-4f1d56ee581b",
+  "activeVersionId": null,
+  "versionCounter": 6,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2025-11-21T22:35:46.383Z",
+      "createdAt": "2025-11-21T22:35:46.383Z",
+      "role": "workflow:owner",
+      "workflowId": "8IChPin0erY6oVov",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

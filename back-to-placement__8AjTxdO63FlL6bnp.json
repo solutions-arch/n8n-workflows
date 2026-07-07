@@ -1,0 +1,310 @@
+{
+  "updatedAt": "2026-04-14T13:29:29.000Z",
+  "createdAt": "2025-11-05T21:08:18.294Z",
+  "id": "8AjTxdO63FlL6bnp",
+  "name": "Back to Placement",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// INPUT: Data from Airtable Webhook\n// ============================================\nconst airtableItems = $input.all();\n\nif (!airtableItems || airtableItems.length === 0) {\n  return [{ json: { error: \"No Airtable data received\" } }];\n}\n\n// ============================================\n// HELPER FUNCTIONS\n// ============================================\nfunction formatDate(dateString) {\n  if (!dateString) return 'N/A';\n  const date = new Date(dateString);\n  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];\n  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;\n}\n\nfunction formatSkillsTools(skillsToolsText) {\n  if (!skillsToolsText) return 'N/A';\n  return skillsToolsText.replace(/\\n/g, '<br>');\n}\n\n// ============================================\n// PDF FETCH + TEXT EXTRACTION HELPER\n// ============================================\n\nasync function extractPdfTextFromUrl(url) {\n  if (!url) return 'No resume link provided';\n  try {\n    const response = await fetch(url);\n    const arrayBuffer = await response.arrayBuffer();\n    const buffer = Buffer.from(arrayBuffer);\n\n    // Requires pdf-parse installed in your n8n instance\n    const pdf = require('pdf-parse');\n    const data = await pdf(buffer);\n    return data.text || 'No text found in PDF';\n  } catch (err) {\n    return `Error extracting PDF: ${err.message}`;\n  }\n}\n\n// ============================================\n// PROCESS EACH VA RECORD\n// ============================================\nconst vaRecords = [];\n\nfor (const item of airtableItems) {\n  const fields = item.json?.body?.fields || {};\n\n  const resumeUrl = fields['Resume URL'] || fields['Updated Resume']?.[0]?.url || null;\n  const extractedText = await extractPdfTextFromUrl(resumeUrl);\n\n  vaRecords.push({\n    name: fields['Virtual Assistants Name'] || 'N/A',\n    btpId: fields['BTP ID'] || 'N/A',\n    latestClient: fields['Latest Client (from Virtual Assistants)']?.[0] || 'N/A',\n    latestRole: fields['Latest Role (from Virtual Assistants)']?.[0] || 'N/A',\n    skillsTools: formatSkillsTools(fields['Skills | Tools']),\n    reasonForCancellation: fields['Reason for MVA Cancellation'] || 'N/A',\n    memo: fields['Memo'] || 'N/A',\n    lastDayWithClient: formatDate(fields['Last day with the client']),\n    readyForInterviews: formatDate(fields['Ready for Interviews']),\n    svEmail: fields['SV Email']?.[0] || fields['B2P Email']?.[0] || 'N/A',\n    personalEmail: fields['Personal Email']?.[0] || 'N/A',\n    resumeUrl,\n    extractedResumeText: extractedText\n  });\n}\n\n// ============================================\n// BUILD HTML EMAIL FOR EACH VA (CLEAN VERSION)\n// ============================================\nconst emailOutputs = vaRecords.map(va => {\n  const htmlMessage = `\n  <div style=\"font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto;\">\n    <p style=\"font-size: 14px; margin-bottom: 20px;\">Hi Team,</p>\n    \n    <p style=\"font-size: 14px; margin-bottom: 20px;\">\n      See <strong>placement ready</strong> for VA <strong>${va.name}</strong>. Here's the \n      <a href=\"${va.resumeUrl || '#'}\" style=\"color: #0066cc; text-decoration: underline;\">link</a> to the updated CV.\n    </p>\n\n    <table border=\"1\" cellpadding=\"10\" cellspacing=\"0\" style=\"border-collapse: collapse; width: 100%; font-size: 14px; border: 2px solid #6E86AD;\">\n      <thead>\n        <tr style=\"background-color: #F17D19;\">\n          <th colspan=\"2\" style=\"color: white; text-align: center; padding: 12px; font-size: 16px;\">\n            VA Endorsement to <strong>Placement</strong>\n          </th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold; width: 30%;\">Name</td>\n          <td style=\"padding: 10px;\">${va.name}</td>\n        </tr>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold;\">Previous Client</td>\n          <td style=\"padding: 10px;\">${va.latestClient}</td>\n        </tr>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold;\">Previous Role</td>\n          <td style=\"padding: 10px;\">${va.latestRole}</td>\n        </tr>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold;\">Tenure with Previous Client</td>\n          <td style=\"padding: 10px;\">See CV for details</td>\n        </tr>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold; vertical-align: top;\">Skills/Tools</td>\n          <td style=\"padding: 10px; line-height: 1.6;\">${va.skillsTools}</td>\n        </tr>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold; vertical-align: top;\">Reason for MVA Cancellation</td>\n          <td style=\"padding: 10px;\">${va.reasonForCancellation}</td>\n        </tr>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold; vertical-align: top;\">Memo</td>\n          <td style=\"padding: 10px;\">${va.memo}</td>\n        </tr>\n        <tr>\n          <td style=\"background-color: #6E86AD; color: white; font-weight: bold;\">Last day with the client</td>\n          <td style=\"padding: 10px;\">${va.lastDayWithClient}</td>\n        </tr>\n      </tbody>\n    </table>\n\n    <p style=\"font-size: 12px; color: #666; margin-top: 20px; font-style: italic;\">\n      This notification was automatically generated by the placement ready notification flow.\n    </p>\n  </div>\n  `;\n\n  return {\n    json: {\n      vaName: va.name,\n      btpId: va.btpId,\n      svEmail: va.svEmail,\n      personalEmail: va.personalEmail,\n      htmlMessage,\n      subject: `Placement Ready - ${va.name}`,\n      readyDate: va.readyForInterviews,\n      extractedResumeText: va.extractedResumeText\n    }\n  };\n});\n\n// ============================================\n// OUTPUT RESULTS\n// ============================================\nreturn emailOutputs;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ],
+      "id": "705105aa-813b-4c32-b9e5-c8ea7c5c7b13",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "sendTo": "solutions@scalevirtually.com",
+        "subject": "=Placement Ready - {{ $json.vaName }}",
+        "message": "={{ $json.htmlMessage }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        96
+      ],
+      "id": "0bfb0b2c-a6b3-4dba-852c-adcc20685bcd",
+      "name": "Send a message",
+      "webhookId": "8d472657-2dec-44c9-ba7f-c8e439e366ec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cccdeb43-4354-4d84-914b-4b28b0d78ace",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -112,
+        96
+      ],
+      "id": "f0c14a10-621a-468d-acef-cf01bd78dcb7",
+      "name": "Webhook",
+      "webhookId": "cccdeb43-4354-4d84-914b-4b28b0d78ace"
+    },
+    {
+      "parameters": {
+        "content": "### VA ENDORSEMENT TO PLACEMENT AUTOMATION\n\nWhat this does:\n- Triggers whenever a new **VA form** is submitted in Airtable\n- Pulls VA details (name, client, role, skills/tools, cancellation reason, memo, dates)\n- Formats the data into a **structured HTML email** with CV link\n- Sends the formatted endorsement notification to the team\n\nRuns: On new Airtable form submission\n",
+        "height": 256,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -160,
+        -560
+      ],
+      "typeVersion": 1,
+      "id": "05f100b1-3593-4446-9663-2d0b9fe4124e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose**  \nStarts the automation whenever a new VA endorsement form is submitted in Airtable.  \n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        -16
+      ],
+      "typeVersion": 1,
+      "id": "3255e853-c561-46a7-950c-ae3d104431cd",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose**  \nProcesses Airtable record fields into a structured object for email formatting.  \n\n**Key Features**  \n- Extracts VA details (name, client, role, skills/tools, cancellation reason, memo, dates)  \n- Formats dates into readable strings (e.g., Nov 7, 2025)  \n- Prepares candidate data for HTML display  \n- Branded header: \u201cVA Endorsement to Placement\u201d  \n- Table layout with VA details (client, role, skills, memo, last day, etc.)  \n- Includes CV link placeholder  \n- Adds auto\u2011generated footer note  ",
+        "height": 400,
+        "width": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        272,
+        -224
+      ],
+      "typeVersion": 1,
+      "id": "f1fdcb4f-bdc8-49a2-b585-87e8bbaf4d40",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose**  \nSends the formatted endorsement email to the team.  "
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        832,
+        16
+      ],
+      "typeVersion": 1,
+      "id": "cae3c5f6-fc78-45ca-a123-064dabc30997",
+      "name": "Sticky Note3"
+    }
+  ],
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
+            "content-length": "1783",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "184.72.196.212",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "99d08681679274e8-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-airtable-source": "apptuAm73VyH7pcHA/wflLezL6K2idZ1pT3",
+            "x-forwarded-for": "184.72.196.212, 104.23.211.208",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-qvbjs",
+            "x-is-trusted": "yes",
+            "x-real-ip": "184.72.196.212"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "id": "recF6gbN21uolvBtk",
+            "fields": {
+              "Virtual Assistants": [
+                {
+                  "id": "recxpjdKXOGp26A1q",
+                  "name": "Armiadel Giellan Cudal"
+                }
+              ],
+              "Latest Client (from Virtual Assistants)": [
+                "rec8i2lYygezC41GU"
+              ],
+              "Latest Role (from Virtual Assistants)": [
+                "reciUaAAUwmLk1oJX"
+              ],
+              "Clients": null,
+              "Date of Submission": "2025-06-10",
+              "Skills | Tools": "Skills:\nE-Commerce Operations\nEmail Marketing and Campaign Automation\nSocial Media Management\nWebsite Traffic Optimization\n\nTools:\nKlaviyo\nShopify\nMeta\nTikTok\nCanva\nSocialCat and other Influencer Marketing Tools",
+              "Last day with the client": "2025-06-10",
+              "Ready for Interviews": "2025-06-10",
+              "Reason for MVA Cancellation": "Performance - skills mismatch",
+              "Updated Resume": {
+                "id": "sel5Vb6uNZbibtIUP",
+                "name": "Up-to-date",
+                "color": "greenLight2"
+              },
+              "Updated Intro Video": {
+                "id": "sel5Vb6uNZbibtIUP",
+                "name": "Up-to-date",
+                "color": "greenLight2"
+              },
+              "Created By": {
+                "id": "usrtej8AuOw9fF8KL",
+                "email": "jianna@scalevirtually.com",
+                "permissionLevel": "create",
+                "name": "Jianna Louise Caritativo",
+                "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_4.png"
+              },
+              "Memo": "N/A",
+              "Reason for Deferred Availability": null,
+              "Virtual Assistants Name": "Armiadel Giellan Cudal",
+              "SV Support": null,
+              "Created": "2025-08-08T17:40:35.000Z",
+              "Last Modified By": {
+                "id": "usrjo028Wx73RpZuw",
+                "email": "pj@scalevirtually.com",
+                "permissionLevel": "create",
+                "name": "Patrick Jansen Villanueva",
+                "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_7.png"
+              },
+              "Last Modified": "2025-09-16T13:05:23.000Z",
+              "B2P Email": [
+                "mia.cudal@scalevirtually.ph"
+              ],
+              "SV Email": [
+                "mia.cudal@scalevirtually.ph"
+              ],
+              "Personal Email": [
+                "miacudal1998@gmail.com"
+              ],
+              "For Scrubbing?": null,
+              "Fields with Missing Data": "\n",
+              "Last Scrubbed At": "2025-09-16T13:05:03.268Z",
+              "Record ID": "recF6gbN21uolvBtk",
+              "Virtual Assistants copy": null
+            }
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook-test/cccdeb43-4354-4d84-914b-4b28b0d78ace",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "versionId": "1edc45f0-1e14-4e65-906f-b40ebb82c540",
+  "activeVersionId": null,
+  "versionCounter": 26,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-06T16:07:40.609Z",
+      "createdAt": "2025-11-06T16:07:40.609Z",
+      "role": "workflow:owner",
+      "workflowId": "8AjTxdO63FlL6bnp",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

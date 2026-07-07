@@ -1,0 +1,932 @@
+{
+  "updatedAt": "2026-07-04T13:03:24.202Z",
+  "createdAt": "2026-02-20T21:57:06.532Z",
+  "id": "1xEAJNdvQrFIDhnG",
+  "name": "Accepted Invite",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Prospect Name",
+              "lookupValue": "={{ $json.senderName }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        -48
+      ],
+      "id": "70cc32e3-923c-4597-9555-0e016e7a2cd6",
+      "name": "Roundtable Warm Leads",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 558745178,
+          "mode": "list",
+          "cachedResultName": "Declined Invites",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=558745178"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $json.senderName }}",
+            "Date": "={{ $json.receivedDate }}"
+          },
+          "matchingColumns": [
+            "Prospect Name"
+          ],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        192
+      ],
+      "id": "bc51ea04-1d11-475b-90fb-e177d4860218",
+      "name": "Declined Invites",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "CEO Roundtable"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -96,
+        80
+      ],
+      "id": "651db32c-441f-47a2-96bd-861270b897d2",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  // 1. Parse Name and Email\n  const fromField = item.json.From || \"\";\n  const match = fromField.match(/(.*)<(.*)>/);\n  \n  if (match) {\n    item.json.senderName = match[1].trim();\n    item.json.senderEmail = match[2].trim();\n  } else {\n    item.json.senderName = 'Unknown';\n    item.json.senderEmail = fromField.trim();\n  }\n\n  // 2. Set Received Date to \"Now\" (System Time)\n  const now = new Date();\n  const mm = String(now.getMonth() + 1).padStart(2, '0');\n  const dd = String(now.getDate()).padStart(2, '0');\n  const yyyy = now.getFullYear();\n  \n  item.json.receivedDate = `${mm}/${dd}/${yyyy}`;\n\n  // 3. Extract RSVP Status from Subject\n  const subject = item.json.Subject || \"\";\n  if (subject.toLowerCase().includes('accepted')) {\n    item.json.rsvpStatus = 'Accepted';\n  } else if (subject.toLowerCase().includes('declined')) {\n    item.json.rsvpStatus = 'Declined';\n  } else {\n    item.json.rsvpStatus = 'Unknown';\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        80
+      ],
+      "id": "4d76049d-de30-4e38-a037-4ef7c3207e44",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.Subject }}",
+                    "rightValue": "Accepted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "a8843f15-6412-4b40-be9a-121032bba065"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Accepted"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3638c48d-5601-400e-a43c-4e0c3712f1fd",
+                    "leftValue": "={{ $json.Subject }}",
+                    "rightValue": "Declined",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Declined"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        80
+      ],
+      "id": "9c85bcc4-c5bd-4866-ac7e-6bcf6035145a",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8aa29ea8-1c9d-401a-9eef-be43d4bc709b",
+              "leftValue": "={{ Object.keys($json).length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -48
+      ],
+      "id": "76bf8515-6246-4488-ae42-1e4ce210610d",
+      "name": "If",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "roundtable-leads",
+          "mode": "name"
+        },
+        "text": "=*New Accepted Roundtable Calendar Invite*\n\n*Lead Name:* {{ $('Code in JavaScript').item.json.senderName }}\n*Email:* {{ $('Code in JavaScript').item.json.senderEmail }}\n*Message:* {{ $('Switch').item.json.rsvpStatus }} \n*Date:* {{ $('Code in JavaScript').item.json.receivedDate }}\n\n\u26a0\ufe0f Sender name or email does not exist in the Roundtable Warm Leads sheet",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1152,
+        48
+      ],
+      "id": "6615089d-76ae-46cc-b242-c2c6356ef62c",
+      "name": "Messaging for flagged invites",
+      "webhookId": "9debfcb1-7a61-4d57-a612-1038ea53340f",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "roundtable-leads",
+          "mode": "name"
+        },
+        "text": "=*New Accepted Roundtable Calendar Invite*\n\n*Source:* {{ $json.Tool }}\n*Lead Name:* {{ $('Code in JavaScript').item.json.senderName }} \n*Message:* {{ $('Switch').item.json.rsvpStatus }} \n*Date:* {{ $('Code in JavaScript').item.json.receivedDate }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1152,
+        -160
+      ],
+      "id": "36c1d821-7dd7-45f6-bfc6-5af01ff3aefe",
+      "name": "Messaging for completed invites",
+      "webhookId": "9debfcb1-7a61-4d57-a612-1038ea53340f",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Roundtable Warm Leads": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Roundtable Warm Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Declined Invites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Messaging for completed invites",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Messaging for flagged invites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "IJnW8xKq7kcp2hBR",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1777569226,
+        "possibleDuplicates": [
+          "19ddf61e93153e30"
+        ]
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19c9095603388663",
+          "threadId": "19c9095603388663",
+          "snippet": "CEO Roundtable Kings Capital has accepted this invitation. Join Zoom Meeting scalevirtually.zoom.us/j/8535893... ID: 8535893137 Join by phone (US) +1 646-931-3860 Joining instructions Joining notes",
+          "payload": {
+            "mimeType": "multipart/mixed"
+          },
+          "sizeEstimate": 40475,
+          "historyId": "217059",
+          "internalDate": "1771952230000",
+          "labels": [
+            {
+              "id": "INBOX",
+              "name": "INBOX"
+            },
+            {
+              "id": "IMPORTANT",
+              "name": "IMPORTANT"
+            },
+            {
+              "id": "CATEGORY_PERSONAL",
+              "name": "CATEGORY_PERSONAL"
+            },
+            {
+              "id": "UNREAD",
+              "name": "UNREAD"
+            }
+          ],
+          "Subject": "Accepted: CEO Roundtable  @ Wed Feb 25, 2026 1pm - 2pm (CST) (sean@scalevirtually.com)",
+          "From": "Kings Capital <deals@kingscapitalre.com>",
+          "To": "sean@scalevirtually.com"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "687b48b4-d6aa-4c69-8c2b-abbc6a7cf87f",
+  "activeVersionId": "687b48b4-d6aa-4c69-8c2b-abbc6a7cf87f",
+  "versionCounter": 555,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-20T21:57:06.537Z",
+      "createdAt": "2026-02-20T21:57:06.537Z",
+      "role": "workflow:owner",
+      "workflowId": "1xEAJNdvQrFIDhnG",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:03:24.203Z",
+    "createdAt": "2026-07-04T13:03:24.203Z",
+    "versionId": "687b48b4-d6aa-4c69-8c2b-abbc6a7cf87f",
+    "workflowId": "1xEAJNdvQrFIDhnG",
+    "nodes": [
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "Prospect Name",
+                "lookupValue": "={{ $json.senderName }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          672,
+          -48
+        ],
+        "id": "70cc32e3-923c-4597-9555-0e016e7a2cd6",
+        "name": "Roundtable Warm Leads",
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "appendOrUpdate",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 558745178,
+            "mode": "list",
+            "cachedResultName": "Declined Invites",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=558745178"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $json.senderName }}",
+              "Date": "={{ $json.receivedDate }}"
+            },
+            "matchingColumns": [
+              "Prospect Name"
+            ],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "row_number",
+                "displayName": "row_number",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "number",
+                "canBeUsedToMatch": true,
+                "readOnly": true,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          672,
+          192
+        ],
+        "id": "bc51ea04-1d11-475b-90fb-e177d4860218",
+        "name": "Declined Invites",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "pollTimes": {
+            "item": [
+              {
+                "mode": "everyMinute"
+              }
+            ]
+          },
+          "filters": {
+            "q": "CEO Roundtable"
+          }
+        },
+        "type": "n8n-nodes-base.gmailTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -96,
+          80
+        ],
+        "id": "651db32c-441f-47a2-96bd-861270b897d2",
+        "name": "Gmail Trigger",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "QdsxfF1pgD1hbNDT",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "for (const item of $input.all()) {\n  // 1. Parse Name and Email\n  const fromField = item.json.From || \"\";\n  const match = fromField.match(/(.*)<(.*)>/);\n  \n  if (match) {\n    item.json.senderName = match[1].trim();\n    item.json.senderEmail = match[2].trim();\n  } else {\n    item.json.senderName = 'Unknown';\n    item.json.senderEmail = fromField.trim();\n  }\n\n  // 2. Set Received Date to \"Now\" (System Time)\n  const now = new Date();\n  const mm = String(now.getMonth() + 1).padStart(2, '0');\n  const dd = String(now.getDate()).padStart(2, '0');\n  const yyyy = now.getFullYear();\n  \n  item.json.receivedDate = `${mm}/${dd}/${yyyy}`;\n\n  // 3. Extract RSVP Status from Subject\n  const subject = item.json.Subject || \"\";\n  if (subject.toLowerCase().includes('accepted')) {\n    item.json.rsvpStatus = 'Accepted';\n  } else if (subject.toLowerCase().includes('declined')) {\n    item.json.rsvpStatus = 'Declined';\n  } else {\n    item.json.rsvpStatus = 'Unknown';\n  }\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          208,
+          80
+        ],
+        "id": "4d76049d-de30-4e38-a037-4ef7c3207e44",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.Subject }}",
+                      "rightValue": "Accepted",
+                      "operator": {
+                        "type": "string",
+                        "operation": "contains"
+                      },
+                      "id": "a8843f15-6412-4b40-be9a-121032bba065"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Accepted"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "3638c48d-5601-400e-a43c-4e0c3712f1fd",
+                      "leftValue": "={{ $json.Subject }}",
+                      "rightValue": "Declined",
+                      "operator": {
+                        "type": "string",
+                        "operation": "contains"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Declined"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          416,
+          80
+        ],
+        "id": "9c85bcc4-c5bd-4866-ac7e-6bcf6035145a",
+        "name": "Switch"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "8aa29ea8-1c9d-401a-9eef-be43d4bc709b",
+                "leftValue": "={{ Object.keys($json).length > 0 }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          896,
+          -48
+        ],
+        "id": "76bf8515-6246-4488-ae42-1e4ce210610d",
+        "name": "If",
+        "alwaysOutputData": false
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "roundtable-leads",
+            "mode": "name"
+          },
+          "text": "=*New Accepted Roundtable Calendar Invite*\n\n*Lead Name:* {{ $('Code in JavaScript').item.json.senderName }}\n*Email:* {{ $('Code in JavaScript').item.json.senderEmail }}\n*Message:* {{ $('Switch').item.json.rsvpStatus }} \n*Date:* {{ $('Code in JavaScript').item.json.receivedDate }}\n\n\u26a0\ufe0f Sender name or email does not exist in the Roundtable Warm Leads sheet",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1152,
+          48
+        ],
+        "id": "6615089d-76ae-46cc-b242-c2c6356ef62c",
+        "name": "Messaging for flagged invites",
+        "webhookId": "9debfcb1-7a61-4d57-a612-1038ea53340f",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "roundtable-leads",
+            "mode": "name"
+          },
+          "text": "=*New Accepted Roundtable Calendar Invite*\n\n*Source:* {{ $json.Tool }}\n*Lead Name:* {{ $('Code in JavaScript').item.json.senderName }} \n*Message:* {{ $('Switch').item.json.rsvpStatus }} \n*Date:* {{ $('Code in JavaScript').item.json.receivedDate }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1152,
+          -160
+        ],
+        "id": "36c1d821-7dd7-45f6-bfc6-5af01ff3aefe",
+        "name": "Messaging for completed invites",
+        "webhookId": "9debfcb1-7a61-4d57-a612-1038ea53340f",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Roundtable Warm Leads": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gmail Trigger": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "Roundtable Warm Leads",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Declined Invites",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "Messaging for completed invites",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Messaging for flagged invites",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "updatedAt": "2026-04-29T22:02:56.551Z",
+  "createdAt": "2026-04-21T12:49:45.580Z",
+  "id": "8rVITpOxuqmLa57q",
+  "name": "Archived - Legacy Solutions insight workflow sanitized",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "manual-trigger-sanitized",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19db0f29fdb8c1d4",
+          "threadId": "19db0f29fdb8c1d4",
+          "snippet": "Lead Intelligence Automation Timeline Here&#39;s the Agenda of the Meeting:1. Review of Draft MaterialsLucidchart Automation FlowProcess Flow Document2. Open Questions &amp;amp; Dependencies",
+          "payload": {
+            "mimeType": "multipart/mixed"
+          },
+          "sizeEstimate": 52326,
+          "historyId": "2049844",
+          "internalDate": "1776790182000",
+          "labels": [
+            {
+              "id": "INBOX",
+              "name": "INBOX"
+            },
+            {
+              "id": "IMPORTANT",
+              "name": "IMPORTANT"
+            },
+            {
+              "id": "CATEGORY_PERSONAL",
+              "name": "CATEGORY_PERSONAL"
+            },
+            {
+              "id": "UNREAD",
+              "name": "UNREAD"
+            }
+          ],
+          "Subject": "Invitation: Lead Intelligence Automation Timeline @ Wed Apr 22, 2026 10am - 11am (CDT) (Patrick Jansen Villanueva)",
+          "From": "Jenneiline Marie Manuel <jenn@scalevirtually.com>",
+          "To": "Patrick Jansen Villanueva <pj@scalevirtually.com>, Jesylou Jopio <jesy@scalevirtually.com>, Janssen Miraflor <janssen@scalevirtually.com>, Jianna Louise Caritativo <jianna@scalevirtually.com>, Aja Mojica <aja@scalevirtually.com>"
+        }
+      }
+    ],
+    "Message a model": [
+      {
+        "json": {
+          "model": "claude-haiku-4-5-20251001",
+          "id": "msg_01X4Ewkv6tmj4Fugg8Buy4pi",
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "text",
+              "text": "```json\n{\n  \"title\": \"Lead Intelligence Automation Timeline Meeting - Review of Draft Materials and Open Questions\",\n  \"simplified_context\": \"Meeting scheduled for Wed Apr 22, 2026 10am-11am CDT to review automation flow materials and address dependencies.\",\n  \"unique_key\": \"gmail_19db0f29fdb8c1d4_1776790182000\",\n  \"project\": \"Lead Intelligence Automation\",\n  \"team\": \"Scale Virtually\",\n  \"from_name\": \"Jenneiline Marie Manuel\",\n  \"from_email\": \"jenn@scalevirtually.com\",\n  \"subject\": \"Invitation: Lead Intelligence Automation Timeline @ Wed Apr 22, 2026 10am - 11am (CDT) (Patrick Jansen Villanueva)\",\n  \"snippet\": \"Lead Intelligence Automation Timeline Here's the Agenda of the Meeting:1. Review of Draft MaterialsLucidchart Automation FlowProcess Flow Document2. Open Questions & Dependencies\",\n  \"thread_id\": \"19db0f29fdb8c1d4\",\n  \"internal_date\": \"1776790182000\",\n  \"email_id\": \"19db0f29fdb8c1d4\"\n}\n```"
+            }
+          ],
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 337,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 0
+            },
+            "output_tokens": 297,
+            "service_tier": "standard",
+            "inference_geo": "not_available"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "f011c644-327d-4dcd-abf3-c0539efdf63b",
+  "activeVersionId": null,
+  "versionCounter": 255,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-04-24T07:25:13.728Z",
+      "createdAt": "2026-04-24T07:25:13.728Z",
+      "role": "workflow:owner",
+      "workflowId": "8rVITpOxuqmLa57q",
+      "projectId": "dIeucgELIM397KsV",
+      "project": {
+        "updatedAt": "2026-04-09T17:38:39.186Z",
+        "createdAt": "2026-04-09T17:34:54.051Z",
+        "id": "dIeucgELIM397KsV",
+        "name": "Aja Mojica <aja@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2026-04-09T17:34:54.054Z",
+            "createdAt": "2026-04-09T17:34:54.054Z",
+            "userId": "d5b3a708-6697-402c-a670-49beebeaf80f",
+            "projectId": "dIeucgELIM397KsV",
+            "user": {
+              "updatedAt": "2026-06-07T23:58:55.000Z",
+              "createdAt": "2026-04-09T17:34:54.040Z",
+              "id": "d5b3a708-6697-402c-a670-49beebeaf80f",
+              "email": "aja@scalevirtually.com",
+              "firstName": "Aja",
+              "lastName": "Mojica",
+              "personalizationAnswers": null,
+              "settings": {
+                "easyAIWorkflowOnboarded": true
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-06-07",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

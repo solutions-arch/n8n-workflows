@@ -1,0 +1,2122 @@
+{
+  "updatedAt": "2026-07-04T13:04:01.008Z",
+  "createdAt": "2026-02-20T00:48:11.578Z",
+  "id": "8qco5YX0tFKhF38K",
+  "name": "Ember Roundtable",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c7d5bd15-f206-48cd-917b-e02f0b63010f",
+              "leftValue": "={{ $json.body.data.campaign.name }}",
+              "rightValue": "ROUNDTABLE INVITE - FEB 19 - REAL ESTATE - 500k+ REV",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c763e756-dc33-4652-9a21-e9a026eedc52",
+              "leftValue": "={{ $json.body.data.campaign.name }}",
+              "rightValue": "ROUNDTABLE INVITE - FEB 25 - REAL ESTATE",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "01fc378a-6b81-4b66-8e96-c2c9d872624e",
+              "leftValue": "={{ $json.body.data.campaign.name }}",
+              "rightValue": "ROUNDTABLE INVITE - FEB 25 - REAL ESTATE (PT 2)",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        256,
+        0
+      ],
+      "id": "69056346-6cb9-4119-9485-f7de2272135e",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "5c8a9812-2e51-4e30-bbe6-084ef31c0024",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        0
+      ],
+      "id": "5e6bd51a-4069-4eab-9c2e-0d748d0e65bc",
+      "name": "Webhook: Ember",
+      "webhookId": "5c8a9812-2e51-4e30-bbe6-084ef31c0024"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1216,
+        208
+      ],
+      "id": "6dbe95ee-75fb-42d5-a739-4e46d7d5e1ac",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook: Ember').item.json.body.data.reply.text_body }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert email reply classifier specializing in roundtable event invitations.\n\nAnalyze the email reply and return ONLY this exact format, nothing else:\n\nclassification: [Positive/False Positive/Negative]\nactual_reply: [extracted reply text]\nreasoning: [one sentence]\nred_flags: [concerns or None]\n\nCLASSIFICATION RULES:\n- Positive: Genuine interest, confirmed attendance, or asking for more details before committing\n- False Positive: Seems positive but sarcastic, contradictory, or confused about their role (e.g. asking about speaking fees, \"sure but I won't show up\")\n- Negative: Clear rejection, unsubscribe request, or out-of-office with no actual reply\n\nEXTRACTING ACTUAL REPLY \u2014 strip out everything below, keep only the prospect's words:\n- Email signatures (name, title, phone, address, company)\n- Quoted thread (everything after \"-----Original Message-----\" or \"On [date]... wrote:\")\n- Lines starting with \">\"\n- Unsubscribe links\n- \"Sent from my iPhone/Outlook\" footers"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "8352c920-a972-4d6e-88ad-6eef68c5707b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"classification\": {\n    \"type\": \"string\",\n    \"description\": \"Positive, False Positive, or Negative\"\n  },\n  \"actual_reply\": {\n    \"type\": \"string\",\n    \"description\": \"The prospect's exact words only, no signatures or quoted thread\"\n  },\n  \"reasoning\": {\n    \"type\": \"string\",\n    \"description\": \"One sentence explanation of the classification\"\n  },\n  \"red_flags\": {\n    \"type\": \"string\",\n    \"description\": \"Any concerns based on the reply, or None\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1472,
+        208
+      ],
+      "id": "d4f36e05-20d9-47d1-a760-4e6d80d62dd5",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7d6025bb-9bb2-4988-8bd3-6e168ee51330"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8c163c6b-364e-402c-b895-a4d8dd513084",
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "False Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "False Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fb3f1ecd-969c-4a1b-8c9f-aafb75cd5f33",
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "Negative",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Negative"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1616,
+        -16
+      ],
+      "id": "bc94b2e7-1b97-4844-9349-faa450b9ad56",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+            "Tool": "Ember",
+            "Status": "Interested (Warm)",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+            "Date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+            "Company Name": "={{ $('Webhook: Ember').item.json.body.data.lead.company }}",
+            "Email": "={{ $('Filter').item.json.body.data.lead.email }}",
+            "Call Notes": "=",
+            "Replies": "={{ $json.output.actual_reply.description }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1872,
+        -272
+      ],
+      "id": "ba9865a6-19a2-45e6-88d7-8a0b70abda7e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+        "format": "=MM/dd/yyyy hh:mm a",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        -272
+      ],
+      "id": "2be38ba9-f0d2-455e-905e-c3623fe1bd72",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ADVRXNH2R",
+          "mode": "id"
+        },
+        "text": "=* New Positive Lead* \n*Source:* Ember \n*Name:* {{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}\n*Message:* {{ $('Switch').item.json.output.actual_reply.description }}\n*Reasoning:* {{ $('Switch').item.json.output.reasoning.description }}\n*Date:* {{ $json.formattedDate }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2304,
+        -272
+      ],
+      "id": "b0096c31-8a38-42c6-852a-7d87d6f0303f",
+      "name": "Send a message",
+      "webhookId": "01a298bd-b25f-4572-9509-519f22aa37a6",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+            "Tool": "Ember",
+            "Status": "Manual Review",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+            "Date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+            "Company Name": "={{ $('Webhook: Ember').item.json.body.data.lead.company }}",
+            "Email": "={{ $('Filter').item.json.body.data.lead.email }}",
+            "Call Notes": "=",
+            "Replies": "={{ $json.output.actual_reply.description }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1872,
+        0
+      ],
+      "id": "5c6c42b5-2731-4435-a4bf-8d7d36dbecb4",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1870085706,
+          "mode": "list",
+          "cachedResultName": "Not interested",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=1870085706"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Replies": "={{ $('AI Agent').item.json.output.actual_reply.description }}",
+            "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+            "Status": "Declined Invite",
+            "Tool": "Ember",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+            "Date": "={{ $('Filter').item.json.body.data.reply.date_received }}",
+            "Company Name": "={{ $('Filter').item.json.body.data.lead.company }}",
+            "Email": "={{ $('Filter').item.json.body.data.lead.email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1888,
+        240
+      ],
+      "id": "79847ccc-9e8d-4ef0-aff1-88966984be4f",
+      "name": "Append row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "839f8175-bff8-4ca2-ab26-549d4f5ab595",
+              "leftValue": "={{ $json['Prospect Name'] ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        864,
+        0
+      ],
+      "id": "8e2ed507-4be0-4947-99b1-21f6999f8eed",
+      "name": "Filter1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Prospect Name",
+              "lookupValue": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}"
+            }
+          ]
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        560,
+        0
+      ],
+      "id": "fae42676-4714-4231-aa65-80ab9ee31d2a",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Ember": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "IJnW8xKq7kcp2hBR",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook: Ember": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "GuzzleHttp/7",
+            "content-length": "24320",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "65.109.69.87",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "FI",
+            "cf-ray": "9d28fa334dd480ad-FRA",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "65.109.69.87, 104.23.239.134",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-g9qxk",
+            "x-is-trusted": "yes",
+            "x-real-ip": "65.109.69.87"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": {
+              "type": "LEAD_REPLIED",
+              "name": "Lead Replied",
+              "instance_url": "https://growth.embertechlab.com",
+              "workspace_id": 31,
+              "workspace_name": "Scaled Virtually"
+            },
+            "data": {
+              "reply": {
+                "id": 397721,
+                "uuid": "a126a41a-ac72-4d4d-9ae7-1af66f51005c",
+                "email_subject": "Re: Founder-only: systems buyers expectCherif",
+                "interested": false,
+                "automated_reply": false,
+                "html_body": "<div style=\"overflow: auto;\"><div dir=\"ltr\">Deborah,&nbsp;<div>Thanks for reaching out. I think that Cherif and Sean were going to specifically discuss Sean's programs for consulting on marketing for those we set up on the structure side.</div><div>Is that a call you would like me to book on Sean's calendar?</div><div>Also- Sean said that you were sending a list of the linkedin handles for those who participated on the call? When will that be sent over, I think Sean said it would be shared Friday but I didn't see it.</div><div>Let me know.</div><div>Thanks</div><div>Ashlee</div><div><br></div></div><br><div class=\"gmail_quote gmail_quote_container\"><div dir=\"ltr\" class=\"gmail_attr\">On Mon, Feb 23, 2026 at 8:09\u202fAM Deborah West &lt;<a href=\"mailto:deborahwest@catalystsparkcollab.com\" target=\"_blank\">deborahwest@catalystsparkcollab.com</a>&gt; wrote:<br></div><blockquote class=\"gmail_quote\" style=\"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\"><div style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px;color:rgb(75,85,99);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;font-size:16px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial\">Hi Ashlee,<br style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px\"><br style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px\"></div><div>We appreciate Cherif joining the Roundtable last Feb 19.</div><div><br></div><div>Sean and Joren are opening a limited number of follow-up slots this week for attendees who want to continue the conversation directly.</div><div><br></div><div>It\u2019s a focused 20-minute session.</div><div>I have some slots open for Tuesday or Wednesday \u2014 which works better for you?</div><div><br></div><div>Alternatively, you can also check for open slots here in our calendar links:</div><div><br></div><div><a href=\"https://calendly.com/scale-virtually/free_30min_strategy_call_set?month=2026-02&amp;date=2026-02-24\" target=\"_blank\">Sean\u2019s Calendar</a></div><div><a href=\"https://scheduler.zoom.us/joren/free-strategy-call\" target=\"_blank\">Joren\u2019s Calendar</a></div><div style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px;color:rgb(75,85,99);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;font-size:16px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial\"><br style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px\"></div><div style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px;color:rgb(75,85,99);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;font-size:16px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial\">Best regards,</div><div style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px;color:rgb(75,85,99);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;font-size:16px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial\">Deborah West</div><div style=\"box-sizing:border-box;border:0px solid;margin:0px;padding:0px;color:rgb(75,85,99);font-family:ui-sans-serif,system-ui,sans-serif,&quot;Apple Color Emoji&quot;,&quot;Segoe UI Emoji&quot;,&quot;Segoe UI Symbol&quot;,&quot;Noto Color Emoji&quot;;font-size:16px;font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial\">Scale Virtually</div><div style=\"margin-top:10px;margin-bottom:10px\">On Tue, Feb 3, 2026 5:31:24 PM Ashlee Jones &lt;<a href=\"mailto:ashlee@cmrei.com\" target=\"_blank\">ashlee@cmrei.com</a>&gt; wrote:</div><blockquote style=\"border-top:none;border-right:none;border-bottom:none;border-left:1pt solid rgb(204,204,204);padding:0cm 0cm 0cm 6pt;margin-left:4.8pt;margin-right:0cm\"><div style=\"overflow:auto\"><div dir=\"ltr\">Yes, I received it. Cherif will see you all on the 19th at 10AM PST.&nbsp;<div>If you need him to review anything in advance send it over.&nbsp;<br><div>Thanks</div><div>Ashlee</div><div>844-720-1031</div></div></div><br><div class=\"gmail_quote\"><div dir=\"ltr\" class=\"gmail_attr\">On Tue, Feb 3, 2026 at 12:28\u202fPM Deborah West &lt;<a href=\"mailto:deborahwest@catalystsparkcollab.com\" target=\"_blank\">deborahwest@catalystsparkcollab.com</a>&gt; wrote:</div><blockquote class=\"gmail_quote\" style=\"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\"><div>Calendar invite sent Ashlee, let me know if you got it on your end.</div><div><br></div><div>Best regards,</div><div>Deborah West</div><div>Scale Virtually</div><div><br></div><div style=\"margin-top:10px;margin-bottom:10px\">On Tue, Feb 3, 2026 3:21:22 PM Ashlee Jones &lt;<a href=\"mailto:ashlee@cmrei.com\" target=\"_blank\">ashlee@cmrei.com</a>&gt; wrote:</div><blockquote style=\"border-top:none;border-right:none;border-bottom:none;border-left:1pt solid rgb(204,204,204);padding:0cm 0cm 0cm 6pt;margin-left:4.8pt;margin-right:0cm\"><div style=\"overflow:auto\"><div dir=\"ltr\">Very good. I handle all his scheduling, you can send the link to confirm his participation to <a href=\"mailto:ashlee@cmrei.com\" target=\"_blank\">ashlee@cmrei.com</a>.<div>Thanks</div></div><br><div class=\"gmail_quote\"><div dir=\"ltr\" class=\"gmail_attr\">On Tue, Feb 3, 2026 at 12:12\u202fPM Deborah West &lt;<a href=\"mailto:deborahwest@catalystsparkcollab.com\" target=\"_blank\">deborahwest@catalystsparkcollab.com</a>&gt; wrote:</div><blockquote class=\"gmail_quote\" style=\"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\"><div>Hi Ashlee,</div><div><br></div><div>Happy to know that Cherif can join us on this one. This roundtable consist of a small group of CEO, founders and partners from the Real Estate Industry. We are keeping the audience small to ensure Sean can really connect with each attendee. Happy to send the calendar invitation here or on Cherif's email directly if you can provide it.</div><div><br></div><div>Best regards,</div><div>Deborah West</div><div>Scale Virtually</div><div style=\"margin-top:10px;margin-bottom:10px\">On Mon, Feb 2, 2026 1:08:22 PM Ashlee Jones &lt;<a href=\"mailto:ashlee@cmrei.com\" target=\"_blank\">ashlee@cmrei.com</a>&gt; wrote:</div><blockquote style=\"border-top:none;border-right:none;border-bottom:none;border-left:1pt solid rgb(204,204,204);padding:0cm 0cm 0cm 6pt;margin-left:4.8pt;margin-right:0cm\"><div style=\"overflow:auto\"><div dir=\"ltr\">Cherif can definitely&nbsp;join in on this conversation.<div>His background was with Hilton Hotels in upper regional management and then he went to work for a Billionaire in the same capacity, plus managing millions in assets and negotiating. 35 years ago he started his own portfolio and manages his own teams from PR to CA.</div><div>Please send me the link for him to attend and anything you may need from us.</div><div>Who will listen in on this round table and what is the end goal?<br>Thanks</div><div>Ashlee</div><div>844-720-1031</div></div><br><div class=\"gmail_quote\"><div dir=\"ltr\" class=\"gmail_attr\">On Mon, Feb 2, 2026 at 9:49\u202fAM Deborah West &lt;<a href=\"mailto:deborahwest@catalystsparkcollab.com\" target=\"_blank\">deborahwest@catalystsparkcollab.com</a>&gt; wrote:</div><blockquote class=\"gmail_quote\" style=\"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\"><div dir=\"ltr\" style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Cherif,&nbsp;<br><br></div><div dir=\"ltr\" style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Would love to have you join us for the roundtable.</div><div dir=\"ltr\" style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\"><br></div><div style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Here are the quick details:</div><div style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Roundtable Theme: \"Preparing for a Strong Exit\"</div><div style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Date &amp; Time: Tuesday, February 19th at 12PM CST / 10AM PST</div><div style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Location: Zoom link sent upon RSVP</div><div dir=\"ltr\" style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\"><br></div><div style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Roundtable Facilitator: Sean Connolly is an accomplished entrepreneur, visionary innovator, and sought-after speaker who has been honored by the Inc. 500 for his exceptional business achievements.<br><br></div><div style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Also here is a <a href=\"https://drive.google.com/file/d/1WWXvMbdMK_cfF6ZTqnLtkB0XCK3ikpFs/view?usp=sharing\" target=\"_blank\">digital invitation</a> with more info.</div><div dir=\"ltr\" style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\"><br></div><div style=\"font-style:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-weight:400;letter-spacing:normal;text-align:start;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:rgb(255,255,255);text-decoration-style:initial;text-decoration-color:initial;font-family:Aptos,Arial,Helvetica,sans-serif;font-size:12pt;color:rgb(0,0,0)\">Will that date and time work for you?<br><br></div><div><br></div><div style=\"margin-top:10px;margin-bottom:10px\">On Sun, Feb 1, 2026 2:35:10 PM Ashlee Jones &lt;<a href=\"mailto:ashlee@cmrei.com\" target=\"_blank\">ashlee@cmrei.com</a>&gt; wrote:</div><blockquote style=\"border-top:none;border-right:none;border-bottom:none;border-left:1pt solid rgb(204,204,204);padding:0cm 0cm 0cm 6pt;margin-left:4.8pt;margin-right:0cm\"><div style=\"overflow:auto\"><div dir=\"ltr\">We would love to participate.<div>Please send info.</div><div>Thanks</div><div>Ashlee</div></div><br><div class=\"gmail_quote\"><div dir=\"ltr\" class=\"gmail_attr\">On Sun, Feb 1, 2026 at 8:27\u202fAM Deborah West &lt;<a href=\"mailto:deborahwest@catalystsparkcollab.com\" target=\"_blank\">deborahwest@catalystsparkcollab.com</a>&gt; wrote:</div><blockquote class=\"gmail_quote\" style=\"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\"><div>Hi Cherif,<br><br></div><div>Hoping to invite you to a CEO roundtable on \u201cBuilding Operational Processes for a Strong Eventual Exit.\u201d</div><div><br></div><div>On <strong>Feb 19, 2026 at 12:00 PM CST</strong>, Inc. 500 entrepreneur Sean Connolly will facilitate a virtual conversation with a select group of real estate CEOs/founders doing ~1M\u20132M in revenue. He\u2019ll discuss strategies for transitioning away from being the \u201cChief Everything Officer,\u201d installing documented operating procedures buyers expect, leveraging world-class virtual assistants, and increasing enterprise value ahead of an eventual exit.</div><div><br></div><div>We\u2019ve been following what you\u2019re building at CREPR, and I thought this might be especially relevant as you think about building long-term value heading into Q2.</div><div><br></div><div>We have a few spots left. Can I share more info?</div><div><br></div><div><br></div><div>Best regards,</div><div>Deborah West</div><div>Scale Virtually<br><br><br></div><img src=\"https://growth.embertechlab.com/t/o/a0f8dff1-119b-44b4-98cd-e8d8a225d472\"></blockquote></div></div></blockquote></blockquote></div></div></blockquote></blockquote></div></div></blockquote></blockquote></div></div></blockquote>\n</blockquote></div></div>",
+                "text_body": "Deborah,\nThanks for reaching out. I think that Cherif and Sean were going to\nspecifically discuss Sean's programs for consulting on marketing for those\nwe set up on the structure side.\nIs that a call you would like me to book on Sean's calendar?\nAlso- Sean said that you were sending a list of the linkedin handles for\nthose who participated on the call? When will that be sent over, I think\nSean said it would be shared Friday but I didn't see it.\nLet me know.\nThanks\nAshlee\n\n\nOn Mon, Feb 23, 2026 at 8:09\u202fAM Deborah West <\ndeborahwest@catalystsparkcollab.com> wrote:\n\n> Hi Ashlee,\n>\n> We appreciate Cherif joining the Roundtable last Feb 19.\n>\n> Sean and Joren are opening a limited number of follow-up slots this week\n> for attendees who want to continue the conversation directly.\n>\n> It\u2019s a focused 20-minute session.\n> I have some slots open for Tuesday or Wednesday \u2014 which works better for\n> you?\n>\n> Alternatively, you can also check for open slots here in our calendar\n> links:\n>\n> Sean\u2019s Calendar\n> <https://calendly.com/scale-virtually/free_30min_strategy_call_set?month=2026-02&date=2026-02-24>\n> Joren\u2019s Calendar <https://scheduler.zoom.us/joren/free-strategy-call>\n>\n> Best regards,\n> Deborah West\n> Scale Virtually\n> On Tue, Feb 3, 2026 5:31:24 PM Ashlee Jones <ashlee@cmrei.com> wrote:\n>\n> Yes, I received it. Cherif will see you all on the 19th at 10AM PST.\n> If you need him to review anything in advance send it over.\n> Thanks\n> Ashlee\n> 844-720-1031\n>\n> On Tue, Feb 3, 2026 at 12:28\u202fPM Deborah West <\n> deborahwest@catalystsparkcollab.com> wrote:\n>\n>> Calendar invite sent Ashlee, let me know if you got it on your end.\n>>\n>> Best regards,\n>> Deborah West\n>> Scale Virtually\n>>\n>> On Tue, Feb 3, 2026 3:21:22 PM Ashlee Jones <ashlee@cmrei.com> wrote:\n>>\n>> Very good. I handle all his scheduling, you can send the link to confirm\n>> his participation to ashlee@cmrei.com.\n>> Thanks\n>>\n>> On Tue, Feb 3, 2026 at 12:12\u202fPM Deborah West <\n>> deborahwest@catalystsparkcollab.com> wrote:\n>>\n>>> Hi Ashlee,\n>>>\n>>> Happy to know that Cherif can join us on this one. This roundtable\n>>> consist of a small group of CEO, founders and partners from the Real Estate\n>>> Industry. We are keeping the audience small to ensure Sean can really\n>>> connect with each attendee. Happy to send the calendar invitation here or\n>>> on Cherif's email directly if you can provide it.\n>>>\n>>> Best regards,\n>>> Deborah West\n>>> Scale Virtually\n>>> On Mon, Feb 2, 2026 1:08:22 PM Ashlee Jones <ashlee@cmrei.com> wrote:\n>>>\n>>> Cherif can definitely join in on this conversation.\n>>> His background was with Hilton Hotels in upper regional management and\n>>> then he went to work for a Billionaire in the same capacity, plus managing\n>>> millions in assets and negotiating. 35 years ago he started his own\n>>> portfolio and manages his own teams from PR to CA.\n>>> Please send me the link for him to attend and anything you may need from\n>>> us.\n>>> Who will listen in on this round table and what is the end goal?\n>>> Thanks\n>>> Ashlee\n>>> 844-720-1031\n>>>\n>>> On Mon, Feb 2, 2026 at 9:49\u202fAM Deborah West <\n>>> deborahwest@catalystsparkcollab.com> wrote:\n>>>\n>>>> Cherif,\n>>>>\n>>>> Would love to have you join us for the roundtable.\n>>>>\n>>>> Here are the quick details:\n>>>> Roundtable Theme: \"Preparing for a Strong Exit\"\n>>>> Date & Time: Tuesday, February 19th at 12PM CST / 10AM PST\n>>>> Location: Zoom link sent upon RSVP\n>>>>\n>>>> Roundtable Facilitator: Sean Connolly is an accomplished entrepreneur,\n>>>> visionary innovator, and sought-after speaker who has been honored by the\n>>>> Inc. 500 for his exceptional business achievements.\n>>>>\n>>>> Also here is a digital invitation\n>>>> <https://drive.google.com/file/d/1WWXvMbdMK_cfF6ZTqnLtkB0XCK3ikpFs/view?usp=sharing>\n>>>> with more info.\n>>>>\n>>>> Will that date and time work for you?\n>>>>\n>>>>\n>>>> On Sun, Feb 1, 2026 2:35:10 PM Ashlee Jones <ashlee@cmrei.com> wrote:\n>>>>\n>>>> We would love to participate.\n>>>> Please send info.\n>>>> Thanks\n>>>> Ashlee\n>>>>\n>>>> On Sun, Feb 1, 2026 at 8:27\u202fAM Deborah West <\n>>>> deborahwest@catalystsparkcollab.com> wrote:\n>>>>\n>>>>> Hi Cherif,\n>>>>>\n>>>>> Hoping to invite you to a CEO roundtable on \u201cBuilding Operational\n>>>>> Processes for a Strong Eventual Exit.\u201d\n>>>>>\n>>>>> On *Feb 19, 2026 at 12:00 PM CST*, Inc. 500 entrepreneur Sean\n>>>>> Connolly will facilitate a virtual conversation with a select group of real\n>>>>> estate CEOs/founders doing ~1M\u20132M in revenue. He\u2019ll discuss strategies for\n>>>>> transitioning away from being the \u201cChief Everything Officer,\u201d installing\n>>>>> documented operating procedures buyers expect, leveraging world-class\n>>>>> virtual assistants, and increasing enterprise value ahead of an eventual\n>>>>> exit.\n>>>>>\n>>>>> We\u2019ve been following what you\u2019re building at CREPR, and I thought this\n>>>>> might be especially relevant as you think about building long-term value\n>>>>> heading into Q2.\n>>>>>\n>>>>> We have a few spots left. Can I share more info?\n>>>>>\n>>>>>\n>>>>> Best regards,\n>>>>> Deborah West\n>>>>> Scale Virtually\n>>>>>\n>>>>>\n>>>>>",
+                "raw_body": null,
+                "headers": null,
+                "date_received": "2026-02-23T19:02:19.000000Z",
+                "type": "Tracked Reply",
+                "folder": "Inbox",
+                "raw_message_id": "<CANUwQQ3v=bpvAb1pZRJePBs_W2CAQ03YEVxi_TRASN-ojNRrVg@mail.gmail.com>",
+                "from_name": "Ashlee Jones",
+                "from_email_address": "ashlee@cmrei.com",
+                "primary_to_email_address": "deborahwest@catalystsparkcollab.com",
+                "to": [
+                  {
+                    "name": "Deborah West",
+                    "address": "deborahwest@catalystsparkcollab.com"
+                  }
+                ],
+                "cc": null,
+                "bcc": null,
+                "parent_id": 397639,
+                "created_at": "2026-02-23T19:02:20.000000Z",
+                "updated_at": "2026-02-23T19:02:21.000000Z",
+                "attachments": []
+              },
+              "campaign_event": {
+                "id": 163921,
+                "type": "replied",
+                "created_at_local": "2026-02-23T18:02:21.000000Z",
+                "local_timezone": "America/New_York",
+                "created_at": "2026-02-23T19:02:21.000000Z"
+              },
+              "lead": {
+                "id": 46095,
+                "email": "cherif@cherifmedawar.com",
+                "first_name": "Cherif",
+                "last_name": "Medawar",
+                "status": "unverified",
+                "title": "Owner",
+                "company": "CREPR",
+                "custom_variables": [],
+                "emails_sent": 2,
+                "opens": 24,
+                "unique_opens": 1,
+                "replies": 5,
+                "unique_replies": 1,
+                "bounces": 0
+              },
+              "campaign": {
+                "id": 65,
+                "name": "ROUNDTABLE INVITE - FEB 19 - REAL ESTATE - 500k+ REV"
+              },
+              "scheduled_email": {
+                "id": 1275066,
+                "sequence_step_id": 253,
+                "sequence_step_order": 1,
+                "sequence_step_variant": 2,
+                "status": "sent",
+                "scheduled_date_est": "2026-02-01T16:26:00.000000Z",
+                "scheduled_date_local": "2026-02-01T15:26:00.000000Z",
+                "local_timezone": "America/New_York",
+                "sent_at": "2026-02-01T16:27:06.000000Z",
+                "opens": 24,
+                "replies": 5,
+                "unique_opens": 1,
+                "unique_replies": 1,
+                "interested": null,
+                "raw_message_id": "<a0f8dff1-119b-44b4-98cd-e8d8a225d472@catalystsparkcollab.com>"
+              },
+              "sender_email": {
+                "id": 14143,
+                "name": "Deborah West",
+                "email": "deborahwest@catalystsparkcollab.com",
+                "status": "connected",
+                "type": "microsoft_oauth",
+                "daily_limit": 2,
+                "emails_sent": 36,
+                "replied": 6,
+                "opened": 31,
+                "unsubscribed": 0,
+                "bounced": 0,
+                "unique_replies": 2,
+                "unique_opens": 5,
+                "total_leads_contacted": 23,
+                "interested": 0,
+                "created_at": "2025-12-15T14:49:22.000000Z",
+                "updated_at": "2026-02-23T19:02:21.000000Z"
+              }
+            }
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/5c8a9812-2e51-4e30-bbe6-084ef31c0024",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "7d6e4402-41d2-4f4a-ac00-58fec5ca0a19",
+  "activeVersionId": "7d6e4402-41d2-4f4a-ac00-58fec5ca0a19",
+  "versionCounter": 154,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-20T00:48:11.585Z",
+      "createdAt": "2026-02-20T00:48:11.585Z",
+      "role": "workflow:owner",
+      "workflowId": "8qco5YX0tFKhF38K",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:04:01.009Z",
+    "createdAt": "2026-07-04T13:04:01.009Z",
+    "versionId": "7d6e4402-41d2-4f4a-ac00-58fec5ca0a19",
+    "workflowId": "8qco5YX0tFKhF38K",
+    "nodes": [
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "c7d5bd15-f206-48cd-917b-e02f0b63010f",
+                "leftValue": "={{ $json.body.data.campaign.name }}",
+                "rightValue": "ROUNDTABLE INVITE - FEB 19 - REAL ESTATE - 500k+ REV",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "c763e756-dc33-4652-9a21-e9a026eedc52",
+                "leftValue": "={{ $json.body.data.campaign.name }}",
+                "rightValue": "ROUNDTABLE INVITE - FEB 25 - REAL ESTATE",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "01fc378a-6b81-4b66-8e96-c2c9d872624e",
+                "leftValue": "={{ $json.body.data.campaign.name }}",
+                "rightValue": "ROUNDTABLE INVITE - FEB 25 - REAL ESTATE (PT 2)",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          256,
+          0
+        ],
+        "id": "69056346-6cb9-4119-9485-f7de2272135e",
+        "name": "Filter"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "5c8a9812-2e51-4e30-bbe6-084ef31c0024",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -176,
+          0
+        ],
+        "id": "5e6bd51a-4069-4eab-9c2e-0d748d0e65bc",
+        "name": "Webhook: Ember",
+        "webhookId": "5c8a9812-2e51-4e30-bbe6-084ef31c0024"
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "claude-sonnet-4-5-20250929",
+            "cachedResultName": "Claude Sonnet 4.5"
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+        "typeVersion": 1.3,
+        "position": [
+          1216,
+          208
+        ],
+        "id": "6dbe95ee-75fb-42d5-a739-4e46d7d5e1ac",
+        "name": "Anthropic Chat Model",
+        "credentials": {
+          "anthropicApi": {
+            "id": "eQfzvn3izR7ec2J1",
+            "name": "Solutions Anthropic"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $('Webhook: Ember').item.json.body.data.reply.text_body }}",
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "You are an expert email reply classifier specializing in roundtable event invitations.\n\nAnalyze the email reply and return ONLY this exact format, nothing else:\n\nclassification: [Positive/False Positive/Negative]\nactual_reply: [extracted reply text]\nreasoning: [one sentence]\nred_flags: [concerns or None]\n\nCLASSIFICATION RULES:\n- Positive: Genuine interest, confirmed attendance, or asking for more details before committing\n- False Positive: Seems positive but sarcastic, contradictory, or confused about their role (e.g. asking about speaking fees, \"sure but I won't show up\")\n- Negative: Clear rejection, unsubscribe request, or out-of-office with no actual reply\n\nEXTRACTING ACTUAL REPLY \u2014 strip out everything below, keep only the prospect's words:\n- Email signatures (name, title, phone, address, company)\n- Quoted thread (everything after \"-----Original Message-----\" or \"On [date]... wrote:\")\n- Lines starting with \">\"\n- Unsubscribe links\n- \"Sent from my iPhone/Outlook\" footers"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          1248,
+          0
+        ],
+        "id": "8352c920-a972-4d6e-88ad-6eef68c5707b",
+        "name": "AI Agent"
+      },
+      {
+        "parameters": {
+          "jsonSchemaExample": "{\n  \"classification\": {\n    \"type\": \"string\",\n    \"description\": \"Positive, False Positive, or Negative\"\n  },\n  \"actual_reply\": {\n    \"type\": \"string\",\n    \"description\": \"The prospect's exact words only, no signatures or quoted thread\"\n  },\n  \"reasoning\": {\n    \"type\": \"string\",\n    \"description\": \"One sentence explanation of the classification\"\n  },\n  \"red_flags\": {\n    \"type\": \"string\",\n    \"description\": \"Any concerns based on the reply, or None\"\n  }\n}"
+        },
+        "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+        "typeVersion": 1.3,
+        "position": [
+          1472,
+          208
+        ],
+        "id": "d4f36e05-20d9-47d1-a760-4e6d80d62dd5",
+        "name": "Structured Output Parser"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.output.classification.description }}",
+                      "rightValue": "Positive",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "id": "7d6025bb-9bb2-4988-8bd3-6e168ee51330"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Positive"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "8c163c6b-364e-402c-b895-a4d8dd513084",
+                      "leftValue": "={{ $json.output.classification.description }}",
+                      "rightValue": "False Positive",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "False Positive"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "fb3f1ecd-969c-4a1b-8c9f-aafb75cd5f33",
+                      "leftValue": "={{ $json.output.classification.description }}",
+                      "rightValue": "Negative",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Negative"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          1616,
+          -16
+        ],
+        "id": "bc94b2e7-1b97-4844-9349-faa450b9ad56",
+        "name": "Switch"
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+              "Tool": "Ember",
+              "Status": "Interested (Warm)",
+              "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+              "Date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+              "Company Name": "={{ $('Webhook: Ember').item.json.body.data.lead.company }}",
+              "Email": "={{ $('Filter').item.json.body.data.lead.email }}",
+              "Call Notes": "=",
+              "Replies": "={{ $json.output.actual_reply.description }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1872,
+          -272
+        ],
+        "id": "ba9865a6-19a2-45e6-88d7-8a0b70abda7e",
+        "name": "Append row in sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "formatDate",
+          "date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+          "format": "=MM/dd/yyyy hh:mm a",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.dateTime",
+        "typeVersion": 2,
+        "position": [
+          2080,
+          -272
+        ],
+        "id": "2be38ba9-f0d2-455e-905e-c3623fe1bd72",
+        "name": "Date & Time"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0ADVRXNH2R",
+            "mode": "id"
+          },
+          "text": "=* New Positive Lead* \n*Source:* Ember \n*Name:* {{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}\n*Message:* {{ $('Switch').item.json.output.actual_reply.description }}\n*Reasoning:* {{ $('Switch').item.json.output.reasoning.description }}\n*Date:* {{ $json.formattedDate }}",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          2304,
+          -272
+        ],
+        "id": "b0096c31-8a38-42c6-852a-7d87d6f0303f",
+        "name": "Send a message",
+        "webhookId": "01a298bd-b25f-4572-9509-519f22aa37a6",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+              "Tool": "Ember",
+              "Status": "Manual Review",
+              "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+              "Date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+              "Company Name": "={{ $('Webhook: Ember').item.json.body.data.lead.company }}",
+              "Email": "={{ $('Filter').item.json.body.data.lead.email }}",
+              "Call Notes": "=",
+              "Replies": "={{ $json.output.actual_reply.description }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1872,
+          0
+        ],
+        "id": "5c6c42b5-2731-4435-a4bf-8d7d36dbecb4",
+        "name": "Append row in sheet1",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1870085706,
+            "mode": "list",
+            "cachedResultName": "Not interested",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=1870085706"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Replies": "={{ $('AI Agent').item.json.output.actual_reply.description }}",
+              "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+              "Status": "Declined Invite",
+              "Tool": "Ember",
+              "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+              "Date": "={{ $('Filter').item.json.body.data.reply.date_received }}",
+              "Company Name": "={{ $('Filter').item.json.body.data.lead.company }}",
+              "Email": "={{ $('Filter').item.json.body.data.lead.email }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1888,
+          240
+        ],
+        "id": "79847ccc-9e8d-4ef0-aff1-88966984be4f",
+        "name": "Append row in sheet2",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "839f8175-bff8-4ca2-ab26-549d4f5ab595",
+                "leftValue": "={{ $json['Prospect Name'] ?? '' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          864,
+          0
+        ],
+        "id": "8e2ed507-4be0-4947-99b1-21f6999f8eed",
+        "name": "Filter1"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "Prospect Name",
+                "lookupValue": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}"
+              }
+            ]
+          },
+          "combineFilters": "OR",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          560,
+          0
+        ],
+        "id": "fae42676-4714-4231-aa65-80ab9ee31d2a",
+        "name": "Get row(s) in sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Filter": {
+        "main": [
+          [
+            {
+              "node": "Get row(s) in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook: Ember": {
+        "main": [
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Anthropic Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Structured Output Parser": {
+        "ai_outputParser": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_outputParser",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "Append row in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Append row in sheet1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Append row in sheet2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append row in sheet": {
+        "main": [
+          [
+            {
+              "node": "Date & Time",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Date & Time": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter1": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get row(s) in sheet": {
+        "main": [
+          [
+            {
+              "node": "Filter1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

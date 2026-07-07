@@ -1,0 +1,1445 @@
+{
+  "name": "[Gmail] Insights Fetcher",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "to:pdev@scalevirtually.com OR cc:pdev@scalevirtually.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -832,
+        -32
+      ],
+      "id": "ac5a7d56-f707-4d2d-8e78-f6e5b56656f1",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UJOF7gMKW80Euvj8",
+          "name": "PJ SV Project"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please analyze the following email and output the JSON as instructed. \n\n--- EMAIL START ---\nSubject: {{ $json.subject }}\nSender: {{ $json.from_address }}\nTo: {{ $json.to_address }}\nCC: {{ $json.cc_addresses }}\nBody: {{ $json.llm_body }}\n--- EMAIL END ---",
+        "options": {
+          "systemMessage": "Role: Data Extraction Agent for Scale Virtually.\n\nObjective: Analyze the provided email content and extract specific data for an Airtable database.\n\nStrict Output Format:\n\nOutput ONLY valid JSON. No conversational text, no pre-amble, and no markdown formatting (like ```json).\n\n{ \"category\": \"[MoM, Inquiry, Complaint, Follow-up, Meeting Reminder]\", \"insights\": \"[1-2 sentence summary]\", \"priority\": \"[High/Medium/Low]\" }\n\nContent Constraints:\n\nInsights Restriction: The \"insights\" field must NOT contain phrases such as \"This email is about...\", \"This person sent an email to...\", \"The sender is...\", or \"The purpose of this email is...\".\n\nDirect Style: Start the summary directly with the action or core subject (e.g., \"Fiona is requesting an update on the website redesign status\").\n\nClassification Logic:\n\nMoM: MUST contain \"MoM\" in the Subject line.\n\nMeeting Reminder: Strictly for emails with \"Meeting Reminder\" in the subject line.\n\nFollow-up:\n\nExternal: Regarding an existing item/deliverable.\n\nInternal: Project check-ins.\n\nInquiry: Questions about new services/tasks with no prior agreement.\n\nComplaint: Expressions of dissatisfaction, issues, or missed deadlines.\n\nPriority Logic:\n\nHigh: Frustration, \"Urgent,\" \"Overdue,\" \"ASAP,\" or missed deadlines.\n\nMedium: Standard business inquiries or active project follow-ups.\n\nLow: General updates or internal informational comms."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1840,
+        560
+      ],
+      "id": "0ef0dc64-6349-44f5-8093-9f238d7a115f",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2416,
+        112
+      ],
+      "id": "e4729137-bb30-4132-b214-252979951524",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "devstral-2512",
+          "mode": "list",
+          "cachedResultName": "devstral-2512"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1760,
+        752
+      ],
+      "id": "2719b206-a0dd-4279-985d-10cc25184b31",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "pmTl8tr3gScO6C5P",
+          "name": "Portkey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "02381e95-4fc9-41b7-88ba-d45ad2bd3784",
+              "leftValue": "={{ $json.from.text }}",
+              "rightValue": "pdev@scalevirtually.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "e3bee2e4-05c9-4ae5-9d3c-90252379335e",
+              "leftValue": "={{ $json.to.text }}",
+              "rightValue": "pdev@scalevirtually.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "1c393d15-9f94-4fd5-9dcc-99b8ac388ee6",
+              "leftValue": "={{ $json.cc.text }}",
+              "rightValue": "pdev@scalevirtually.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -608,
+        -32
+      ],
+      "id": "60f38499-267e-438c-86e5-fb0935f405e1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND(\n  OR({PDEV STAGE} = 'Ongoing PEC', {PDEV STAGE} = 'New Requirement'),\n  {{ $json.airtableFormula }}\n)",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client",
+            "Requirement ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        272,
+        -176
+      ],
+      "id": "ee6db823-b0e7-4e42-afe9-1a02041a02d7",
+      "name": "Search Ongoing PECs",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxho5QOix1I061r",
+          "mode": "list",
+          "cachedResultName": "SV Support",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+        },
+        "filterByFormula": "=AND(\n  SEARCH('{{ $('Cleaner').first().json.from_address }}', {SV Email}),\n  OR(\n    {Role} = \"Process Engineer\",\n    {Role} = \"Client Services Manager\"\n  )\n)",
+        "options": {
+          "fields": [
+            "Name",
+            "Support Record ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1392,
+        -544
+      ],
+      "id": "71dff215-ea00-4cee-8914-e7446403f22f",
+      "name": "Search PE",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2192,
+        -224
+      ],
+      "id": "284a4d00-a468-458b-b18e-9ec94633e278",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const EXCLUDED_EMAILS = [\n  \"placements.sv@scalevirtually.com\",\n  \"ace@scalevirtually.com\",\n  \"ck@scalevirtually.com\",\n  \"bam@scalevirtually.com\",\n  \"karlo@scalevirtually.com\"\n];\n\nconst results = [];\nfor (const item of $input.all()) {\n  const email = item.json;\n\n  const toEmails = email.to?.value?.map(p => p.address.toLowerCase()) || [];\n  const ccEmails = email.cc?.value?.map(p => p.address.toLowerCase()) || [];\n\n  // Skip if the primary To recipient is an excluded internal email\n  const primaryTo = toEmails[0] || \"\";\n  if (EXCLUDED_EMAILS.includes(primaryTo)) continue;\n\n  // Also skip if ALL To recipients are internal\n  const hasExternalTo = toEmails.some(addr => !EXCLUDED_EMAILS.includes(addr));\n  if (!hasExternalTo) continue;\n\n  const rawBody = email.text || \"\";\n  let llmBody = rawBody.split(/thanks and regards/i)[0].trim();\n  const sender = email.from?.value?.[0]?.address || \"\";\n  const recipient = toEmails[0] || \"\";\n  const allParticipants = [...new Set([sender, ...toEmails, ...ccEmails])].filter(e => e !== \"\");\n  const formulaParts = allParticipants.map(emailAddr => {\n    const lowerEmail = emailAddr.toLowerCase();\n    return `FIND('${lowerEmail}', LOWER(ARRAYJOIN({Email (from Client)}, ' '))), FIND('${lowerEmail}', LOWER(ARRAYJOIN({POC Primary email}, ' ')))`;\n  });\n  const airtableFormula = `OR(${formulaParts.join(\", \")})`;\n  const priorityLabels = (email.labelIds || []).filter(l => ![\"UNREAD\", \"INBOX\", \"IMPORTANT\"].includes(l));\n  results.push({\n    json: {\n      from_address: sender,\n      to_address: recipient,\n      to_addresses: toEmails.join(\", \"),\n      cc_addresses: ccEmails.join(\", \"),\n      airtableFormula: airtableFormula,\n      full_body: rawBody,\n      llm_body: llmBody,\n      subject: email.subject,\n      date: email.date,\n      prompt_context_string: `\nCONTEXT:\n- Subject: ${email.subject}\n- From: ${sender}\n- To: ${toEmails.join(\", \")}\n- CC: ${ccEmails.join(\", \")}\n- Date: ${email.date}\nMESSAGE:\n${llmBody}\n      `.trim()\n    }\n  });\n}\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        -32
+      ],
+      "id": "daa946da-c448-452c-9158-812a03d5a7de",
+      "name": "Cleaner"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1616,
+        -544
+      ],
+      "id": "e359b5d4-0a55-4eb4-9720-c22e426d476a",
+      "name": "Sender not exists?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxho5QOix1I061r",
+          "mode": "list",
+          "cachedResultName": "SV Support",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+        },
+        "filterByFormula": "=AND(\n  SEARCH('{{ $('Cleaner').first().json.to_address }}', {SV Email}),\n  OR(\n    {Role} = \"Process Engineer\",\n    {Role} = \"Client Services Manager\"\n  )\n)",
+        "options": {
+          "fields": [
+            "Name",
+            "Support Record ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1904,
+        -608
+      ],
+      "id": "5df161e9-59a7-417a-a537-051c7a8543e7",
+      "name": "Search PE1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND({PDEV STAGE} = 'Outliers', {{ $('Cleaner').first().json.airtableFormula }})",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        64
+      ],
+      "id": "6c504089-6b31-4124-8b31-5aff2695a056",
+      "name": "Search Outliers Requirements",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        496,
+        -32
+      ],
+      "id": "c75b8c07-9e7f-4eb4-895e-4a2752b7ad64",
+      "name": "Ongoing Requirement not exists?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        944,
+        64
+      ],
+      "id": "70a809dc-5540-4ae3-ae3e-ad944e5d2667",
+      "name": "Outlier Requirement not exists?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND({PDEV STAGE} = 'Parked', {{ $('Cleaner').first().json.airtableFormula }})",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1168,
+        160
+      ],
+      "id": "e48f7faf-bd0e-4681-9cdb-ffd05a716de8",
+      "name": "Parked",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1392,
+        160
+      ],
+      "id": "8cb1ec48-a43c-43f8-a708-bb4dd1514e02",
+      "name": "Parked Requirement not exists?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND({PDEV STAGE} = 'Completed', {{ $('Cleaner').first().json.airtableFormula }})",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1616,
+        64
+      ],
+      "id": "96145e08-3934-4c7d-9076-cffd6d55acb7",
+      "name": "Completed",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblZiB3uCUJmuKaXr",
+          "mode": "list",
+          "cachedResultName": "PE Insights",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblZiB3uCUJmuKaXr"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Gmail Trigger').first().json.subject }} - {{ $now.format('LLddyyyy') }}",
+            "Email Subject": "={{ $('Gmail Trigger').first().json.subject }}",
+            "Email Sender": "={{ $('Gmail Trigger').first().json.from.text }}",
+            "Insights": "={{ $json.insights }}",
+            "Email Category": "={{ $json.category }}",
+            "PDEV Requirements Link": "={{ $json[\"Requirement ID\"] }}",
+            "Assigned Process Engineer": "={{ [$json[\"Support Record ID\"] ]}}",
+            "Clients": "={{ $json.Client ? $json.Client : null }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Category",
+              "displayName": "Email Category",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "MoM",
+                  "value": "MoM"
+                },
+                {
+                  "name": "Inquiry",
+                  "value": "Inquiry"
+                },
+                {
+                  "name": "Complaint",
+                  "value": "Complaint"
+                },
+                {
+                  "name": "Follow-up",
+                  "value": "Follow-up"
+                },
+                {
+                  "name": "Meeting Reminder",
+                  "value": "Meeting Reminder"
+                },
+                {
+                  "name": "For Approval",
+                  "value": "For Approval"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Subject",
+              "displayName": "Email Subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Sender",
+              "displayName": "Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Assigned Process Engineer",
+              "displayName": "Assigned Process Engineer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Clients",
+              "displayName": "Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PDEV Requirements Link",
+              "displayName": "PDEV Requirements Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Insights",
+              "displayName": "Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Dated Insights",
+              "displayName": "Dated Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Process Engineer",
+              "displayName": "Process Engineer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Process Engineer Name",
+              "displayName": "Process Engineer Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements",
+              "displayName": "PDEV Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Reported to Daily Summary",
+              "displayName": "Reported to Daily Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Clients Name (Lookup)",
+              "displayName": "Clients Name (Lookup)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Clients Name",
+              "displayName": "Clients Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2640,
+        128
+      ],
+      "id": "3c0baeae-9f7d-4570-bc40-3bfba96d3753",
+      "name": "Create Insights Record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the output string from the AI Agent\nconst rawOutput = $json.output;\n\n// 1. Remove Markdown code blocks using Regex\n// This strips ```json, ```, and any leading/trailing whitespace\nconst cleanString = rawOutput.replace(/```json|```/g, \"\").trim();\n\ntry {\n  // 2. Parse the string into a JavaScript Object\n  const parsedData = JSON.parse(cleanString);\n\n  // 3. Return the parsed data as the new node output\n  return {\n    category: parsedData.category,\n    insights: parsedData.insights,\n    priority: parsedData.priority\n  };\n} catch (error) {\n  // Fallback in case the AI outputs something that isn't valid JSON\n  return {\n    error: \"Failed to parse JSON\",\n    raw: rawOutput\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        560
+      ],
+      "id": "3bcdee0e-f843-4b9b-ad83-5e660130ec6f",
+      "name": "LLM Output Parser"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5617afa5-07b5-49fd-ba62-718e81fd4af7",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1904,
+        -128
+      ],
+      "id": "a9a178c4-600b-4d31-862e-891a63e9c826",
+      "name": "Set Requirement ID Outlier."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fac0da43-9b25-41c8-b476-0219e64fdc7b",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1904,
+        -320
+      ],
+      "id": "a807eac2-2c4f-469f-a899-0a194e28fe6a",
+      "name": "Set Requirement ID Ongoing"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ef6e1ca9-066e-4ee1-8bdd-40ea4b9334a0",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1904,
+        256
+      ],
+      "id": "f1dea611-f6b5-458c-9d8c-88f0b4ec8408",
+      "name": "Set Requirement ID Parked"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c09679e4-1d30-44c9-9dbc-95dbb2b8c054",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1904,
+        64
+      ],
+      "id": "d52168c1-3947-4eb1-90a7-960d7c06c628",
+      "name": "Set Requirement ID Completed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// ── 1. SENDER / RECIPIENT EXCLUSIONS ──\nconst excludedSenders = [\n  \"placements.sv\",\n  \"ck\",\n  \"ace\",\n  \"bam\",\n  \"karlo\"\n];\n\nconst excludedRecipients = [\n  \"placements.sv@scalevirtually.com\"\n];\n\n// ── 2. TRIVIAL BODY PATTERNS (internal senders only) ──\nconst trivialPatterns = /^(received|noted|thanks|thank you|got it|ok|okay|acknowledged|confirmed|copy|noted with thanks|will do|seen|ack)\\.?!?$/i;\n\n// ── 3. TEST / NOISE SUBJECT PATTERNS ──\nconst noiseSubjects = /\\b(test email|just a random|testing|ignore this|test message)\\b/i;\n\nconst filtered = items.filter(item => {\n  const email = item.json;\n  const fromText  = (email.from?.text || email.from || \"\").toLowerCase();\n  const toText    = (email.to?.text   || email.to   || \"\").toLowerCase();\n  const subject   = (email.subject    || \"\").toLowerCase();\n  const rawBody   = email.text        || \"\";\n\n  // ── RULE 1: Block excluded senders ──\n  if (excludedSenders.some(s => fromText.includes(s))) {\n    return false;\n  }\n\n  // ── RULE 2: Block excluded recipients ──\n  if (excludedRecipients.some(r => toText.includes(r))) {\n    return false;\n  }\n\n  // ── RULE 3: Block noise subjects ──\n  if (noiseSubjects.test(subject)) {\n    return false;\n  }\n\n  // ── RULE 4: Block trivial-body emails (INTERNAL SENDERS ONLY) ──\n  const senderAddress = (\n    email.from?.value?.[0]?.address ||\n    email.from?.text ||\n    email.from ||\n    \"\"\n  ).toLowerCase();\n\n  const isInternal = senderAddress.includes(\"@scalevirtually.com\") ||\n                     senderAddress.includes(\"@scalevirtually.ph\");\n\n  if (isInternal) {\n    const cleanBody = stripQuotedAndSignature(rawBody);\n    if (cleanBody.length < 20 || trivialPatterns.test(cleanBody)) {\n      return false;\n    }\n  }\n\n  return true;\n});\n\nreturn filtered;\n\n// ── HELPER: Extract only the sender's actual message ──\nfunction stripQuotedAndSignature(text) {\n  let clean = text;\n\n  // Remove quoted replies (\"On [date], [name] wrote:\")\n  clean = clean.split(/\\r?\\nOn .+wrote:\\s*$/m)[0];\n\n  // Remove signature blocks\n  clean = clean.split(/\\r?\\n\\s*(thanks and regards|best regards|regards|best|cheers|sincerely|thanks|thank you),?\\s*\\r?\\n/i)[0];\n\n  // Remove image placeholders, phone numbers, URLs, email addresses\n  clean = clean\n    .replace(/\\[image:.*?\\]/g, \"\")\n    .replace(/\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}/g, \"\")\n    .replace(/https?:\\/\\/\\S+/g, \"\")\n    .replace(/\\S+@\\S+\\.\\S+/g, \"\")\n    .replace(/\\n{2,}/g, \"\\n\")\n    .trim();\n\n  return clean;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -32
+      ],
+      "id": "4875ac1d-936b-43b5-92ea-eaba44f5724b",
+      "name": "Filter"
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19e88c5299f45bac",
+          "threadId": "19e88b274c1d8ba8",
+          "labelIds": [
+            "UNREAD",
+            "CATEGORY_FORUMS",
+            "INBOX"
+          ],
+          "sizeEstimate": 29177,
+          "headers": {
+            "delivered-to": "Delivered-To: pj@scalevirtually.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id 00721157ae682-7e177cf2390sor57060547b3.6.2026.06.02.07.37.59\r\n        for <pdev@scalevirtually.com>\r\n        (Google Transport Security);\r\n        Tue, 02 Jun 2026 07:37:59 -0700 (PDT)",
+            "x-forwarded-encrypted": "X-Forwarded-Encrypted: i=3; AFNElJ+8EQQpcTeSO7hqDvHPGnxPh0QDMQCZzUTPkraa/ByJFimoSXuppYLbdBxBRdHlsTog4A==@scalevirtually.com",
+            "x-received": "X-Received: by 2002:a05:690c:3349:b0:7b5:88ec:91b0 with SMTP id\r\n 00721157ae682-7e060a51ef2mr146152937b3.48.1780411078737; Tue, 02 Jun 2026\r\n 07:37:58 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1780411079; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=IEX0Wdzdry81MFOKzZEIsuhMIDG9yUgkGgO9F5rrbEC7saoKLjq3gbxl4vKYEZ6acK\r\n         2wVeGPnLy5FpjpaGAlTlbFiBzZK+PJ0VFYYJAWrsMCH9953YZDKx+l5jiwpOP0tB/uSI\r\n         9ZQfuCQVJP66g4+mb00Fh3m4LbAW5auWJY5ql/tCm7uAeq72TuJoqQuLqCadLc042Rk/\r\n         AXcoDDJK0qy2LZKH6+UWGSmQWdtwcJBgj0C9VQdu7eHojd2u+Xr6IGwyP0G3r6npRNqt\r\n         G0gr0Ul6s9XGz/A/Lbznr48zKY39yGVSnxfMfBxvHFf9csRbSDr/A3jKRVQoBSzsRKlq\r\n         uYQg==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=cc:to:subject:message-id:date:from:in-reply-to:references\r\n         :mime-version:dkim-signature;\r\n        bh=uDWVjYOFpuIn0oc4m38T4/B0myoGrVrw5RnY+Te/4r0=;\r\n        fh=dRuD2oQickwuDd4mjA5/GlP9iQsAgac0a+nFJZSHIx4=;\r\n        b=PW1pCirhRQne2xWHPA5q2kTT2aVEW9aCJn+Ld4lN8SyaEABthrO7yYWL/WW5n1a1bC\r\n         T1SC/yr8MA89DX7RMHWDavwXBb2VJoPE1AKQzRtA7qnnhRa0FqMpQauGOK2RWD7GTCZT\r\n         uMh5XySytvPpG6wy6r++P4If/DyX+G6r3yPtDIE1xH3pcAisWWTfqMvOfnPCQ4CZwD1T\r\n         8HGmPSH20/JQphuKgDFQft3tedUVDWf7BAey4B3ExSh1Gk1VznKWQ6+lUtEJ7o4mmh8s\r\n         X81GvJctMgldvx8AmjmVSMAwgYt+LEh6WJV3v37a65KPhJG2ibS/ZubzKKHM9JYhEgdl\r\n         6Xiw==;\r\n        darn=scalevirtually.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com; arc=none",
+            "return-path": "Return-Path: <pdev+bncBDB4JS7PXEKBBSGV7PIAMGQEACOT2EA@scalevirtually.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of jesy@scalevirtually.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       arc=pass (i=3 spf=pass spfdomain=scalevirtually.com dmarc=pass fromdomain=scalevirtually.com);\r\n       spf=pass (google.com: domain of pdev+bncbdb4js7pxekbbsgv7piamgqeacot2ea@scalevirtually.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=pdev+bncBDB4JS7PXEKBBSGV7PIAMGQEACOT2EA@scalevirtually.com;\r\n       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=scalevirtually.com;\r\n       dara=neutral header.i=@scalevirtually.com",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20251104; t=1780411081; x=1781015881;\r\n        h=list-unsubscribe:list-subscribe:list-archive:list-help:list-post\r\n         :x-spam-checked-in-group:list-id:mailing-list:precedence\r\n         :x-original-authentication-results:x-original-sender:cc:to:subject\r\n         :message-id:date:from:in-reply-to:references:mime-version:x-gm-gg\r\n         :x-beenthere:x-gm-message-state:from:to:cc:subject:date:message-id\r\n         :reply-to;\r\n        bh=uDWVjYOFpuIn0oc4m38T4/B0myoGrVrw5RnY+Te/4r0=;\r\n        b=VSUxGsqSF63YTjR2eGo2i2x4fiNWa1t805M/yv7hw+DbzoQhymMwJ3IeyocJgFBX6w\r\n         ppoGAPpI47q9gGdClPAygqUwM/hJuIN90RWGFOQejviHlXuXpfar4X2959qTNbqRndNG\r\n         7Qf/ja0AsG7foLUlHxtdXjuPQmFUUIJ3e0rFi8fbJdq1Bi4no+Azl8Fwzhk4epwoa5+s\r\n         Nqbx7DI5SH+GMjzRaFhlTJiE1gCCeKXjvbwt2crwn79d4WOaAe1ly8jYzR+VcWIHtBia\r\n         TN09z8oFuQx/nvilNeGFN34yJR6rksJiCW+RQsodw7zF9gS9N8T/nURxvugJ8ozp9gD9\r\n         C66A==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0YywhGf+VbQj7mWDkzh5i6rrt5reTXF1715VUoHFFLTxD+4V3QbX\r\n\ts6QGxYTDjqbGJkEO05EWj5WWWfFBax1lO0e36ib++DiwF1JuOM4LidS0RQ32vcMbCef3dw==",
+            "x-beenthere": "X-BeenThere: pdev@scalevirtually.com; h=\"AUV6zMM/gUCYsw3QYIgt6ZtAjdRvCrW/bs0lsmYZkuwq9JlEkQ==\"",
+            "x-gm-gg": "X-Gm-Gg: Acq92OG0LbEaD7nBmON369EOuqv83JldYy2qcgNcZSbUTKVF6AnyMShEMxXi4Yc9ljy\r\n\tv2us/z5RHxfzmDRDf1TDWvFmOvDcrvLTwbFu/mMAbeJm2o9cPcJC6Y4xrjRvIdU5JQNZ3XoPSzU\r\n\tR337lWfAmzF7XPAgg0fcX1rd4K+GfPfYd/gYU3Vpd8NMibPSV6C+yhsJ6JZ8f/FDLRfwiNYAh5a\r\n\tdOKg9BP3SKFnKY+p3Z6WTwPiV9ob2+tPhbVERk21oJVf9OLXl5Cibsyun1EJNjoUkSsmPXpMZkl\r\n\t6SnNA667WX6f0blY3QUp+jj0Z7xcrg==",
+            "mime-version": "MIME-Version: 1.0",
+            "references": "References: <19e88b25fad.1049cf1e442140.4305919677402884085@scalevirtually.ph>",
+            "in-reply-to": "In-Reply-To: <19e88b25fad.1049cf1e442140.4305919677402884085@scalevirtually.ph>",
+            "from": "From: Jesylou Jopio <jesy@scalevirtually.com>",
+            "date": "Date: Tue, 2 Jun 2026 22:37:47 +0800",
+            "x-gm-features": "X-Gm-Features: AVHnY4LhWFJ7mAViRjJ-sPAJqH0p9e2Nq3iJrLzpFXso6E7wDQSFwLAjzk1nm-0",
+            "message-id": "Message-ID: <CABYjmj23+hVRnTYUSfjNu+-9QUutuaZjrfrT55BE7HSfPUTrTg@mail.gmail.com>",
+            "subject": "Subject: Re: Just a Random Email",
+            "to": "To: Jaja <ragina@scalevirtually.ph>",
+            "cc": "Cc: pdev <pdev@scalevirtually.com>",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"000000000000e7190c0653464116\"",
+            "x-original-sender": "X-Original-Sender: jesy@scalevirtually.com",
+            "x-original-authentication-results": "X-Original-Authentication-Results: mx.google.com;       dkim=fail\r\n header.i=@scalevirtually.com header.s=google header.b=AhN8moN8;\r\n       arc=pass (i=1);       spf=pass (google.com: domain of\r\n jesy@scalevirtually.com designates 209.85.220.41 as permitted sender)\r\n smtp.mailfrom=jesy@scalevirtually.com;       dmarc=pass (p=NONE sp=NONE\r\n dis=NONE) header.from=scalevirtually.com;       dara=neutral header.i=@scalevirtually.com",
+            "precedence": "Precedence: list",
+            "mailing-list": "Mailing-list: list pdev@scalevirtually.com; contact pdev+owners@scalevirtually.com",
+            "list-id": "List-ID: <pdev.scalevirtually.com>",
+            "x-spam-checked-in-group": "X-Spam-Checked-In-Group: pdev@scalevirtually.com",
+            "x-google-group-id": "X-Google-Group-Id: 766992137603",
+            "list-post": "List-Post: <https://groups.google.com/a/scalevirtually.com/group/pdev/post>, <mailto:pdev@scalevirtually.com>",
+            "list-help": "List-Help: <https://support.google.com/a/scalevirtually.com/bin/topic.py?topic=25838>,\r\n <mailto:pdev+help@scalevirtually.com>",
+            "list-archive": "List-Archive: <https://groups.google.com/a/scalevirtually.com/group/pdev/>",
+            "list-subscribe": "List-Subscribe: <https://groups.google.com/a/scalevirtually.com/group/pdev/subscribe>,\r\n <mailto:pdev+subscribe@scalevirtually.com>",
+            "list-unsubscribe": "List-Unsubscribe: <mailto:googlegroups-manage+766992137603+unsubscribe@googlegroups.com>,\r\n <https://groups.google.com/a/scalevirtually.com/group/pdev/subscribe>"
+          },
+          "html": "<div dir=\"auto\"><div>Received</div><div><br></div><div data-smartmail=\"gmail_signature\"><div dir=\"ltr\"><div dir=\"auto\" style=\"color:rgb(0,0,0);font-family:Arial;font-size:15px\"><div dir=\"auto\"><div dir=\"auto\"><div dir=\"auto\" style=\"font-family:Helvetica;font-size:12px\">Thanks and regards,<br><br><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:820px;color:rgb(255,255,255);vertical-align:-webkit-baseline-middle;font-family:Verdana\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:820px;vertical-align:-webkit-baseline-middle\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td width=\"150\" style=\"padding:0px;border:0px;vertical-align:middle\"><span style=\"margin-right:20px;display:block\"><img src=\"https://scalevirtually.ph/wp-content/uploads/2023/02/ScaleVirtually_logo.jpg\" width=\"130\" style=\"border-style:none;max-width:130px\"></span></td><td style=\"padding:0px;border:0px;vertical-align:middle\"><h2 color=\"#000000\" style=\"font-size:18px;line-height:1.38;margin:0px\"><font color=\"#000000\"><span>Jesy</span><span> </span><span>Jopio</span></font></h2><div style=\"font-size:14px;line-height:22px;margin:0px\"><span><font color=\"#000000\">Scale Virtually LLC</font></span></div><div style=\"font-size:14px;line-height:22px;margin:0px\"><span><font color=\"#000000\">Client Services Manager</font></span></div></td><td width=\"30\" style=\"padding:0px;border:0px\"><div style=\"width:30px\"></div></td><td color=\"#F17D1A\" width=\"1\" height=\"auto\" style=\"padding:0px;border-top-width:0px;border-right-width:0px;border-bottom-style:none;border-left:1px solid rgb(241,125,26);width:1px\"></td><td width=\"30\" style=\"padding:0px;border:0px\"><div style=\"width:30px\"></div></td><td style=\"padding:0px;border:0px;vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:298.438px;vertical-align:-webkit-baseline-middle\"><tbody><tr height=\"25\" style=\"margin:0px;padding:0px;border:0px;vertical-align:middle\"><td width=\"30\" style=\"padding:0px;border:0px;vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:30px;vertical-align:-webkit-baseline-middle\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px;vertical-align:bottom\"><span color=\"#F17D1A\" width=\"11\" style=\"display:inline-block;background-color:rgb(241,125,26)\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/phone-icon-2x.png\" color=\"#F17D1A\" alt=\"mobilePhone\" width=\"13\" style=\"border-style:none;display:block\"></span></td></tr></tbody></table></td><td style=\"padding:0px;border:0px\"><a href=\"tel:(773)+692-2792\" color=\"#000000\" style=\"color:rgb(0,0,0)\" target=\"_blank\">(773) 692-2792</a></td></tr><tr height=\"25\" style=\"margin:0px;padding:0px;border:0px;vertical-align:middle\"><td width=\"30\" style=\"padding:0px;border:0px;vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:30px;vertical-align:-webkit-baseline-middle\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px;vertical-align:bottom\"><span color=\"#F17D1A\" width=\"11\" style=\"display:inline-block;background-color:rgb(241,125,26)\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/email-icon-2x.png\" color=\"#F17D1A\" alt=\"emailAddress\" width=\"13\" style=\"border-style:none;display:block\"></span></td></tr></tbody></table></td><td style=\"padding:0px;border:0px\"><a href=\"mailto:jesy@scalevirtually.com\" color=\"#000000\" style=\"color:rgb(0,0,0)\" target=\"_blank\">jesy@scalevirtually.com</a></td></tr><tr height=\"25\" style=\"margin:0px;padding:0px;border:0px;vertical-align:middle\"><td width=\"30\" style=\"padding:0px;border:0px;vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:30px;vertical-align:-webkit-baseline-middle\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px;vertical-align:bottom\"><span color=\"#F17D1A\" width=\"11\" style=\"display:inline-block;background-color:rgb(241,125,26)\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/link-icon-2x.png\" color=\"#F17D1A\" alt=\"website\" width=\"13\" style=\"border-style:none;display:block\"></span></td></tr></tbody></table></td><td style=\"padding:0px;border:0px\"><a href=\"https://www.scalevirtually.com/\" color=\"#000000\" style=\"color:rgb(0,0,0)\" target=\"_blank\">www.scalevirtually.com</a></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:820px;vertical-align:-webkit-baseline-middle\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td height=\"30\" style=\"padding:0px;border:0px\"></td></tr><tr style=\"margin:0px;padding:0px;border:0px\"><td color=\"#F17D1A\" width=\"auto\" height=\"1\" style=\"padding:0px;border-top-width:0px;border-right-width:0px;border-bottom:1px solid rgb(241,125,26);border-left-style:none;width:820px;display:block\"></td></tr><tr style=\"margin:0px;padding:0px;border:0px\"><td height=\"30\" style=\"padding:0px;border:0px\"></td></tr></tbody></table></td></tr><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:820px;vertical-align:-webkit-baseline-middle\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px;text-align:right;vertical-align:top\"></td></tr></tbody></table></td></tr><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;border-spacing:0px;width:820px;vertical-align:-webkit-baseline-middle\"><tbody><tr style=\"margin:0px;padding:0px;border:0px\"><td style=\"padding:0px;border:0px\"></td><td style=\"padding:0px;border:0px;text-align:right\"><span style=\"display:block\"><a rel=\"noopener noreferrer\" href=\"https://scalevirtually.com/\" color=\"#F17D1A\" style=\"background-color:rgb(241,125,26);border-width:6px 12px;border-style:solid;border-color:rgb(241,125,26);display:inline-block;color:rgb(255,255,255);font-weight:700;text-align:center;line-height:40px;border-radius:3px\" target=\"_blank\">Looking to Lower Costs, 2x Growth, and Scale Successfully? Let&#39;s make it happen! Schedule a FREE Strategy Call Today!</a></span></td></tr></tbody></table></td></tr></tbody></table><div><br></div></div></div></div><br></div><br style=\"color:rgb(0,0,0);font-family:Arial;font-size:15px\"></div></div></div><br><div class=\"gmail_quote gmail_quote_container\"><div dir=\"ltr\" class=\"gmail_attr\">On Tue, Jun 2, 2026, 10:17 PM Jaja &lt;<a href=\"mailto:ragina@scalevirtually.ph\">ragina@scalevirtually.ph</a>&gt; wrote:<br></div><blockquote class=\"gmail_quote\" style=\"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-left:1ex\"><u></u><div><div style=\"font-family:Tahoma,Arial,Helvetica,sans-serif;font-size:10pt;color:rgb(0,0,0)\"><p><span><span style=\"font-family:tahoma,arial,helvetica,sans-serif\"><span style=\"font-size:16px\">Hi Team,</span></span></span><span style=\"font-family:tahoma,arial,helvetica,sans-serif\"><span style=\"font-size:16px\"><br></span></span></p><p><span><span style=\"font-family:tahoma,arial,helvetica,sans-serif\"><span style=\"font-size:16px\">This is a test email. Kindly confirm if you have received this message.</span></span></span><span style=\"font-family:tahoma,arial,helvetica,sans-serif\"><span style=\"font-size:16px\"><br></span></span></p><p><span><span style=\"font-family:tahoma,arial,helvetica,sans-serif\"><span style=\"font-size:16px\">Thank you.</span></span></span><br></p><div><br></div><div><div id=\"m_-1838587621468165421\"><div style=\"font-family:&quot;PT Sans&quot;,sans-serif,system-ui,-apple-system,&quot;Segoe UI&quot;,Roboto,Ubuntu,Cantarell,&quot;Noto Sans&quot;;font-size:14px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;background-color:white;color:black\"><div><div><div><div><div dir=\"ltr\"><div><div dir=\"ltr\"><div dir=\"ltr\"><div><br></div><div><br></div><div><div style=\"font-family:Arial;font-size:13.3333px;color:rgb(0,0,0)\"><div style=\"font-family:tahoma,sans-serif;font-size:small\"><br></div><div style=\"font-family:tahoma,sans-serif;font-size:small\"><br></div></div><div style=\"font-family:Arial;font-size:13.3333px;color:rgb(0,0,0)\"><div><div><div><div style=\"font-size:16px\"><table cellspacing=\"0\" cellpadding=\"0\" style=\"font-size:12pt\"><tbody><tr><td><table cellspacing=\"0\" cellpadding=\"0\" style=\"font-size:12pt\"><tbody><tr><td width=\"150\" style=\"vertical-align:middle\"><span style=\"margin-right:20px;display:block\"><img id=\"m_-18385876214681654211715810297042110001_imgsrc_url_0\" width=\"130\" src=\"https://scalevirtually.ph/wp-content/uploads/2023/02/ScaleVirtually_logo.jpg\" style=\"max-width:130px\"><br></span></td><td style=\"vertical-align:middle\"><h2 style=\"margin:0px;font-size:18px;color:rgb(58,58,58)\"><span style=\"font-family:tahoma,sans-serif\">Ragina Gamayao</span><br></h2><p style=\"margin:0px;line-height:22px\"><span style=\"color:rgb(58,58,58)\"><span style=\"font-size:14px;margin:0px;line-height:22px\"><span style=\"font-family:tahoma,sans-serif\">DevOps and Implementations</span><br></span></span></p></td><td width=\"30\"><div style=\"width:30px\"><br></div></td><td width=\"1\" height=\"auto\" style=\"width:1px;border-bottom:medium none;border-left:1px solid rgb(241,112,26)\"><br></td><td width=\"30\"><div style=\"width:30px\"><br></div></td><td style=\"vertical-align:middle\"><table cellspacing=\"0\" cellpadding=\"0\" style=\"font-size:12pt\"><tbody><tr height=\"25\" style=\"vertical-align:middle\"><td width=\"30\" style=\"vertical-align:middle\"><br></td><td style=\"padding:0px;color:rgb(58,58,58)\"><br></td></tr><tr height=\"25\" style=\"vertical-align:middle\"><td width=\"30\" style=\"vertical-align:middle\"><table cellspacing=\"0\" cellpadding=\"0\" style=\"font-size:12pt\"><tbody><tr><td style=\"vertical-align:bottom\"><span style=\"display:inline-block;background-color:rgb(241,112,26)\"><img id=\"m_-18385876214681654211715810297042110001_imgsrc_url_1\" alt=\"emailAddress\" width=\"13\" src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/email-icon-2x.png\" style=\"display:block\"></span></td></tr></tbody></table></td><td style=\"padding:0px\"><a href=\"mailto:ragina@scalevirtually.com\" style=\"font-size:12px;color:rgb(58,58,58)\" target=\"_blank\" rel=\"noreferrer\"><span style=\"font-family:tahoma,sans-serif\">ragina@scalevirtually.com</span></a><br></td></tr><tr height=\"25\" style=\"vertical-align:middle\"><td width=\"30\" style=\"vertical-align:middle\"><table cellspacing=\"0\" cellpadding=\"0\" style=\"font-size:12pt\"><tbody><tr><td style=\"vertical-align:bottom\"><span style=\"display:inline-block;background-color:rgb(241,112,26)\"><span style=\"font-family:tahoma,sans-serif\"><img id=\"m_-18385876214681654211715810297042110001_imgsrc_url_2\" alt=\"website\" width=\"13\" src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/link-icon-2x.png\" style=\"display:block\"></span></span></td></tr></tbody></table></td><td style=\"padding:0px\"><a href=\"https://www.scalevirtually.com/\" style=\"font-size:12px;color:rgb(58,58,58)\" target=\"_blank\" rel=\"noreferrer\"><span style=\"font-family:tahoma,sans-serif\">www.scalevirtually.com</span></a><br></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr><td><table cellspacing=\"0\" cellpadding=\"0\" style=\"width:719.667px;font-size:12pt\"><tbody><tr><td height=\"30\"><br></td></tr><tr><td height=\"1\" style=\"width:719.667px;border-bottom:1px solid rgb(241,112,26);border-left:medium none;display:block\"><br></td></tr><tr><td height=\"30\"><br></td></tr></tbody></table></td></tr><tr><td><table cellspacing=\"0\" cellpadding=\"0\" style=\"width:719.667px;font-size:12pt\"><tbody><tr><td style=\"text-align:right;vertical-align:top\"><br></td></tr></tbody></table></td></tr><tr><td><table cellspacing=\"0\" cellpadding=\"0\" style=\"width:719.667px;font-size:12pt\"><tbody><tr><td><br></td><td style=\"text-align:right\"><span style=\"display:block\"><a href=\"https://scalevirtually.com/contact-us/\" style=\"border-color:rgb(241,112,26);border-style:solid;border-width:6px 12px;display:inline-block;font-weight:700;text-align:center;line-height:40px;font-size:12px;border-radius:3px;color:rgb(255,255,255);background-color:rgb(241,112,26)\" target=\"_blank\" rel=\"noreferrer\">Looking to Lower Costs, 2x Growth, and Scale Successfully? Let&#39;s Make it Happen! Schedule A FREE Strategy Call Today!</a><br></span></td></tr></tbody></table></td></tr></tbody></table></div></div></div></div></div></div></div></div></div></div></div><div style=\"clear:both\"><br></div></div></div></div></div><div style=\"border-top-width:1px;border-top-style:dotted;clear:both;padding:4px 0px;font-family:&quot;PT Sans&quot;,sans-serif,system-ui,-apple-system,&quot;Segoe UI&quot;,Roboto,Ubuntu,Cantarell,&quot;Noto Sans&quot;;font-size:14px;font-style:normal;font-weight:400;letter-spacing:normal;text-indent:0px;text-transform:none;word-spacing:0px;white-space:normal;color:rgb(188,190,194);background-color:rgb(36,38,40)\"><button value=\"reply\" type=\"button\" style=\"font-family:inherit;font-size:0.875rem;overflow:hidden;display:inline-flex;max-width:100%;margin:0px;line-height:normal;text-decoration:none;text-transform:inherit;white-space:nowrap;vertical-align:middle;background-color:transparent;border:1px solid transparent\"><span style=\"overflow:hidden;white-space:nowrap\">ReplyReply AllForward</span></button><br></div></div></div><div><br></div></div><br></div></blockquote></div>\n",
+          "text": "Received\n\nThanks and regards,\n\nJesy Jopio\nScale Virtually LLC\nClient Services Manager\n[image: mobilePhone] (773) 692-2792\n[image: emailAddress] jesy@scalevirtually.com\n[image: website] www.scalevirtually.com\nLooking to Lower Costs, 2x Growth, and Scale Successfully? Let's make it\nhappen! Schedule a FREE Strategy Call Today! <https://scalevirtually.com/>\n\n\n\n\nOn Tue, Jun 2, 2026, 10:17 PM Jaja <ragina@scalevirtually.ph> wrote:\n\n> Hi Team,\n>\n> This is a test email. Kindly confirm if you have received this message.\n>\n> Thank you.\n>\n>\n>\n>\n>\n>\n> Ragina Gamayao\n>\n> DevOps and Implementations\n>\n>\n>\n>\n>\n> [image: emailAddress] ragina@scalevirtually.com\n> [image: website] www.scalevirtually.com\n>\n>\n>\n>\n>\n> Looking to Lower Costs, 2x Growth, and Scale Successfully? Let's Make it\n> Happen! Schedule A FREE Strategy Call Today!\n> <https://scalevirtually.com/contact-us/>\n>\n> ReplyReply AllForward\n>\n>\n>\n",
+          "textAsHtml": "<p>Received</p><p>Thanks and regards,</p><p>Jesy Jopio<br/>Scale Virtually LLC<br/>Client Services Manager<br/>[image: mobilePhone] (773) 692-2792<br/>[image: emailAddress] <a href=\"mailto:jesy@scalevirtually.com\">jesy@scalevirtually.com</a><br/>[image: website] <a href=\"http://www.scalevirtually.com\">www.scalevirtually.com</a><br/>Looking to Lower Costs, 2x Growth, and Scale Successfully? Let&apos;s make it<br/>happen! Schedule a FREE Strategy Call Today! &lt;<a href=\"https://scalevirtually.com/\">https://scalevirtually.com/</a>&gt;</p><p>On Tue, Jun 2, 2026, 10:17&#x202F;PM Jaja &lt;<a href=\"mailto:ragina@scalevirtually.ph\">ragina@scalevirtually.ph</a>&gt; wrote:</p><p>&gt; Hi Team,<br/>&gt;<br/>&gt; This is a test email. Kindly confirm if you have received this message.<br/>&gt;<br/>&gt; Thank you.<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt; Ragina Gamayao<br/>&gt;<br/>&gt; DevOps and Implementations<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt; [image: emailAddress] <a href=\"mailto:ragina@scalevirtually.com\">ragina@scalevirtually.com</a><br/>&gt; [image: website] <a href=\"http://www.scalevirtually.com\">www.scalevirtually.com</a><br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt;<br/>&gt; Looking to Lower Costs, 2x Growth, and Scale Successfully? Let&apos;s Make it<br/>&gt; Happen! Schedule A FREE Strategy Call Today!<br/>&gt; &lt;<a href=\"https://scalevirtually.com/contact-us/\">https://scalevirtually.com/contact-us/</a>&gt;<br/>&gt;<br/>&gt; ReplyReply AllForward<br/>&gt;<br/>&gt;<br/>&gt;</p>",
+          "subject": "Re: Just a Random Email",
+          "references": "<19e88b25fad.1049cf1e442140.4305919677402884085@scalevirtually.ph>",
+          "date": "2026-06-02T14:37:47.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "ragina@scalevirtually.ph",
+                "name": "Jaja"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Jaja</span> &lt;<a href=\"mailto:ragina@scalevirtually.ph\" class=\"mp_address_email\">ragina@scalevirtually.ph</a>&gt;</span>",
+            "text": "\"Jaja\" <ragina@scalevirtually.ph>"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "jesy@scalevirtually.com",
+                "name": "Jesylou Jopio"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Jesylou Jopio</span> &lt;<a href=\"mailto:jesy@scalevirtually.com\" class=\"mp_address_email\">jesy@scalevirtually.com</a>&gt;</span>",
+            "text": "\"Jesylou Jopio\" <jesy@scalevirtually.com>"
+          },
+          "cc": {
+            "value": [
+              {
+                "address": "pdev@scalevirtually.com",
+                "name": "pdev"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">pdev</span> &lt;<a href=\"mailto:pdev@scalevirtually.com\" class=\"mp_address_email\">pdev@scalevirtually.com</a>&gt;</span>",
+            "text": "\"pdev\" <pdev@scalevirtually.com>"
+          },
+          "messageId": "<CABYjmj23+hVRnTYUSfjNu+-9QUutuaZjrfrT55BE7HSfPUTrTg@mail.gmail.com>",
+          "inReplyTo": "<19e88b25fad.1049cf1e442140.4305919677402884085@scalevirtually.ph>"
+        }
+      },
+      {
+        "json": {
+          "id": "19e88c526a400647",
+          "threadId": "19e88c526a400647",
+          "labelIds": [
+            "UNREAD",
+            "CATEGORY_FORUMS",
+            "INBOX"
+          ],
+          "sizeEstimate": 18853,
+          "headers": {
+            "delivered-to": "Delivered-To: pj@scalevirtually.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id 38308e7fff4ca-396abf461c6sor73121fa.4.2026.06.02.07.37.59\r\n        for <pdev@scalevirtually.com>\r\n        (Google Transport Security);\r\n        Tue, 02 Jun 2026 07:37:59 -0700 (PDT)",
+            "x-forwarded-encrypted": "X-Forwarded-Encrypted: i=3; AFNElJ+54fzTlnwnzC+IsxHVA8ycMWrAdhg+syp8U+Wb0+vg/+PsPu/rRA/X3K0C39ggyDL79Q==@scalevirtually.com",
+            "x-received": "X-Received: by 2002:a05:651c:1ac8:b0:38a:3208:8cc4 with SMTP id\r\n 38308e7fff4ca-39664f10e3emr33479321fa.25.1780411079283; Tue, 02 Jun 2026\r\n 07:37:59 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1780411079; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=H2c3aHCVfDPCF/+LpUltLCxF0yk/m6zo8XdAq6g3X5ymiywcnPNMjwoy4QiGPa/a+b\r\n         RjIOqJ2gzldKgoiSUa0HdASjb45ouVJbnEAvCCckbqiz+x5bHwbYPlZ/0FTug0TjR/I8\r\n         5aFS4UGlg2G7rM2zk6dOsRvnReRZnDJEFUoITNdwcend0w+C/VO4w1mO+2eoUBGYDRyR\r\n         zHnuaLzsPLnIs0J9/CFUYZuo7I7RrQeQQU5shAFS3Rj5Uq788Cc00Xea1GcvLBupXNfS\r\n         TYkN6eb8TNKuu4JQznBHW2NEsy75+vxDJu10U5bDChovfUIS6XsvoGN6aR+KscijXjW1\r\n         q35Q==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=cc:to:subject:message-id:date:from:mime-version:dkim-signature;\r\n        bh=0QLaJ8xzALL5+EfZ8DQ/mE6FtEyP/p7G2b50IN2p5qw=;\r\n        fh=2PdsXzLhL05Lj/H6YAG6YDiPIbp0vvBXNk/l4mhYt+s=;\r\n        b=QIBCpAN23b6xNc/Ckk8lj4zO0BqFWvfLvkU2bz38toM0HTBW8JZ+/JXHzhp2lq/W5N\r\n         wRWc9rqJU5z8zBCE5EeHQxvcXcwMY5oygfPjAyKQ4qwDDodT+QvMFhVjttrMAAkzGauz\r\n         7D8yf+oGjIbbigEE01TKmYgYYnoaiHnHnBcpcQ+A56eDab140x/rD7Wq/jmRxIc5spsS\r\n         q/qt6JIKf8gcAJg8dA3DYouaCeQ+PNgjeyYGpINxvEKSWFrc154W7ezB63TJQcxGWKVm\r\n         s96G6GbGPzzZ9utSkrV1NI/tiDyoHHRxjjRbtI2ptT4X4ALYhSNlXN83Hjy4OGTfVMJ4\r\n         XKgA==;\r\n        darn=scalevirtually.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com; arc=none",
+            "return-path": "Return-Path: <pdev+bncBD2IBXG3YQDBBSOV7PIAMGQERF2YHNY@scalevirtually.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of gellyn@scalevirtually.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       arc=pass (i=3 spf=pass spfdomain=scalevirtually.com dmarc=pass fromdomain=scalevirtually.com);\r\n       spf=pass (google.com: domain of pdev+bncbd2ibxg3yqdbbsov7piamgqerf2yhny@scalevirtually.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=pdev+bncBD2IBXG3YQDBBSOV7PIAMGQERF2YHNY@scalevirtually.com;\r\n       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=scalevirtually.com;\r\n       dara=neutral header.i=@scalevirtually.com",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20251104; t=1780411082; x=1781015882;\r\n        h=list-unsubscribe:list-subscribe:list-archive:list-help:list-post\r\n         :x-spam-checked-in-group:list-id:mailing-list:precedence\r\n         :x-original-authentication-results:x-original-sender:cc:to:subject\r\n         :message-id:date:from:mime-version:x-gm-gg:x-beenthere\r\n         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=0QLaJ8xzALL5+EfZ8DQ/mE6FtEyP/p7G2b50IN2p5qw=;\r\n        b=itD83b82qf7PWLNQl3mMtbze03rwd5yrMDe/T4SQrphHwdZrj/Qme+zDvuL+zNi32Q\r\n         gdPUUXFMvKgWaAkMNM+BLaw7sm47WTWpEqsG7+QFU/iOlywUcVeZgM/rHriz/8V7rT23\r\n         1CBtwUQ12BHeN96lVjiVEgCSbE4Cyk2SCikWplsx7IKiuuhpDfW6l7P8nE3HlysCur7m\r\n         3vNY61gg1WaDYOb8pP+y6YBRrCyCtaQqKFGfm4M/pZ+ijQlvqO9AFdJbG0CfNXPAAmdq\r\n         QBvN/eyVJNGVcmK1YtXNrkDlk3YO8K/C1odIyso36uq+nX+jiQF3B5+YEGkM4/TBsjZm\r\n         pTdA==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0Yxcz51YTEbmPjeG/GAeVIct9KVrisnP772tc8BFTRfLDQXbKPQT\r\n\tu+A6zLkv3ZKkl4cHtVzgkamzv05gQwUwB4LAr1j2c8aB9JdO0zAYoqWn6VqxQD6rrFnIpA==",
+            "x-beenthere": "X-BeenThere: pdev@scalevirtually.com; h=\"AUV6zMNLceQY2YoYwO3fwrkcnLZEF7qQmQ3OVcq1RpbjY3QonQ==\"",
+            "x-gm-gg": "X-Gm-Gg: Acq92OG836BUXwQ2EJ+QkAz4RJu2tU065Xs6K+EZ3S/96/gOba+xsRshez0ZC6sVc8H\r\n\t2Q/7xs1fa4D0noMxvALj6oxdoJB9Y4nzZCHULay+w1IsdbwUg6Pi7X6XEoDYip/6OSvIC54Ni9v\r\n\tnzvMKj19Rwa5G1HIU7BABQh0oOUXv6gEbCjj/SuDQ6J+NvLP+9NwGnsKKI/U3p8IG7dgZJUalQP\r\n\t5lP0VwMPz5FumaOozocYQcRJU7nzg+OZoc4M3QLfraC1+SoILYbuNUT8H4JJxUmJBijOw9bB/wC\r\n\t6LyTRq72N88AqAxx",
+            "mime-version": "MIME-Version: 1.0",
+            "from": "From: Gellyn Ponteras <gellyn@scalevirtually.com>",
+            "date": "Date: Tue, 2 Jun 2026 22:37:48 +0800",
+            "x-gm-features": "X-Gm-Features: AVHnY4KCNOyEHde1bBd3-apIVhHLtUnTyBrQ86NprlyNhF3LBYcIeCZICHIrNrc",
+            "message-id": "Message-ID: <CAGRSJBv98_WQ3a8CtZbc5zcJastBDYmLzX6GVpdmJgkg9FOR8g@mail.gmail.com>",
+            "subject": "Subject: Meeting Reminder | Scale Virtually",
+            "to": "To: Kevin Thomas <kevin@multisurances.com>",
+            "cc": "Cc: Scale Virtually Process Development Team <pdev@scalevirtually.com>",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"000000000000ef625d0653464195\"",
+            "x-original-sender": "X-Original-Sender: gellyn@scalevirtually.com",
+            "x-original-authentication-results": "X-Original-Authentication-Results: mx.google.com;       dkim=fail\r\n header.i=@scalevirtually.com header.s=google header.b=qz5BSVsx;\r\n       arc=pass (i=1);       spf=pass (google.com: domain of\r\n gellyn@scalevirtually.com designates 209.85.220.41 as permitted sender)\r\n smtp.mailfrom=gellyn@scalevirtually.com;       dmarc=pass (p=NONE sp=NONE\r\n dis=NONE) header.from=scalevirtually.com;       dara=neutral header.i=@scalevirtually.com",
+            "precedence": "Precedence: list",
+            "mailing-list": "Mailing-list: list pdev@scalevirtually.com; contact pdev+owners@scalevirtually.com",
+            "list-id": "List-ID: <pdev.scalevirtually.com>",
+            "x-spam-checked-in-group": "X-Spam-Checked-In-Group: pdev@scalevirtually.com",
+            "x-google-group-id": "X-Google-Group-Id: 766992137603",
+            "list-post": "List-Post: <https://groups.google.com/a/scalevirtually.com/group/pdev/post>, <mailto:pdev@scalevirtually.com>",
+            "list-help": "List-Help: <https://support.google.com/a/scalevirtually.com/bin/topic.py?topic=25838>,\r\n <mailto:pdev+help@scalevirtually.com>",
+            "list-archive": "List-Archive: <https://groups.google.com/a/scalevirtually.com/group/pdev/>",
+            "list-subscribe": "List-Subscribe: <https://groups.google.com/a/scalevirtually.com/group/pdev/subscribe>,\r\n <mailto:pdev+subscribe@scalevirtually.com>",
+            "list-unsubscribe": "List-Unsubscribe: <mailto:googlegroups-manage+766992137603+unsubscribe@googlegroups.com>,\r\n <https://groups.google.com/a/scalevirtually.com/group/pdev/subscribe>"
+          },
+          "html": "<div dir=\"ltr\"><div>Dear Kevin,<br><br>This is to remind you of our meeting later today at 11am Central Time.<br><br>Here&#39;s the link for your convenience: <a href=\"https://scalevirtually.zoom.us/my/gponteras\">https://scalevirtually.zoom.us/my/gponteras</a><br><br>We look forward to speaking with you later.</div><div><div dir=\"ltr\" class=\"gmail_signature\" data-smartmail=\"gmail_signature\"><div dir=\"ltr\"><br><div><font color=\"#222222\">Best Regards,</font><br style=\"color:rgb(34,34,34)\"><div dir=\"ltr\" style=\"color:rgb(34,34,34)\"><div dir=\"ltr\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle\"><tbody><tr><td width=\"150\" style=\"vertical-align:middle\"><span style=\"margin-right:20px;display:block\"><img src=\"https://scalevirtually.ph/wp-content/uploads/2023/02/ScaleVirtually_logo.jpg\" width=\"130\" style=\"color:rgb(255,255,255);font-family:Verdana;font-size:12px;border-style:none;max-width:130px\"><br></span></td><td style=\"vertical-align:middle\"><h3 color=\"#3A3A3A\" style=\"margin:0px;font-size:18px;color:rgb(58,58,58)\">Gellyn Ponteras</h3><div style=\"margin:0px;color:rgb(58,58,58);font-size:14px;line-height:22px\">Scale Virtually, LLC</div><div style=\"margin:0px;color:rgb(58,58,58);font-size:14px;line-height:22px\"><span style=\"font-size:small;color:rgb(32,33,36)\">Process Development | Process Engineer</span></div></td><td width=\"30\"><div style=\"width:30px\"></div></td><td color=\"#F17D1A\" width=\"1\" style=\"width:1px;border-bottom:none;border-left:1px solid rgb(241,125,26)\"></td><td width=\"30\"><div style=\"width:30px\"></div></td><td style=\"vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle\"><tbody><tr height=\"25\" style=\"vertical-align:middle\"><td width=\"30\" style=\"vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle\"><tbody><tr><td style=\"vertical-align:bottom\"><span color=\"#F17D1A\" width=\"11\" style=\"display:block;background-color:rgb(241,125,26)\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/phone-icon-2x.png\" color=\"#F17D1A\" width=\"13\" style=\"display:block\"></span></td></tr></tbody></table></td><td style=\"padding:0px;color:rgb(58,58,58)\"><a href=\"tel:(773)%20820-7194\" color=\"#3A3A3A\" style=\"color:rgb(58,58,58);font-size:12px\" target=\"_blank\">(773) 820-7194</a></td></tr><tr height=\"25\" style=\"vertical-align:middle\"><td width=\"30\" style=\"vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle\"><tbody><tr><td style=\"vertical-align:bottom\"><span color=\"#F17D1A\" width=\"11\" style=\"display:block;background-color:rgb(241,125,26)\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/email-icon-2x.png\" color=\"#F17D1A\" width=\"13\" style=\"display:block\"></span></td></tr></tbody></table></td><td style=\"padding:0px\"><a href=\"mailto:gellyn@scalevirtually.com\" color=\"#3A3A3A\" style=\"color:rgb(58,58,58);font-size:12px\" target=\"_blank\">gellyn@scalevirtually.com</a></td></tr><tr height=\"25\" style=\"vertical-align:middle\"><td width=\"30\" style=\"vertical-align:middle\"><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle\"><tbody><tr><td style=\"vertical-align:bottom\"><span color=\"#F17D1A\" width=\"11\" style=\"display:block;background-color:rgb(241,125,26)\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/link-icon-2x.png\" color=\"#F17D1A\" width=\"13\" style=\"display:block\"></span></td></tr></tbody></table></td><td style=\"padding:0px\"><a href=\"https://www.scalevirtually.com/\" color=\"#3A3A3A\" style=\"color:rgb(58,58,58);font-size:12px\" target=\"_blank\">www.scalevirtually.com</a></td></tr></tbody></table></td></tr></tbody></table><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle;width:746px\"><tbody><tr><td height=\"30\"></td></tr><tr><td color=\"#F17D1A\" height=\"1\" style=\"width:746px;border-bottom:1px solid rgb(241,125,26);border-left:none;display:block\"></td></tr><tr><td height=\"30\"></td></tr></tbody></table><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle;width:746px\"><tbody><tr><td style=\"text-align:right;vertical-align:top\"></td></tr></tbody></table><table cellpadding=\"0\" cellspacing=\"0\" style=\"vertical-align:-webkit-baseline-middle;width:746px\"><tbody><tr><td></td><td style=\"text-align:right\"><span style=\"display:block\"><a rel=\"noopener noreferrer\" href=\"https://scalevirtually.com/contact-us/\" color=\"#F17D1A\" style=\"color:rgb(255,255,255);border-width:6px 12px;border-style:solid;border-color:rgb(241,125,26);display:inline-block;background-color:rgb(241,125,26);font-weight:700;text-align:center;line-height:40px;font-size:12px;border-radius:3px\" target=\"_blank\">Looking to Lower Costs, 2x Growth, and Scale Successfully? Let&#39;s make it happen! Schedule a FREE Strategy Call Today!</a></span><div><br></div></td></tr></tbody></table></div></div></div></div></div></div></div>\n",
+          "text": "Dear Kevin,\n\nThis is to remind you of our meeting later today at 11am Central Time.\n\nHere's the link for your convenience:\nhttps://scalevirtually.zoom.us/my/gponteras\n\nWe look forward to speaking with you later.\n\nBest Regards,\n\nGellyn Ponteras\nScale Virtually, LLC\nProcess Development | Process Engineer\n(773) 820-7194\ngellyn@scalevirtually.com\nwww.scalevirtually.com\nLooking to Lower Costs, 2x Growth, and Scale Successfully? Let's make it\nhappen! Schedule a FREE Strategy Call Today!\n<https://scalevirtually.com/contact-us/>\n",
+          "textAsHtml": "<p>Dear Kevin,</p><p>This is to remind you of our meeting later today at 11am Central Time.</p><p>Here&apos;s the link for your convenience:<br/><a href=\"https://scalevirtually.zoom.us/my/gponteras\">https://scalevirtually.zoom.us/my/gponteras</a></p><p>We look forward to speaking with you later.</p><p>Best Regards,</p><p>Gellyn Ponteras<br/>Scale Virtually, LLC<br/>Process Development | Process Engineer<br/>(773) 820-7194<br/><a href=\"mailto:gellyn@scalevirtually.com\">gellyn@scalevirtually.com</a><br/><a href=\"http://www.scalevirtually.com\">www.scalevirtually.com</a><br/>Looking to Lower Costs, 2x Growth, and Scale Successfully? Let&apos;s make it<br/>happen! Schedule a FREE Strategy Call Today!<br/>&lt;<a href=\"https://scalevirtually.com/contact-us/\">https://scalevirtually.com/contact-us/</a>&gt;</p>",
+          "subject": "Meeting Reminder | Scale Virtually",
+          "date": "2026-06-02T14:37:48.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "kevin@multisurances.com",
+                "name": "Kevin Thomas"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Kevin Thomas</span> &lt;<a href=\"mailto:kevin@multisurances.com\" class=\"mp_address_email\">kevin@multisurances.com</a>&gt;</span>",
+            "text": "\"Kevin Thomas\" <kevin@multisurances.com>"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "gellyn@scalevirtually.com",
+                "name": "Gellyn Ponteras"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Gellyn Ponteras</span> &lt;<a href=\"mailto:gellyn@scalevirtually.com\" class=\"mp_address_email\">gellyn@scalevirtually.com</a>&gt;</span>",
+            "text": "\"Gellyn Ponteras\" <gellyn@scalevirtually.com>"
+          },
+          "cc": {
+            "value": [
+              {
+                "address": "pdev@scalevirtually.com",
+                "name": "Scale Virtually Process Development Team"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Scale Virtually Process Development Team</span> &lt;<a href=\"mailto:pdev@scalevirtually.com\" class=\"mp_address_email\">pdev@scalevirtually.com</a>&gt;</span>",
+            "text": "\"Scale Virtually Process Development Team\" <pdev@scalevirtually.com>"
+          },
+          "messageId": "<CAGRSJBv98_WQ3a8CtZbc5zcJastBDYmLzX6GVpdmJgkg9FOR8g@mail.gmail.com>"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "LLM Output Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create Insights Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Ongoing PECs": {
+      "main": [
+        [
+          {
+            "node": "Search PE",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ongoing Requirement not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search PE": {
+      "main": [
+        [
+          {
+            "node": "Sender not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Ongoing PECs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sender not exists?": {
+      "main": [
+        [
+          {
+            "node": "Search PE1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search PE1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Outliers Requirements": {
+      "main": [
+        [
+          {
+            "node": "Outlier Requirement not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ongoing Requirement not exists?": {
+      "main": [
+        [
+          {
+            "node": "Search Outliers Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Requirement ID Ongoing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outlier Requirement not exists?": {
+      "main": [
+        [
+          {
+            "node": "Parked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Requirement ID Outlier.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parked": {
+      "main": [
+        [
+          {
+            "node": "Parked Requirement not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parked Requirement not exists?": {
+      "main": [
+        [
+          {
+            "node": "Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Requirement ID Parked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed": {
+      "main": [
+        [
+          {
+            "node": "Set Requirement ID Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Output Parser": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Outlier.": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Ongoing": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Parked": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Completed": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "gQZoWFB01klMg0wu",
+    "saveExecutionProgress": true
+  },
+  "versionId": "bd9ef74e-e761-412b-a782-85e92a170f8d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b06c82296e26ffae4ee1414f5f6f1fab985a46e1996657541736162432921043"
+  },
+  "id": "sZ4Vu4VhcTrdSA0s",
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    },
+    {
+      "updatedAt": "2026-04-29T22:14:43.442Z",
+      "createdAt": "2026-04-29T22:14:43.442Z",
+      "id": "syNcT4Uk2dB151Vd",
+      "name": "AI Agent"
+    }
+  ]
+}

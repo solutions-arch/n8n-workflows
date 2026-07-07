@@ -1,0 +1,223 @@
+{
+  "updatedAt": "2025-11-13T14:06:13.000Z",
+  "createdAt": "2025-11-13T14:05:23.139Z",
+  "id": "PyJNAOtXk1a9rkve",
+  "name": "Bubble.io to Google Form Submission",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bubble-to-form",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "fc878618-bd23-4194-93bd-4f8c4262beef",
+      "name": "Receive Data from Bubble.io",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "643beaaa-7b17-4760-a090-3e093a8f1b7d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "googleFormUrl",
+              "value": "<__PLACEHOLDER_VALUE__Google Form submission URL__>",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "googleSheetId",
+              "value": "<__PLACEHOLDER_VALUE__Google Sheet ID__>",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "4a35cf97-e76f-4fc5-827e-f70aff6e8181",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Workflow Configuration').first().json.googleFormUrl }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "entry.XXXXX",
+              "value": "={{ $json.fieldName }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "c8fa30ba-8141-412c-aaf9-b5725b984caa",
+      "name": "Submit to Google Form",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.googleSheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": null,
+          "matchingColumns": [
+            "timestamp"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "b6d17917-b4f9-4611-a52e-7e1f6f4ebcc0",
+      "name": "Store Form Submission",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Lwa6O1ix6sgMbyu7",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Receive Data from Bubble.io": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Submit to Google Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit to Google Form": {
+      "main": [
+        [
+          {
+            "node": "Store Form Submission",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "fc9caf6b-0922-441e-a652-05267d9f8dbc",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2025-11-13T14:05:23.148Z",
+      "createdAt": "2025-11-13T14:05:23.148Z",
+      "role": "workflow:owner",
+      "workflowId": "PyJNAOtXk1a9rkve",
+      "projectId": "FtQDRp9NTnHC2f4o",
+      "project": {
+        "updatedAt": "2026-04-09T18:34:38.902Z",
+        "createdAt": "2025-09-03T13:17:34.780Z",
+        "id": "FtQDRp9NTnHC2f4o",
+        "name": "Solution Architects <solutions@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-03T13:17:34.780Z",
+            "createdAt": "2025-09-03T13:17:34.780Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "FtQDRp9NTnHC2f4o",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

@@ -1,0 +1,4798 @@
+{
+  "updatedAt": "2026-07-04T13:07:05.461Z",
+  "createdAt": "2026-01-21T13:51:15.959Z",
+  "id": "8Jc8VsrzhuaWHYHi",
+  "name": "[Scheduled] Billable Activities",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        240
+      ],
+      "id": "6740e907-ea6e-4eaa-8820-a54d8513df02",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        448
+      ],
+      "id": "82e167b2-21d1-4a4e-b34f-54907075880e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "response.results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        464,
+        240
+      ],
+      "id": "a31de837-2510-4acb-bde9-9a381cae8224",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a357083a-4b49-44a5-b416-cf8382aa8ebe",
+              "leftValue": "={{ $json[\"Department\"] }}",
+              "rightValue": "Process Development",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "7f32908d-525b-4a39-9aa4-879be472a330",
+              "leftValue": "={{ $json[\"Department\"] }}",
+              "rightValue": "Placements",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        240
+      ],
+      "id": "037dafd5-9314-44a3-87eb-273344ec245f",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "Client",
+              "field2": "Bubble Unique ID"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1360,
+        -48
+      ],
+      "id": "55f9790c-47c6-4292-b264-0fc29ed7b16b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "Contractor",
+              "field2": "Bubble Unique ID"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1360,
+        240
+      ],
+      "id": "c10ee0b2-e351-4919-94aa-cad45532d5fc",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblaf3mkvcrgSSBSZ",
+          "mode": "list",
+          "cachedResultName": "Clients",
+          "cachedResultUrl": "https://airtable.com/appNQQgamg8cKV5kA/tblaf3mkvcrgSSBSZ"
+        },
+        "filterByFormula": "=AND({Bubble Unique ID} != '', {Bubble Unique ID} = '{{ $json.Client }}')",
+        "options": {
+          "fields": [
+            "Client Name",
+            "Bubble Unique ID",
+            "Record ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        912,
+        32
+      ],
+      "id": "53308eb4-82e6-408d-b46e-dadc38680c4f",
+      "name": "Search Clients",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1584,
+        96
+      ],
+      "id": "79b3a1b2-50a6-4f60-bb3e-e74f4ceb2f39",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxho5QOix1I061r",
+          "mode": "list",
+          "cachedResultName": "SV Support",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+        },
+        "filterByFormula": "={Bubble Unique ID} = '{{ $json.Contractor }}'",
+        "options": {
+          "fields": [
+            "Name",
+            "Bubble Unique ID",
+            "Support Record ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        912,
+        320
+      ],
+      "id": "59b8da21-e73f-4e59-a9ef-b2d852dfa9a1",
+      "name": "Search Contractors",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const uniqueIds = new Set();\nconst uniqueRecords = [];\n\nfor (const item of items) {\n  // Check if we've already added this Airtable record ID\n  if (!uniqueIds.has(item.json.id)) {\n    uniqueIds.add(item.json.id);\n    uniqueRecords.push(item);\n  }\n}\n\nreturn uniqueRecords;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        32
+      ],
+      "id": "1c88aaf3-9c85-4c2e-b818-0d84bbe8ce4a",
+      "name": "Get Unique Clients"
+    },
+    {
+      "parameters": {
+        "jsCode": "const uniqueIds = new Set();\nconst uniqueSupportRecords = [];\n\nfor (const item of items) {\n  // Check if we've already added this Airtable record ID\n  if (!uniqueIds.has(item.json.id)) {\n    uniqueIds.add(item.json.id);\n    uniqueSupportRecords.push(item);\n  }\n}\n\nreturn uniqueSupportRecords;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        320
+      ],
+      "id": "1937e989-ab14-45ff-9b0a-b6aed9f4e470",
+      "name": "Get Unique Contractors"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "PDev Requirement",
+              "field2": "Bubble Unique ID"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1360,
+        528
+      ],
+      "id": "deaf3b4a-4f39-45aa-ad2c-072dd27a7848",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "={Bubble Unique ID} = '{{ $json[\"PDev Requirement\"] }}'",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Bubble Unique ID",
+            "Requirement ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        912,
+        608
+      ],
+      "id": "b891114a-dfaa-436e-99df-a68eab455ba7",
+      "name": "Search PDEV Requirements",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const uniqueIds = new Set();\nconst uniqueRequirementRecords = [];\n\nfor (const item of items) {\n  // Check if we've already added this Airtable record ID\n  if (!uniqueIds.has(item.json.id)) {\n    uniqueIds.add(item.json.id);\n    uniqueRequirementRecords.push(item);\n  }\n}\n\nreturn uniqueRequirementRecords;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        608
+      ],
+      "id": "1b06bd3d-20fa-4621-a753-9797d68209c9",
+      "name": "Get Unique Requirement"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "_id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1808,
+        240
+      ],
+      "id": "288c2f0c-fe92-4e4c-8c71-6f5f42b28adb",
+      "name": "Final Merge"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblhK2ZvtenhtaFCv",
+          "mode": "list",
+          "cachedResultName": "Billable Activities",
+          "cachedResultUrl": "https://airtable.com/appXeNvT0ib83dUlt/tblhK2ZvtenhtaFCv"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Activity": "={{ $json[\"Activity (Text)\"] }}",
+            "Client": "={{ [$json[\"Record ID\"]] }}",
+            "Owner": "={{ [$json[\"Support Record ID\"]] }}",
+            "Activity Date": "={{ $json[\"Created Date\"] }}",
+            "Billable Hours": "={{ $json.Duration }}",
+            "PDEV Requirements (from Client)": "={{ [$json[\"Requirement ID\"]] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Activity",
+              "displayName": "Activity",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Internal Meeting",
+                  "value": "Internal Meeting"
+                },
+                {
+                  "name": "PEC",
+                  "value": "PEC"
+                },
+                {
+                  "name": "Research and Preparation",
+                  "value": "Research and Preparation"
+                },
+                {
+                  "name": "Building",
+                  "value": "Building"
+                },
+                {
+                  "name": "Documentation",
+                  "value": "Documentation"
+                },
+                {
+                  "name": "CIO and PDOC Onboarding",
+                  "value": "CIO and PDOC Onboarding"
+                },
+                {
+                  "name": "Research and preparation",
+                  "value": "Research and preparation"
+                },
+                {
+                  "name": "CIO and PDoc Onboarding",
+                  "value": "CIO and PDoc Onboarding"
+                },
+                {
+                  "name": "Project work",
+                  "value": "Project work"
+                },
+                {
+                  "name": "Documentation/Coordination",
+                  "value": "Documentation/Coordination"
+                },
+                {
+                  "name": "Candidate Shortlisting",
+                  "value": "Candidate Shortlisting"
+                },
+                {
+                  "name": "Prep for Client Interview",
+                  "value": "Prep for Client Interview"
+                },
+                {
+                  "name": "Placements Call",
+                  "value": "Placements Call"
+                },
+                {
+                  "name": "Post Client Interview",
+                  "value": "Post Client Interview"
+                },
+                {
+                  "name": "Client Interview",
+                  "value": "Client Interview"
+                },
+                {
+                  "name": "Meeting",
+                  "value": "Meeting"
+                },
+                {
+                  "name": "Pre-placements prep",
+                  "value": "Pre-placements prep"
+                },
+                {
+                  "name": "Team Meeting",
+                  "value": "Team Meeting"
+                },
+                {
+                  "name": "Profiling",
+                  "value": "Profiling"
+                },
+                {
+                  "name": "Resume/Intro Video Review",
+                  "value": "Resume/Intro Video Review"
+                },
+                {
+                  "name": "1-on-1 or Coaching",
+                  "value": "1-on-1 or Coaching"
+                },
+                {
+                  "name": "Communication",
+                  "value": "Communication"
+                },
+                {
+                  "name": "Team Support",
+                  "value": "Team Support"
+                },
+                {
+                  "name": "Away",
+                  "value": "Away"
+                },
+                {
+                  "name": "AT Audit",
+                  "value": "AT Audit"
+                },
+                {
+                  "name": "Lunch",
+                  "value": "Lunch"
+                },
+                {
+                  "name": "System Audit",
+                  "value": "System Audit"
+                },
+                {
+                  "name": "Project Work",
+                  "value": "Project Work"
+                },
+                {
+                  "name": "Upskilling and PDoc Onboarding",
+                  "value": "Upskilling and PDoc Onboarding"
+                },
+                {
+                  "name": "Training",
+                  "value": "Training"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Owner",
+              "displayName": "Owner",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PDEV Requirements (from Client)",
+              "displayName": "PDEV Requirements (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SUF (from PDEV Requirements) (from Client)",
+              "displayName": "SUF (from PDEV Requirements) (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Activity Date",
+              "displayName": "Activity Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Billable Hours",
+              "displayName": "Billable Hours",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Team (from Owner)",
+              "displayName": "Team (from Owner)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Attachment Download Link",
+              "displayName": "Attachment Download Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Original Email Link",
+              "displayName": "Original Email Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "To",
+              "displayName": "To",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CC",
+              "displayName": "CC",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Sender",
+              "displayName": "Sender",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Attachments",
+              "displayName": "Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tags",
+              "displayName": "Tags",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "Urgent",
+                  "value": "Urgent"
+                },
+                {
+                  "name": "Not started",
+                  "value": "Not started"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                },
+                {
+                  "name": "viaBCC",
+                  "value": "viaBCC"
+                },
+                {
+                  "name": "viaAutoForward",
+                  "value": "viaAutoForward"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Bubble Roles",
+              "displayName": "Bubble Roles",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Auto Link",
+              "displayName": "Auto Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Symmetric Column",
+              "displayName": "Symmetric Column",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements (from PDEV Requirements (from Client))",
+              "displayName": "PLACEMENTS Requirements (from PDEV Requirements (from Client))",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements",
+              "displayName": "PDEV Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Value",
+              "displayName": "Value",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billable Hours (hrs)",
+              "displayName": "Billable Hours (hrs)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Amount Billable",
+              "displayName": "Amount Billable",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF Paid Amount (from Projects_New) (from PDEV Requirements (from Client))",
+              "displayName": "SUF Paid Amount (from Projects_New) (from PDEV Requirements (from Client))",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Team (From Activity)",
+              "displayName": "Team (From Activity)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2032,
+        240
+      ],
+      "id": "ab99f0ce-3304-41aa-935a-11cc2ba6b277",
+      "name": "Create Billable Activities",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://scalevirtually.net/api/1.1/obj/supportactivity",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "constraints",
+              "value": "=[{\"key\": \"Date\", \"constraint_type\": \"equals\", \"value\": \"Feb 13, 2026\"}]"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fdb31500af0a0df85c7d2f7c7a0c8681"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "value": "={{ $pageCount * 100 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ $response.body.response.remaining === 0 }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        672
+      ],
+      "id": "dce5d6d5-1c81-42c3-ad3f-336ca268b679",
+      "name": "Test"
+    },
+    {
+      "parameters": {
+        "url": "https://scalevirtually.net/api/1.1/meta",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fdb31500af0a0df85c7d2f7c7a0c8681"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        16,
+        240
+      ],
+      "id": "e97e711d-76ba-46db-be7f-b4c187d85734",
+      "name": "Fetch WBR"
+    },
+    {
+      "parameters": {
+        "url": "https://scalevirtually.net/api/1.1/obj/supportactivity",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "constraints",
+              "value": "=[{\"key\": \"Date\", \"constraint_type\": \"equals\", \"value\": \"{{ $now.setZone('America/Chicago').toFormat('MMM d, yyyy') }}\"}]"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fdb31500af0a0df85c7d2f7c7a0c8681"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "value": "={{ $pageCount * 100 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ $response.body.response.remaining === 0 }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        256,
+        240
+      ],
+      "id": "af960571-e3db-49f8-949c-01196389a081",
+      "name": "Fetch Time Logs"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Fetch WBR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch WBR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Search Clients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Contractors",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search PDEV Requirements",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Clients": {
+      "main": [
+        [
+          {
+            "node": "Get Unique Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Final Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Search Contractors": {
+      "main": [
+        [
+          {
+            "node": "Get Unique Contractors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unique Clients": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Unique Contractors": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Final Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Search PDEV Requirements": {
+      "main": [
+        [
+          {
+            "node": "Get Unique Requirement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Unique Requirement": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Final Merge": {
+      "main": [
+        [
+          {
+            "node": "Create Billable Activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test": {
+      "main": [
+        []
+      ]
+    },
+    "Fetch WBR": {
+      "main": [
+        [
+          {
+            "node": "Fetch Time Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Time Logs": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "rGzixtwYBsqnFWBo",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Schedule Trigger": [
+      {
+        "json": {
+          "timestamp": "2026-02-14T08:00:53.007+08:00",
+          "Readable date": "February 14th 2026, 8:00:53 am",
+          "Readable time": "8:00:53 am",
+          "Day of week": "Saturday",
+          "Year": "2026",
+          "Month": "February",
+          "Day of month": "14",
+          "Hour": "08",
+          "Minute": "00",
+          "Second": "53",
+          "Timezone": "Asia/Manila (UTC+08:00)"
+        }
+      }
+    ],
+    "Fetch Time Logs": [
+      {
+        "json": {
+          "response": {
+            "cursor": 0,
+            "results": [
+              {
+                "Start time": "2026-02-09T11:55:59.895Z",
+                "Created Date": "2026-02-09T11:56:01.318Z",
+                "_id": "1770638159872x257885712877092860",
+                "Created By": "1726684844979x639080257917599100",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1726684709441x581730806808182800",
+                "Activity (Text)": "Clocked In",
+                "Modified Date": "2026-02-09T11:56:01.319Z"
+              },
+              {
+                "Effective End": "2026-02-09T21:00:00.000Z",
+                "Start time": "2026-02-09T11:56:07.239Z",
+                "Created Date": "2026-02-09T11:56:07.783Z",
+                "Date": "Feb 9, 2026",
+                "Cost": 85.5,
+                "Description": "Training",
+                "End time": "2026-02-09T21:30:01.586Z",
+                "Created By": "1726684844979x639080257917599100",
+                "Activity (Text)": "Working",
+                "Department": "Training",
+                "Duration (hours)": 9,
+                "Week": 7,
+                "Effective start": "2026-02-09T12:00:00.000Z",
+                "Duration": 32400,
+                "Contractor": "1726684709441x581730806808182800",
+                "_id": "1770638167221x835270272884670500",
+                "Modified Date": "2026-02-09T21:30:01.652Z"
+              },
+              {
+                "Modified Date": "2026-02-09T12:45:12.646Z",
+                "Created By": "1747229472212x341496887901366900",
+                "_id": "1770641111858x948389034448912400",
+                "Created Date": "2026-02-09T12:45:12.645Z",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T12:45:12.260Z",
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1747229470046x430046894219067400"
+              },
+              {
+                "Modified Date": "2026-02-09T12:45:18.298Z",
+                "Date": "Feb 9, 2026",
+                "_id": "1770641120319x856122894234419200",
+                "Contractor": "1725877180471x575854094221591940",
+                "Created By": "1723218548154x829889954047839200",
+                "Start time": "2026-02-09T12:45:17.250Z",
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T12:45:18.298Z"
+              },
+              {
+                "Week": 7,
+                "Date": "Feb 9, 2026",
+                "Duration": 32400,
+                "End time": "2026-02-09T22:12:05.629Z",
+                "Description": "admin, metrics, lead gen",
+                "Activity (Text)": "Working",
+                "Department": "Special Project",
+                "Contractor": "1747229470046x430046894219067400",
+                "Cost": 67.5,
+                "Modified Date": "2026-02-09T22:12:05.801Z",
+                "Duration (hours)": 9,
+                "Created By": "1747229472212x341496887901366900",
+                "Start time": "2026-02-09T12:45:27.848Z",
+                "Created Date": "2026-02-09T12:45:27.752Z",
+                "Effective start": "2026-02-09T13:00:00.000Z",
+                "_id": "1770641127456x895016387799416800",
+                "Effective End": "2026-02-09T22:00:00.000Z"
+              },
+              {
+                "End time": "2026-02-09T22:30:02.443Z",
+                "_id": "1770641134248x944542454552985600",
+                "Department": "Operations",
+                "Duration": 1770674400,
+                "Contractor": "1725877180471x575854094221591940",
+                "Cost": 3688905,
+                "Modified Date": "2026-02-09T22:30:02.515Z",
+                "Date": "Feb 9, 2026",
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Start time": "2026-02-09T12:45:31.169Z",
+                "Week": 7,
+                "Activity ": "General Admin",
+                "Created Date": "2026-02-09T12:45:32.039Z",
+                "Duration (hours)": 491854,
+                "Activity (Text)": "General Admin",
+                "Created By": "1723218548154x829889954047839200"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T12:45:47.964Z",
+                "Contractor": "1725877239809x814794223374582900",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T12:45:45.387Z",
+                "Created By": "1723218532697x459908362594547700",
+                "Modified Date": "2026-02-09T12:45:47.964Z",
+                "_id": "1770641145393x338157729787150340"
+              },
+              {
+                "Created By": "1723218532697x459908362594547700",
+                "Duration (hours)": 7.63138888888889,
+                "Department": "Operations",
+                "End time": "2026-02-09T20:23:44.996Z",
+                "_id": "1770641151899x725047504889970700",
+                "Created Date": "2026-02-09T12:45:52.158Z",
+                "Cost": 57.24,
+                "Week": 7,
+                "Date": "Feb 9, 2026",
+                "Contractor": "1725877239809x814794223374582900",
+                "Start time": "2026-02-09T12:45:51.888Z",
+                "Duration": 27473,
+                "Modified Date": "2026-02-09T20:23:45.033Z",
+                "Activity (Text)": "General Admin",
+                "Activity ": "General Admin"
+              },
+              {
+                "Start time": "2026-02-09T12:46:02.394Z",
+                "_id": "1770641162641x574201754663256060",
+                "Activity (Text)": "Clocked In",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T12:46:03.289Z",
+                "Created By": "1726684843675x404094230748085060",
+                "Contractor": "1726684709441x869911622231785500",
+                "Created Date": "2026-02-09T12:46:03.289Z"
+              },
+              {
+                "Duration (hours)": 491854,
+                "Activity ": "Meeting",
+                "Contractor": "1726684709441x869911622231785500",
+                "End time": "2026-02-09T22:30:03.130Z",
+                "_id": "1770641179325x625021612899434500",
+                "Activity (Text)": "Meeting",
+                "Week": 7,
+                "Description": "VA Handoff",
+                "Date": "Feb 9, 2026",
+                "Cost": 6885956,
+                "Duration": 1770674400,
+                "Department": "Operations",
+                "Modified Date": "2026-02-09T22:30:03.185Z",
+                "Created By": "1726684843675x404094230748085060",
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Start time": "2026-02-09T12:46:19.071Z",
+                "Created Date": "2026-02-09T12:46:19.368Z"
+              },
+              {
+                "Created Date": "2026-02-09T12:47:50.460Z",
+                "Start time": "2026-02-09T12:47:48.966Z",
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1726684709441x732326867527532500",
+                "Modified Date": "2026-02-09T12:47:50.460Z",
+                "_id": "1770641269532x264934568383217660",
+                "Created By": "1726684845129x705504441199025200",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Date": "Feb 9, 2026",
+                "Created By": "1743437337037x628864891167617800",
+                "Start time": "2026-02-09T12:47:53.338Z",
+                "_id": "1770641274281x156502871285432320",
+                "Modified Date": "2026-02-09T12:47:53.902Z",
+                "Contractor": "1743437334395x793658039923638300",
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T12:47:53.901Z"
+              },
+              {
+                "_id": "1770641280066x800096407470473200",
+                "Start time": "2026-02-09T12:47:59.479Z",
+                "Date": "Feb 9, 2026",
+                "Week": 7,
+                "Department": "Special Project",
+                "Created Date": "2026-02-09T12:48:01.011Z",
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Contractor": "1726684709441x732326867527532500",
+                "Activity (Text)": "Working",
+                "Modified Date": "2026-02-09T22:30:00.687Z",
+                "Effective start": "2026-02-09T13:00:00.000Z",
+                "Cost": 72,
+                "End time": "2026-02-09T22:30:00.602Z",
+                "Duration (hours)": 9,
+                "Description": "Admin Tasks",
+                "Created By": "1726684845129x705504441199025200",
+                "Duration": 32400
+              },
+              {
+                "Duration (hours)": 1.15888888888889,
+                "Created By": "1743437337037x628864891167617800",
+                "_id": "1770641281889x415085720752619500",
+                "Modified Date": "2026-02-09T13:57:34.420Z",
+                "Cost": 8.11222222222222,
+                "Contractor": "1743437334395x793658039923638300",
+                "Department": "Operations",
+                "Created Date": "2026-02-09T12:48:01.238Z",
+                "Date": "Feb 9, 2026",
+                "Activity ": "General Admin",
+                "End time": "2026-02-09T13:57:33.417Z",
+                "Week": 7,
+                "Activity (Text)": "General Admin",
+                "Start time": "2026-02-09T12:48:00.941Z",
+                "Duration": 4172
+              },
+              {
+                "Created By": "1723218516828x972750650208924500",
+                "Created Date": "2026-02-09T12:49:01.565Z",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1725877283065x988502472917061100",
+                "Modified Date": "2026-02-09T12:49:01.566Z",
+                "Activity (Text)": "Clocked In",
+                "Start time": "2026-02-09T12:49:00.791Z",
+                "_id": "1770641340775x748986666049077200"
+              },
+              {
+                "Created By": "1723218516828x972750650208924500",
+                "Start time": "2026-02-09T12:49:12.555Z",
+                "Contractor": "1725877283065x988502472917061100",
+                "Activity ": "Meeting",
+                "Duration (hours)": 0.642222222222222,
+                "Duration": 2312,
+                "Activity (Text)": "Meeting",
+                "End time": "2026-02-09T13:27:44.507Z",
+                "Created Date": "2026-02-09T12:49:12.935Z",
+                "Department": "Operations",
+                "Cost": 4.81666666666667,
+                "Week": 7,
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:27:45.472Z",
+                "_id": "1770641352544x599283389834461200",
+                "Description": "VA handoff"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T12:50:47.918Z",
+                "_id": "1770641446082x884644789151072300",
+                "Modified Date": "2026-02-09T12:50:47.918Z",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1750703234147x348369781247442940",
+                "Created By": "1750703236845x810507358928078500",
+                "Start time": "2026-02-09T12:50:47.325Z"
+              },
+              {
+                "Modified Date": "2026-02-09T12:52:24.629Z",
+                "Created Date": "2026-02-09T12:52:24.628Z",
+                "Date": "Feb 9, 2026",
+                "_id": "1770641543438x521377552947478500",
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1725877044461x325983423807804300",
+                "Created By": "1723218576819x273183038733971330",
+                "Start time": "2026-02-09T12:52:23.226Z"
+              },
+              {
+                "Duration (hours)": 3.04166666666667,
+                "Duration": 10950,
+                "Created Date": "2026-02-09T12:52:29.798Z",
+                "Activity ": "General Admin",
+                "Department": "Operations",
+                "Created By": "1723218576819x273183038733971330",
+                "Week": 7,
+                "Start time": "2026-02-09T12:52:28.924Z",
+                "Activity (Text)": "General Admin",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1725877044461x325983423807804300",
+                "Modified Date": "2026-02-09T15:54:59.726Z",
+                "Cost": 27.375,
+                "End time": "2026-02-09T15:54:59.154Z",
+                "_id": "1770641549141x159140216748900350"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T12:53:37.777Z",
+                "Start time": "2026-02-09T12:53:37.083Z",
+                "Modified Date": "2026-02-09T12:53:37.777Z",
+                "Date": "Feb 9, 2026",
+                "_id": "1770641617112x920453836026675200",
+                "Contractor": "1725876979134x548949909522924700",
+                "Created By": "1723218589059x570781024024001400"
+              },
+              {
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Modified Date": "2026-02-09T22:30:02.348Z",
+                "Created By": "1723218589059x570781024024001400",
+                "Duration": 1770674400,
+                "Cost": 4303722.5,
+                "Department": "Operations",
+                "Activity (Text)": "General Admin",
+                "Duration (hours)": 491854,
+                "Created Date": "2026-02-09T12:53:44.564Z",
+                "Start time": "2026-02-09T12:53:44.106Z",
+                "Week": 7,
+                "Activity ": "General Admin",
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T22:30:02.230Z",
+                "Contractor": "1725876979134x548949909522924700",
+                "Description": "Admin",
+                "_id": "1770641624149x420097928185249800"
+              },
+              {
+                "Contractor": "1725877106778x751921415463097700",
+                "Start time": "2026-02-09T13:00:36.833Z",
+                "Activity (Text)": "Clocked In",
+                "Created By": "1723218562834x408688816049095100",
+                "Created Date": "2026-02-09T13:00:38.094Z",
+                "Modified Date": "2026-02-09T13:00:38.095Z",
+                "Date": "Feb 9, 2026",
+                "_id": "1770642036515x782158174710661100"
+              },
+              {
+                "Contractor": "1725877106778x751921415463097700",
+                "Date": "Feb 9, 2026",
+                "Cost": 6.10666666666667,
+                "_id": "1770642045208x252379222628106240",
+                "Created By": "1723218562834x408688816049095100",
+                "Duration (hours)": 0.763333333333333,
+                "Duration": 2748,
+                "End time": "2026-02-09T13:46:33.665Z",
+                "Created Date": "2026-02-09T13:00:45.893Z",
+                "Activity (Text)": "General Admin",
+                "Modified Date": "2026-02-09T13:46:33.939Z",
+                "Activity ": "General Admin",
+                "Week": 7,
+                "Department": "Operations",
+                "Start time": "2026-02-09T13:00:45.503Z"
+              },
+              {
+                "Contractor": "1725877283065x988502472917061100",
+                "Description": "deliverables",
+                "Modified Date": "2026-02-09T14:26:28.486Z",
+                "Cost": 7.32916666666667,
+                "Created Date": "2026-02-09T13:27:51.253Z",
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T14:26:27.975Z",
+                "Created By": "1723218516828x972750650208924500",
+                "Department": "Operations",
+                "Activity (Text)": "General Admin",
+                "Week": 7,
+                "Duration": 3518,
+                "_id": "1770643670268x154554163409190900",
+                "Duration (hours)": 0.977222222222222,
+                "Start time": "2026-02-09T13:27:50.279Z",
+                "Activity ": "General Admin"
+              },
+              {
+                "Created By": "1738677680354x661831610736528500",
+                "Modified Date": "2026-02-09T13:45:05.789Z",
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1738677678986x449926181277401100",
+                "Start time": "2026-02-09T13:45:05.210Z",
+                "Date": "Feb 9, 2026",
+                "_id": "1770644705163x347278023902887940",
+                "Created Date": "2026-02-09T13:45:05.789Z"
+              },
+              {
+                "_id": "1770644707689x685885443439329300",
+                "Created By": "1764793123905x616362522539556000",
+                "Start time": "2026-02-09T13:45:07.732Z",
+                "Modified Date": "2026-02-09T13:45:08.225Z",
+                "Contractor": "1764793116907x770667497881862100",
+                "Date": "Feb 9, 2026",
+                "Created Date": "2026-02-09T13:45:08.225Z",
+                "Activity (Text)": "Clocked In"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Modified Date": "2026-02-09T13:45:10.236Z",
+                "Start time": "2026-02-09T13:45:09.073Z",
+                "Contractor": "1727059708529x891407959647060000",
+                "Created By": "1727059709478x816714012074937500",
+                "Created Date": "2026-02-09T13:45:10.235Z",
+                "_id": "1770644708807x828625029688197100",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Modified Date": "2026-02-09T13:45:10.623Z",
+                "Created By": "1726684844979x301804713350090300",
+                "Start time": "2026-02-09T13:45:09.095Z",
+                "Activity (Text)": "Clocked In",
+                "_id": "1770644709071x464705079094018050",
+                "Created Date": "2026-02-09T13:45:10.622Z",
+                "Contractor": "1726684709441x642995363745890300",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Duration": 32400,
+                "End time": "2026-02-09T23:30:03.337Z",
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Working",
+                "Department": "Contractor Services",
+                "Created By": "1726684844979x301804713350090300",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "_id": "1770644717311x332778406501416960",
+                "Start time": "2026-02-09T13:45:17.330Z",
+                "Description": "Working...",
+                "Cost": 108,
+                "Created Date": "2026-02-09T13:45:17.691Z",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Modified Date": "2026-02-09T23:30:03.400Z",
+                "Week": 7,
+                "Duration (hours)": 9,
+                "Contractor": "1726684709441x642995363745890300"
+              },
+              {
+                "Department": "Talent Acquisition",
+                "Duration (hours)": 9,
+                "Created Date": "2026-02-09T13:45:19.879Z",
+                "Description": "Admin/Interviews/Meetings",
+                "Date": "Feb 9, 2026",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Cost": 63,
+                "Week": 7,
+                "Modified Date": "2026-02-09T23:30:03.411Z",
+                "Created By": "1727059709478x816714012074937500",
+                "End time": "2026-02-09T23:30:03.357Z",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Start time": "2026-02-09T13:45:19.173Z",
+                "_id": "1770644718926x387889609168650200",
+                "Duration": 32400,
+                "Activity (Text)": "Working",
+                "Contractor": "1727059708529x891407959647060000"
+              },
+              {
+                "Activity (Text)": "Work",
+                "Created By": "1764793123905x616362522539556000",
+                "Start time": "2026-02-09T13:45:19.441Z",
+                "_id": "1770644719404x416831661043089400",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Duration": 32400,
+                "Modified Date": "2026-02-09T23:30:03.757Z",
+                "Week": 7,
+                "Department": "Special Project",
+                "Created Date": "2026-02-09T13:45:19.813Z",
+                "Cost": 108,
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T23:30:03.623Z",
+                "Contractor": "1764793116907x770667497881862100",
+                "Duration (hours)": 9,
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Description": "Admin tasks"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1726684709441x322729253504286700",
+                "_id": "1770644735470x566249106305450000",
+                "Start time": "2026-02-09T13:45:34.463Z",
+                "Created By": "1726684844519x565068062195410050",
+                "Modified Date": "2026-02-09T13:45:34.990Z",
+                "Created Date": "2026-02-09T13:45:34.990Z",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Contractor": "1726312706371x405192808264106000",
+                "Modified Date": "2026-02-09T13:45:42.952Z",
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T13:45:42.951Z",
+                "Start time": "2026-02-09T13:45:42.238Z",
+                "Created By": "1726312706566x817931580685263400",
+                "_id": "1770644742220x691422078026121200"
+              },
+              {
+                "Created By": "1727059515416x952436618741232300",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:45:34.735Z",
+                "Created Date": "2026-02-09T13:45:34.734Z",
+                "Contractor": "1727059514426x799993998163050500",
+                "Start time": "2026-02-09T13:45:34.291Z",
+                "Activity (Text)": "Clocked In",
+                "_id": "1770644742400x156617236508311550"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1726684709441x506448276420034600",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T13:45:46.380Z",
+                "_id": "1770644746417x395041942330146800",
+                "Modified Date": "2026-02-09T13:45:46.939Z",
+                "Created Date": "2026-02-09T13:45:46.939Z",
+                "Created By": "1726684844488x792572839374397000"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T13:45:47.444Z",
+                "Start time": "2026-02-09T13:45:46.923Z",
+                "_id": "1770644746687x476892214566060000",
+                "Contractor": "1757940888979x875922658562670600",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:45:47.445Z",
+                "Created By": "1757940889533x584761027197428900"
+              },
+              {
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Cost": 63,
+                "Modified Date": "2026-02-09T23:30:03.939Z",
+                "_id": "1770644751697x533265202182357000",
+                "Contractor": "1727059514426x799993998163050500",
+                "Department": "Talent Acquisition",
+                "Created Date": "2026-02-09T13:45:43.882Z",
+                "Start time": "2026-02-09T13:45:43.582Z",
+                "Duration (hours)": 9,
+                "Activity (Text)": "Working",
+                "End time": "2026-02-09T23:30:03.891Z",
+                "Description": "admin/setting interviews",
+                "Duration": 32400,
+                "Week": 7,
+                "Date": "Feb 9, 2026",
+                "Created By": "1727059515416x952436618741232300",
+                "Effective End": "2026-02-09T23:00:00.000Z"
+              },
+              {
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Cost": 72,
+                "_id": "1770644753383x886659504282271700",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Created Date": "2026-02-09T13:45:53.871Z",
+                "Duration": 32400,
+                "Week": 7,
+                "Activity (Text)": "Working",
+                "Date": "Feb 9, 2026",
+                "Description": "Working",
+                "Department": "Finance",
+                "Duration (hours)": 9,
+                "Start time": "2026-02-09T13:45:53.342Z",
+                "End time": "2026-02-09T23:30:03.931Z",
+                "Created By": "1726684844488x792572839374397000",
+                "Modified Date": "2026-02-09T23:30:04.056Z",
+                "Contractor": "1726684709441x506448276420034600"
+              },
+              {
+                "Activity ": "Project work",
+                "Modified Date": "2026-02-09T14:57:50.158Z",
+                "Week": 7,
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Effective End": "2026-02-09T14:57:49.706Z",
+                "Duration (hours)": 0.963888888888889,
+                "_id": "1770644754659x558117481623584800",
+                "Duration": 3470,
+                "Client": "1731172472784x174447688502408450",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Contractor": "1726312706371x405192808264106000",
+                "Created By": "1726312706566x817931580685263400",
+                "Cost": 5.78333333333333,
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Project work",
+                "Requirement Title": "Research and Development (R&D)",
+                "Department": "Process Development",
+                "Start time": "2026-02-09T13:45:54.675Z",
+                "Created Date": "2026-02-09T13:45:55.305Z",
+                "End time": "2026-02-09T14:57:49.706Z"
+              },
+              {
+                "Department": "Process Development",
+                "Week": 7,
+                "Created By": "1757940889533x584761027197428900",
+                "Duration": 1753,
+                "Requirement Title": "Research and Development (R&D)",
+                "End time": "2026-02-09T14:29:12.649Z",
+                "Effective End": "2026-02-09T14:29:12.649Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Duration (hours)": 0.486944444444444,
+                "Contractor": "1757940888979x875922658562670600",
+                "Created Date": "2026-02-09T13:45:56.758Z",
+                "Modified Date": "2026-02-09T14:29:12.981Z",
+                "Client": "1731172472784x174447688502408450",
+                "Start time": "2026-02-09T13:45:56.333Z",
+                "Cost": 3.89555555555556,
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Communication",
+                "_id": "1770644756106x987833078761128000",
+                "Activity ": "Communication"
+              },
+              {
+                "Created By": "1726684844519x565068062195410050",
+                "_id": "1770644760386x410078580889616400",
+                "Client": "1731172472784x174447688502408450",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1726684709441x322729253504286700",
+                "Week": 7,
+                "Duration (hours)": 3.69111111111111,
+                "Activity (Text)": "Meeting",
+                "Duration": 13288,
+                "Requirement Title": "Research and Development (R&D)",
+                "Effective End": "2026-02-09T17:41:27.744Z",
+                "Modified Date": "2026-02-09T17:41:29.305Z",
+                "Activity ": "Meeting",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Created Date": "2026-02-09T13:45:59.672Z",
+                "Department": "Placements",
+                "End time": "2026-02-09T17:41:27.744Z",
+                "Start time": "2026-02-09T13:45:59.373Z",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Cost": 27.6833333333333
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Created By": "1769800279344x247001719815216360",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:46:12.408Z",
+                "Contractor": "1769800278893x384262004593393660",
+                "_id": "1770644772482x960754167567876100",
+                "Start time": "2026-02-09T13:46:12.004Z",
+                "Created Date": "2026-02-09T13:46:12.407Z"
+              },
+              {
+                "Activity ": "Training",
+                "Department": "Placements",
+                "Week": 7,
+                "Created By": "1769800279344x247001719815216360",
+                "Cost": 30.41875,
+                "End time": "2026-02-09T18:03:21.025Z",
+                "Effective End": "2026-02-09T18:03:21.025Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "Contractor": "1769800278893x384262004593393660",
+                "Client": "1731172472784x174447688502408450",
+                "Start time": "2026-02-09T13:46:19.557Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Duration": 14601,
+                "Created Date": "2026-02-09T13:46:19.704Z",
+                "Modified Date": "2026-02-09T18:03:20.788Z",
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Training",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "_id": "1770644780042x941111056394354700",
+                "Duration (hours)": 4.05583333333333
+              },
+              {
+                "_id": "1770644783239x460864812784812000",
+                "Activity (Text)": "Clocked In",
+                "Start time": "2026-02-09T13:46:24.091Z",
+                "Modified Date": "2026-02-09T13:46:24.380Z",
+                "Contractor": "1726684709441x191723322406862850",
+                "Created Date": "2026-02-09T13:46:24.380Z",
+                "Created By": "1726684843703x768291409530253800",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Activity (Text)": "Working",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Department": "Contractor Services",
+                "Created Date": "2026-02-09T13:46:33.167Z",
+                "Description": "Admin Tasks",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Cost": 63,
+                "Start time": "2026-02-09T13:46:32.742Z",
+                "End time": "2026-02-09T23:30:01.072Z",
+                "Modified Date": "2026-02-09T23:30:01.231Z",
+                "Duration (hours)": 9,
+                "Contractor": "1726684709441x191723322406862850",
+                "Created By": "1726684843703x768291409530253800",
+                "_id": "1770644791924x996078624557498400",
+                "Week": 7,
+                "Date": "Feb 9, 2026",
+                "Duration": 32400
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Modified Date": "2026-02-09T13:46:31.735Z",
+                "Created By": "1727275721382x836532052928583300",
+                "_id": "1770644792536x542762623983681540",
+                "Start time": "2026-02-09T13:46:31.191Z",
+                "Date": "Feb 9, 2026",
+                "Created Date": "2026-02-09T13:46:31.735Z",
+                "Contractor": "1727275720482x838906678499606500"
+              },
+              {
+                "Modified Date": "2026-02-09T23:30:02.483Z",
+                "Created Date": "2026-02-09T13:46:39.861Z",
+                "Created By": "1727275721382x836532052928583300",
+                "Department": "Talent Acquisition",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Duration": 32400,
+                "End time": "2026-02-09T23:30:02.406Z",
+                "Activity (Text)": "Working",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "_id": "1770644800642x423694342112411650",
+                "Description": "admin/interviews",
+                "Contractor": "1727275720482x838906678499606500",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 9,
+                "Start time": "2026-02-09T13:46:39.290Z",
+                "Cost": 63,
+                "Week": 7
+              },
+              {
+                "Created Date": "2026-02-09T13:47:11.371Z",
+                "Created By": "1723218562834x408688816049095100",
+                "Week": 7,
+                "Activity ": "Meeting",
+                "_id": "1770644832380x564939102165401600",
+                "Modified Date": "2026-02-09T22:30:03.261Z",
+                "End time": "2026-02-09T22:30:03.175Z",
+                "Duration": 1770674400,
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Contractor": "1725877106778x751921415463097700",
+                "Date": "Feb 9, 2026",
+                "Cost": 3934832,
+                "Activity (Text)": "Meeting",
+                "Start time": "2026-02-09T13:47:11.073Z",
+                "Duration (hours)": 491854,
+                "Department": "Operations"
+              },
+              {
+                "Contractor": "1763669423584x595714418986451000",
+                "Modified Date": "2026-02-09T13:49:39.900Z",
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Clocked In",
+                "_id": "1770644873505x502695182637465600",
+                "Created Date": "2026-02-09T13:49:39.899Z",
+                "Created By": "1763669424501x487069976354243650",
+                "Start time": "2026-02-09T13:49:38.917Z"
+              },
+              {
+                "Modified Date": "2026-02-09T23:30:01.424Z",
+                "Activity (Text)": "Work",
+                "_id": "1770644884673x134703713973436420",
+                "Duration (hours)": 9,
+                "Start time": "2026-02-09T13:49:50.055Z",
+                "Created By": "1763669424501x487069976354243650",
+                "Contractor": "1763669423584x595714418986451000",
+                "Cost": 63,
+                "Created Date": "2026-02-09T13:49:51.054Z",
+                "Description": "Finance tasks",
+                "Department": "Finance",
+                "End time": "2026-02-09T23:30:01.324Z",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Duration": 32400,
+                "Week": 7,
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Modified Date": "2026-02-09T13:48:50.001Z",
+                "Contractor": "1769800195304x474485569198489600",
+                "Created Date": "2026-02-09T13:48:49.999Z",
+                "_id": "1770644946817x775882496231342000",
+                "Date": "Feb 9, 2026",
+                "Created By": "1769800195867x816906915551230700",
+                "Start time": "2026-02-09T13:48:49.404Z"
+              },
+              {
+                "Modified Date": "2026-02-09T18:11:13.237Z",
+                "Effective End": "2026-02-09T18:11:12.624Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Start time": "2026-02-09T13:49:07.359Z",
+                "Client": "1731172472784x174447688502408450",
+                "_id": "1770644964778x599812900680892400",
+                "Contractor": "1769800195304x474485569198489600",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Created By": "1769800195867x816906915551230700",
+                "Created Date": "2026-02-09T13:49:07.873Z",
+                "Department": "Process Development",
+                "Duration": 15073,
+                "Activity ": "Training",
+                "Date": "Feb 9, 2026",
+                "Cost": 29.3086111111111,
+                "Week": 7,
+                "End time": "2026-02-09T18:11:12.624Z",
+                "Duration (hours)": 4.18694444444444,
+                "Requirement Title": "Research and Development (R&D)",
+                "Activity (Text)": "Training"
+              },
+              {
+                "Created Date": "2026-02-09T13:51:06.101Z",
+                "Contractor": "1755522654123x962060312717557800",
+                "Created By": "1755522655052x399139381190599900",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:51:06.101Z",
+                "_id": "1770645065209x539581670544375800",
+                "Start time": "2026-02-09T13:51:05.191Z",
+                "Activity (Text)": "Clocked In"
+              },
+              {
+                "Date": "Feb 9, 2026",
+                "Created By": "1753888713423x212563331611999260",
+                "Modified Date": "2026-02-09T13:51:07.357Z",
+                "Start time": "2026-02-09T13:51:05.609Z",
+                "_id": "1770645068379x235161525343748100",
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1753888712164x425912059258470400",
+                "Created Date": "2026-02-09T13:51:07.356Z"
+              },
+              {
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "End time": "2026-02-09T15:04:17.995Z",
+                "Note": "DevOps Daily Stand Up",
+                "Created By": "1755522655052x399139381190599900",
+                "Duration (hours)": 1.07166666666667,
+                "Activity (Text)": "Meeting",
+                "Week": 7,
+                "Effective End": "2026-02-09T15:04:17.995Z",
+                "Start time": "2026-02-09T13:51:09.777Z",
+                "Activity ": "Meeting",
+                "Contractor": "1755522654123x962060312717557800",
+                "Date": "Feb 9, 2026",
+                "_id": "1770645069808x259515428451123200",
+                "Cost": 8.57333333333333,
+                "Department": "DevOps",
+                "Modified Date": "2026-02-09T15:04:18.360Z",
+                "Created Date": "2026-02-09T13:51:10.248Z",
+                "Duration": 3858
+              },
+              {
+                "Created Date": "2026-02-09T13:51:14.392Z",
+                "Created By": "1766505880780x943088046758825600",
+                "Date": "Feb 9, 2026",
+                "_id": "1770645073683x978223059734626300",
+                "Modified Date": "2026-02-09T13:51:14.392Z",
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1766505879508x482087829691432960",
+                "Start time": "2026-02-09T13:51:09.870Z"
+              },
+              {
+                "Start time": "2026-02-09T13:51:23.657Z",
+                "Created Date": "2026-02-09T13:51:24.301Z",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1762187479603x376258606278639600",
+                "_id": "1770645083585x616406857092431900",
+                "Activity (Text)": "Clocked In",
+                "Created By": "1762187483770x402953471115887100",
+                "Modified Date": "2026-02-09T13:51:24.302Z"
+              },
+              {
+                "Created By": "1726312808513x392675972200963400",
+                "Modified Date": "2026-02-09T13:51:26.986Z",
+                "Start time": "2026-02-09T13:51:26.039Z",
+                "Activity (Text)": "Clocked In",
+                "Created Date": "2026-02-09T13:51:26.985Z",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1726312807986x753937460428800000",
+                "_id": "1770645085993x346167708935258100"
+              },
+              {
+                "End time": "2026-02-09T23:30:04.542Z",
+                "Modified Date": "2026-02-09T23:30:04.599Z",
+                "Cost": 94.5,
+                "Duration": 32400,
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "_id": "1770645090846x647659729626857500",
+                "Requirement Title": "Research and Development (R&D)",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Contractor": "1762187479603x376258606278639600",
+                "Created Date": "2026-02-09T13:51:31.222Z",
+                "Duration (hours)": 9,
+                "Created By": "1762187483770x402953471115887100",
+                "Week": 7,
+                "Client": "1731172472784x174447688502408450",
+                "Start time": "2026-02-09T13:51:30.905Z",
+                "Activity (Text)": "Project work",
+                "Date": "Feb 9, 2026",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Activity ": "Project work",
+                "Department": "Process Development"
+              },
+              {
+                "Created By": "1767998128170x962734020242454500",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:52:16.412Z",
+                "Start time": "2026-02-09T13:52:15.870Z",
+                "Contractor": "1767998126774x575461642916331500",
+                "Activity (Text)": "Clocked In",
+                "_id": "1770645135861x966165542244188200",
+                "Created Date": "2026-02-09T13:52:16.411Z"
+              },
+              {
+                "Created By": "1760619625016x451656960806215100",
+                "Contractor": "1760619624993x715750942041702400",
+                "Created Date": "2026-02-09T13:53:18.561Z",
+                "Start time": "2026-02-09T13:53:17.046Z",
+                "Modified Date": "2026-02-09T13:53:18.562Z",
+                "Activity (Text)": "Clocked In",
+                "Date": "Feb 9, 2026",
+                "_id": "1770645197104x781091621407293400"
+              },
+              {
+                "Modified Date": "2026-02-09T13:53:21.799Z",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1750165498756x354495896319688700",
+                "Created Date": "2026-02-09T13:53:21.799Z",
+                "Start time": "2026-02-09T13:53:21.211Z",
+                "Created By": "1750165499534x619804877570468700",
+                "Activity (Text)": "Clocked In",
+                "_id": "1770645202071x825768612087988200"
+              },
+              {
+                "Created Date": "2026-02-09T13:53:24.039Z",
+                "Modified Date": "2026-02-09T23:30:03.005Z",
+                "Duration (hours)": 491855,
+                "_id": "1770645203663x986661645007454200",
+                "Date": "Feb 9, 2026",
+                "Created By": "1760619625016x451656960806215100",
+                "Activity (Text)": "General Admin",
+                "Contractor": "1760619624993x715750942041702400",
+                "Week": 7,
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Activity ": "General Admin",
+                "Duration": 1770678000,
+                "Department": "Operations",
+                "Cost": 4918550,
+                "Start time": "2026-02-09T13:53:23.602Z",
+                "End time": "2026-02-09T23:30:02.894Z"
+              },
+              {
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T13:53:37.659Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Modified Date": "2026-02-09T15:19:00.587Z",
+                "Duration (hours)": 1.31583333333333,
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Created By": "1750165499534x619804877570468700",
+                "Week": 7,
+                "End time": "2026-02-09T15:18:57.428Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "Activity ": "Communication",
+                "Duration": 4737,
+                "_id": "1770645218527x211642069265940480",
+                "Client": "1731172472784x174447688502408450",
+                "Contractor": "1750165498756x354495896319688700",
+                "Cost": 8.55291666666667,
+                "Department": "Process Development",
+                "Created Date": "2026-02-09T13:53:38.022Z",
+                "Effective End": "2026-02-09T15:18:57.428Z",
+                "Activity (Text)": "Communication"
+              },
+              {
+                "_id": "1770645231669x240722602447339520",
+                "Start time": "2026-02-09T13:53:51.021Z",
+                "Created Date": "2026-02-09T13:53:52.031Z",
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1726312548178x213564322558771200",
+                "Created By": "1726312548767x918412106979024100",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:53:52.032Z"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Contractor": "1767621944145x184000895302500350",
+                "Date": "Feb 9, 2026",
+                "_id": "1770645329843x759200557555253200",
+                "Created Date": "2026-02-09T13:55:30.887Z",
+                "Created By": "1767621945449x483569179681231800",
+                "Modified Date": "2026-02-09T13:55:30.887Z",
+                "Start time": "2026-02-09T13:55:29.895Z"
+              },
+              {
+                "_id": "1770645338100x495156073261432800",
+                "Start time": "2026-02-09T13:55:39.094Z",
+                "Contractor": "1745583900015x439635007573065700",
+                "Created By": "1745583900502x718979250155050800",
+                "Activity (Text)": "Clocked In",
+                "Date": "Feb 9, 2026",
+                "Created Date": "2026-02-09T13:55:40.088Z",
+                "Modified Date": "2026-02-09T13:55:40.089Z"
+              },
+              {
+                "Description": "Ember and Valley replies",
+                "Created Date": "2026-02-09T13:55:59.574Z",
+                "Cost": 65.25,
+                "Department": "Special Project",
+                "_id": "1770645359277x560219332500521000",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Modified Date": "2026-02-09T23:30:04.490Z",
+                "End time": "2026-02-09T23:30:04.443Z",
+                "Activity (Text)": "Work",
+                "Duration (hours)": 9,
+                "Week": 7,
+                "Created By": "1767621945449x483569179681231800",
+                "Date": "Feb 9, 2026",
+                "Duration": 32400,
+                "Contractor": "1767621944145x184000895302500350",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Start time": "2026-02-09T13:55:59.301Z"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Start time": "2026-02-09T13:55:59.009Z",
+                "Created Date": "2026-02-09T13:55:59.854Z",
+                "Contractor": "1726684709441x379171267116269600",
+                "_id": "1770645360067x733582874342850600",
+                "Created By": "1726684845052x329568524336021100",
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T13:55:59.855Z"
+              },
+              {
+                "Contractor": "1726684709441x379171267116269600",
+                "Department": "DevOps",
+                "Activity ": "Admin",
+                "Created Date": "2026-02-09T13:56:04.583Z",
+                "Date": "Feb 9, 2026",
+                "Created By": "1726684845052x329568524336021100",
+                "End time": "2026-02-09T23:30:04.530Z",
+                "Start time": "2026-02-09T13:56:04.334Z",
+                "Cost": 67.5,
+                "Duration (hours)": 9,
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Week": 7,
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Modified Date": "2026-02-09T23:30:04.675Z",
+                "Activity (Text)": "Admin",
+                "_id": "1770645365413x409215936957251600",
+                "Duration": 32400
+              },
+              {
+                "_id": "1770645467841x858496396900958200",
+                "Effective End": "2026-02-09T16:56:42.316Z",
+                "Modified Date": "2026-02-09T16:56:43.409Z",
+                "Duration (hours)": 2.945,
+                "Duration": 10602,
+                "Activity (Text)": "Project work",
+                "Department": "Process Development",
+                "Client": "1731172472784x174447688502408450",
+                "Created By": "1726312808513x392675972200963400",
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T16:56:42.316Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "Cost": 29.45,
+                "Start time": "2026-02-09T13:57:47.852Z",
+                "Created Date": "2026-02-09T13:57:48.126Z",
+                "Activity ": "Project work",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Contractor": "1726312807986x753937460428800000",
+                "Week": 7,
+                "Effective start": "2026-02-09T14:00:00.000Z"
+              },
+              {
+                "Start time": "2026-02-09T13:57:45.450Z",
+                "_id": "1770645469281x200075796283916300",
+                "End time": "2026-02-09T23:18:07.149Z",
+                "Duration": 32400,
+                "Modified Date": "2026-02-09T23:18:10.931Z",
+                "Activity ": "Projects",
+                "Created Date": "2026-02-09T13:57:49.911Z",
+                "Contractor": "1766505879508x482087829691432960",
+                "Week": 7,
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Duration (hours)": 9,
+                "Department": "DevOps",
+                "Activity (Text)": "Projects",
+                "Cost": 67.5,
+                "Date": "Feb 9, 2026",
+                "Created By": "1766505880780x943088046758825600"
+              },
+              {
+                "Start time": "2026-02-09T13:57:59.801Z",
+                "Duration (hours)": 1.32888888888889,
+                "Description": "Jesse Herfel: Onboarding  + Handoff",
+                "_id": "1770645480750x614774545595236400",
+                "Activity (Text)": "Meeting",
+                "Modified Date": "2026-02-09T15:17:44.935Z",
+                "Contractor": "1743437334395x793658039923638300",
+                "Activity ": "Meeting",
+                "Cost": 9.30222222222222,
+                "Duration": 4784,
+                "Date": "Feb 9, 2026",
+                "Week": 7,
+                "Created By": "1743437337037x628864891167617800",
+                "Created Date": "2026-02-09T13:58:00.897Z",
+                "Department": "Operations",
+                "End time": "2026-02-09T15:17:44.185Z"
+              },
+              {
+                "Contractor": "1726312746280x455783738316161000",
+                "Created Date": "2026-02-09T13:58:26.535Z",
+                "Created By": "1726312746714x277382530717829250",
+                "Activity (Text)": "Clocked In",
+                "Start time": "2026-02-09T13:58:25.812Z",
+                "Modified Date": "2026-02-09T13:58:26.535Z",
+                "_id": "1770645504033x400129697654767600",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Cost": 0,
+                "Duration (hours)": 0,
+                "Created Date": "2026-02-09T13:58:36.023Z",
+                "Effective End": "2026-02-09T13:58:38.071Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "Activity ": "Project work",
+                "Department": "Process Development",
+                "_id": "1770645513855x571223542845407200",
+                "Client": "1731172472784x174447688502408450",
+                "Week": 7,
+                "Contractor": "1726312746280x455783738316161000",
+                "End time": "2026-02-09T13:58:38.071Z",
+                "Modified Date": "2026-02-09T13:58:39.233Z",
+                "Date": "Feb 9, 2026",
+                "Duration": 0,
+                "Start time": "2026-02-09T13:58:35.631Z",
+                "Activity (Text)": "Project work",
+                "Created By": "1726312746714x277382530717829250"
+              },
+              {
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Created By": "1726312746714x277382530717829250",
+                "Duration": 19083,
+                "Activity (Text)": "Team Meeting",
+                "Start time": "2026-02-09T13:58:42.574Z",
+                "Cost": 74.2116666666667,
+                "Effective End": "2026-02-09T19:18:03.149Z",
+                "Department": "Process Development",
+                "Modified Date": "2026-02-09T19:18:01.644Z",
+                "End time": "2026-02-09T19:18:03.149Z",
+                "_id": "1770645520798x706760293352472600",
+                "Client": "1731172472784x174447688502408450",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1726312746280x455783738316161000",
+                "Duration (hours)": 5.30083333333333,
+                "Week": 7,
+                "Requirement Title": "Research and Development (R&D)",
+                "Created Date": "2026-02-09T13:58:42.890Z",
+                "Activity ": "Team Meeting",
+                "PDev Requirement": "1741725349887x662314241295033300"
+              },
+              {
+                "Start time": "2026-02-09T13:59:10.115Z",
+                "Created By": "1745583900502x718979250155050800",
+                "Activity ": "Communication",
+                "Cost": 28.1963888888889,
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Department": "Process Development",
+                "Requirement Title": "Research and Development (R&D)",
+                "Effective start": "2026-02-09T14:00:00.000Z",
+                "Modified Date": "2026-02-09T18:01:41.389Z",
+                "Week": 7,
+                "Client": "1731172472784x174447688502408450",
+                "Activity (Text)": "Communication",
+                "End time": "2026-02-09T18:01:41.151Z",
+                "Contractor": "1745583900015x439635007573065700",
+                "_id": "1770645549131x784993696414695400",
+                "Effective End": "2026-02-09T18:01:41.151Z",
+                "Duration": 14501,
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 4.02805555555556,
+                "Created Date": "2026-02-09T13:59:12.457Z"
+              },
+              {
+                "Contractor": "1726684709441x499559894282141700",
+                "Created By": "1726684845127x318413281308743230",
+                "Modified Date": "2026-02-09T14:06:29.025Z",
+                "Activity (Text)": "Clocked In",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T14:06:21.975Z",
+                "Created Date": "2026-02-09T14:06:29.024Z",
+                "_id": "1770645987461x925247931347107800"
+              },
+              {
+                "Duration (hours)": 0.586944444444444,
+                "Start time": "2026-02-09T14:26:35.254Z",
+                "Cost": 4.40208333333333,
+                "Contractor": "1725877283065x988502472917061100",
+                "Duration": 2113,
+                "Week": 7,
+                "Activity (Text)": "Meeting",
+                "Date": "Feb 9, 2026",
+                "_id": "1770647195244x798920359179452400",
+                "Activity ": "Meeting",
+                "Department": "Operations",
+                "Description": "VA handoff",
+                "End time": "2026-02-09T15:01:48.714Z",
+                "Modified Date": "2026-02-09T15:01:49.725Z",
+                "Created Date": "2026-02-09T14:26:35.757Z",
+                "Created By": "1723218516828x972750650208924500"
+              },
+              {
+                "Activity (Text)": "Clocked In",
+                "Created By": "1726312827662x161558280685101020",
+                "Modified Date": "2026-02-09T14:28:57.074Z",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1726312827496x413733711456501760",
+                "_id": "1770647337156x428437818310393860",
+                "Start time": "2026-02-09T14:28:55.967Z",
+                "Created Date": "2026-02-09T14:28:57.074Z"
+              },
+              {
+                "Department": "Process Development",
+                "PDev Requirement": "1763755911947x156895556725637120",
+                "Created Date": "2026-02-09T14:29:25.778Z",
+                "Contractor": "1757940888979x875922658562670600",
+                "Effective start": "2026-02-09T14:29:24.694Z",
+                "Date": "Feb 9, 2026",
+                "Duration": 6291,
+                "Activity ": "Documentation/Coordination",
+                "Duration (hours)": 1.7475,
+                "Client": "1763755170286x787523168050872300",
+                "Created By": "1757940889533x584761027197428900",
+                "End time": "2026-02-09T16:14:16.113Z",
+                "Activity (Text)": "Documentation/Coordination",
+                "_id": "1770647364467x577693352453472300",
+                "Modified Date": "2026-02-09T16:14:16.871Z",
+                "Requirement Title": "Operations VA",
+                "Week": 7,
+                "Effective End": "2026-02-09T16:14:16.113Z",
+                "Start time": "2026-02-09T14:29:24.694Z",
+                "Cost": 13.98
+              },
+              {
+                "Modified Date": "2026-02-09T15:46:52.612Z",
+                "Start time": "2026-02-09T14:57:49.706Z",
+                "Activity ": "Team Meeting",
+                "End time": "2026-02-09T15:46:52.065Z",
+                "Effective start": "2026-02-09T14:57:49.706Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "Department": "Process Development",
+                "Duration (hours)": 0.817222222222222,
+                "Created By": "1726312706566x817931580685263400",
+                "_id": "1770648914827x133107790359560200",
+                "Contractor": "1726312706371x405192808264106000",
+                "Cost": 4.90333333333333,
+                "Date": "Feb 9, 2026",
+                "Client": "1731172472784x174447688502408450",
+                "Activity (Text)": "Team Meeting",
+                "Effective End": "2026-02-09T15:46:52.065Z",
+                "Duration": 2942,
+                "Created Date": "2026-02-09T14:57:50.188Z",
+                "Week": 7
+              },
+              {
+                "Duration": 1618,
+                "Activity (Text)": "General Admin",
+                "Created Date": "2026-02-09T15:01:58.360Z",
+                "End time": "2026-02-09T15:28:55.359Z",
+                "Created By": "1723218516828x972750650208924500",
+                "Contractor": "1725877283065x988502472917061100",
+                "Department": "Operations",
+                "Description": "deliverables",
+                "Start time": "2026-02-09T15:01:57.770Z",
+                "Modified Date": "2026-02-09T15:28:56.225Z",
+                "Week": 7,
+                "Activity ": "General Admin",
+                "Duration (hours)": 0.449444444444444,
+                "_id": "1770649317760x442624271138422800",
+                "Date": "Feb 9, 2026",
+                "Cost": 3.37083333333333
+              },
+              {
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "End time": "2026-02-09T23:01:18.666Z",
+                "Created By": "1755522655052x399139381190599900",
+                "Duration": 28540,
+                "Cost": 63.4222222222222,
+                "Effective start": "2026-02-09T15:04:19.672Z",
+                "Modified Date": "2026-02-09T23:01:18.694Z",
+                "Activity ": "Projects",
+                "Week": 7,
+                "Created Date": "2026-02-09T15:04:20.206Z",
+                "Contractor": "1755522654123x962060312717557800",
+                "Activity (Text)": "Projects",
+                "Department": "DevOps",
+                "Start time": "2026-02-09T15:04:19.672Z",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 7.92777777777778,
+                "_id": "1770649459732x942866561020461000"
+              },
+              {
+                "Duration": 27766,
+                "Contractor": "1726312548178x213564322558771200",
+                "Client": "1731172472784x174447688502408450",
+                "Cost": 69.415,
+                "Activity ": "Project work",
+                "_id": "1770650234534x667589616238592000",
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T23:30:04.403Z",
+                "Duration (hours)": 7.71277777777778,
+                "Activity (Text)": "Project work",
+                "Week": 7,
+                "Start time": "2026-02-09T15:17:13.874Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Requirement Title": "Research and Development (R&D)",
+                "Department": "Process Development",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Created Date": "2026-02-09T15:17:14.929Z",
+                "Effective start": "2026-02-09T15:17:13.874Z",
+                "Modified Date": "2026-02-09T23:30:04.528Z",
+                "Created By": "1726312548767x918412106979024100"
+              },
+              {
+                "Cost": 5.56888888888889,
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T16:05:36.893Z",
+                "Activity (Text)": "VA Check-in",
+                "Activity ": "VA Check-in",
+                "End time": "2026-02-09T16:05:36.329Z",
+                "Department": "Operations",
+                "Contractor": "1743437334395x793658039923638300",
+                "Start time": "2026-02-09T15:17:52.117Z",
+                "VA": "1731100532731x439625004700171100",
+                "_id": "1770650272277x828252222354620400",
+                "Duration": 2864,
+                "Week": 7,
+                "Duration (hours)": 0.795555555555556,
+                "Created By": "1743437337037x628864891167617800",
+                "Created Date": "2026-02-09T15:17:52.701Z"
+              },
+              {
+                "VA": "1731423124406x271592969763291140",
+                "End time": "2026-02-09T16:00:04.385Z",
+                "Duration": 1859,
+                "_id": "1770650945824x211257065024520200",
+                "Modified Date": "2026-02-09T16:00:05.781Z",
+                "Created By": "1723218516828x972750650208924500",
+                "Cost": 3.87291666666667,
+                "Description": "check-in John",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1725877283065x988502472917061100",
+                "Duration (hours)": 0.516388888888889,
+                "Week": 7,
+                "Created Date": "2026-02-09T15:29:06.726Z",
+                "Activity (Text)": "VA Check-in",
+                "Activity ": "VA Check-in",
+                "Department": "Operations",
+                "Start time": "2026-02-09T15:29:05.835Z"
+              },
+              {
+                "Activity ": "Project work",
+                "Effective End": "2026-02-09T17:57:32.418Z",
+                "Contractor": "1726312706371x405192808264106000",
+                "Created Date": "2026-02-09T15:46:52.654Z",
+                "Client": "1731172472784x174447688502408450",
+                "Activity (Text)": "Project work",
+                "Modified Date": "2026-02-09T17:57:32.967Z",
+                "Date": "Feb 9, 2026",
+                "Duration": 7840,
+                "Start time": "2026-02-09T15:46:52.065Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "End time": "2026-02-09T17:57:32.418Z",
+                "Cost": 13.0666666666667,
+                "Duration (hours)": 2.17777777777778,
+                "Effective start": "2026-02-09T15:46:52.065Z",
+                "Department": "Process Development",
+                "_id": "1770651857186x184483686704218100",
+                "Created By": "1726312706566x817931580685263400",
+                "Week": 7
+              },
+              {
+                "Activity ": "Meeting",
+                "Created By": "1723218576819x273183038733971330",
+                "Contractor": "1725877044461x325983423807804300",
+                "Cost": 50.34,
+                "Modified Date": "2026-02-09T22:12:35.723Z",
+                "Department": "Operations",
+                "_id": "1770652502040x509046980015554600",
+                "Start time": "2026-02-09T15:55:01.822Z",
+                "Duration": 22653,
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Meeting",
+                "Week": 7,
+                "End time": "2026-02-09T22:12:35.170Z",
+                "Created Date": "2026-02-09T15:55:02.364Z",
+                "Duration (hours)": 6.2925
+              },
+              {
+                "Activity (Text)": "Meeting",
+                "Duration (hours)": 0.786111111111111,
+                "Department": "Operations",
+                "Cost": 5.89583333333333,
+                "Duration": 2830,
+                "Activity ": "Meeting",
+                "Created By": "1723218516828x972750650208924500",
+                "Created Date": "2026-02-09T16:00:15.745Z",
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T16:47:25.416Z",
+                "Description": "Stand up",
+                "Contractor": "1725877283065x988502472917061100",
+                "Modified Date": "2026-02-09T16:47:26.238Z",
+                "Start time": "2026-02-09T16:00:15.072Z",
+                "Week": 7,
+                "_id": "1770652815062x784166079522930700"
+              },
+              {
+                "Modified Date": "2026-02-09T17:52:16.884Z",
+                "Contractor": "1743437334395x793658039923638300",
+                "End time": "2026-02-09T17:52:16.153Z",
+                "Week": 7,
+                "Cost": 12.425,
+                "Duration": 6390,
+                "Activity ": "Meeting",
+                "Activity (Text)": "Meeting",
+                "Description": "Ops stand up",
+                "_id": "1770653145914x259764030307303420",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T16:05:45.754Z",
+                "Duration (hours)": 1.775,
+                "Department": "Operations",
+                "Created Date": "2026-02-09T16:05:46.846Z",
+                "Created By": "1743437337037x628864891167617800"
+              },
+              {
+                "Client": "1731172472784x174447688502408450",
+                "End time": "2026-02-09T16:59:19.477Z",
+                "Date": "Feb 9, 2026",
+                "Effective End": "2026-02-09T16:59:19.477Z",
+                "Modified Date": "2026-02-09T16:59:20.293Z",
+                "Cost": 6.00666666666667,
+                "Activity (Text)": "Lunch",
+                "Created Date": "2026-02-09T16:14:16.992Z",
+                "Effective start": "2026-02-09T16:14:16.113Z",
+                "Duration": 2703,
+                "Duration (hours)": 0.750833333333333,
+                "Contractor": "1757940888979x875922658562670600",
+                "Created By": "1757940889533x584761027197428900",
+                "Department": "Process Development",
+                "Start time": "2026-02-09T16:14:16.113Z",
+                "_id": "1770653655886x694746634019405800",
+                "Week": 7
+              },
+              {
+                "Duration": 8192,
+                "Cost": 17.07,
+                "Week": 7,
+                "Created By": "1723218516828x972750650208924500",
+                "End time": "2026-02-09T19:04:02.606Z",
+                "Start time": "2026-02-09T16:47:30.850Z",
+                "Created Date": "2026-02-09T16:47:31.526Z",
+                "Department": "Operations",
+                "_id": "1770655650839x664163826814943200",
+                "Date": "Feb 9, 2026",
+                "Description": "deliverables",
+                "Modified Date": "2026-02-09T19:04:03.403Z",
+                "Activity (Text)": "General Admin",
+                "Duration (hours)": 2.27555555555556,
+                "Contractor": "1725877283065x988502472917061100",
+                "Activity ": "General Admin"
+              },
+              {
+                "Modified Date": "2026-02-09T17:12:32.227Z",
+                "PDev Requirement": "1763755911947x156895556725637120",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 0.260555555555556,
+                "Contractor": "1726312807986x753937460428800000",
+                "Start time": "2026-02-09T16:56:53.872Z",
+                "Created Date": "2026-02-09T16:56:54.251Z",
+                "Cost": 2.60555555555556,
+                "Requirement Title": "Operations VA",
+                "Client": "1763755170286x787523168050872300",
+                "_id": "1770656213868x657718108735406100",
+                "Department": "Process Development",
+                "End time": "2026-02-09T17:12:31.844Z",
+                "Activity ": "PEC",
+                "Duration": 938,
+                "Effective End": "2026-02-09T17:12:31.844Z",
+                "Effective start": "2026-02-09T16:56:53.872Z",
+                "Week": 7,
+                "Created By": "1726312808513x392675972200963400",
+                "Activity (Text)": "PEC"
+              },
+              {
+                "Client": "1763755170286x787523168050872300",
+                "Department": "Process Development",
+                "Activity (Text)": "PEC",
+                "End time": "2026-02-09T18:59:12.050Z",
+                "_id": "1770656359249x778414127778365400",
+                "Cost": 15.9844444444444,
+                "Contractor": "1757940888979x875922658562670600",
+                "Created By": "1757940889533x584761027197428900",
+                "PDev Requirement": "1763755911947x156895556725637120",
+                "Duration": 7193,
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T16:59:19.477Z",
+                "Requirement Title": "Operations VA",
+                "Duration (hours)": 1.99805555555556,
+                "Week": 7,
+                "Created Date": "2026-02-09T16:59:20.331Z",
+                "Effective start": "2026-02-09T16:59:19.477Z",
+                "Effective End": "2026-02-09T18:59:12.050Z",
+                "Modified Date": "2026-02-09T18:59:12.939Z",
+                "Activity ": "PEC"
+              },
+              {
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Contractor": "1726312807986x753937460428800000",
+                "End time": "2026-02-09T17:26:05.976Z",
+                "Modified Date": "2026-02-09T17:26:06.398Z",
+                "Activity (Text)": "Project work",
+                "Date": "Feb 9, 2026",
+                "Created Date": "2026-02-09T17:12:38.910Z",
+                "Department": "Process Development",
+                "Week": 7,
+                "Duration (hours)": 0.224444444444444,
+                "Activity ": "Project work",
+                "Client": "1731172472784x174447688502408450",
+                "Duration": 808,
+                "Created By": "1726312808513x392675972200963400",
+                "Start time": "2026-02-09T17:12:38.396Z",
+                "Cost": 2.24444444444444,
+                "Effective End": "2026-02-09T17:26:05.976Z",
+                "_id": "1770657158389x867926846922031100",
+                "Requirement Title": "Research and Development (R&D)",
+                "Effective start": "2026-02-09T17:12:38.396Z"
+              },
+              {
+                "Duration (hours)": 0.680277777777778,
+                "Client": "1731172472784x174447688502408450",
+                "Start time": "2026-02-09T17:26:05.976Z",
+                "Duration": 2449,
+                "Created By": "1726312808513x392675972200963400",
+                "Week": 7,
+                "_id": "1770657965971x424731129365659650",
+                "Date": "Feb 9, 2026",
+                "Effective start": "2026-02-09T17:26:05.976Z",
+                "Effective End": "2026-02-09T18:06:54.657Z",
+                "Contractor": "1726312807986x753937460428800000",
+                "Cost": 6.80277777777778,
+                "Department": "Process Development",
+                "Activity (Text)": "Lunch",
+                "Created Date": "2026-02-09T17:26:06.511Z",
+                "Modified Date": "2026-02-09T18:06:55.010Z",
+                "End time": "2026-02-09T18:06:54.657Z"
+              },
+              {
+                "Requirement Title": "Transaction Coordinator EVA",
+                "_id": "1770658903204x734796287538626600",
+                "Start time": "2026-02-09T17:41:42.191Z",
+                "Effective End": "2026-02-09T18:30:41.730Z",
+                "Week": 7,
+                "Activity ": "Candidate Shortlisting",
+                "Contractor": "1726684709441x322729253504286700",
+                "Department": "Placements",
+                "Created By": "1726684844519x565068062195410050",
+                "Duration": 2940,
+                "Client": "1765894242629x115258530215493630",
+                "Effective start": "2026-02-09T17:41:42.191Z",
+                "PDev Requirement": "1767362521798x553910229287305200",
+                "Activity (Text)": "Candidate Shortlisting",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 0.816666666666667,
+                "End time": "2026-02-09T18:30:41.730Z",
+                "Created Date": "2026-02-09T17:41:43.610Z",
+                "Modified Date": "2026-02-09T18:30:43.146Z",
+                "Cost": 6.125
+              },
+              {
+                "Modified Date": "2026-02-09T18:38:27.439Z",
+                "Duration (hours)": 0.765833333333333,
+                "_id": "1770659549865x966886304227786800",
+                "Contractor": "1743437334395x793658039923638300",
+                "Created Date": "2026-02-09T17:52:30.385Z",
+                "Client": "1746463533294x615784636549431300",
+                "Duration": 2757,
+                "Week": 7,
+                "VA": "1749128342980x117758366202986500",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T17:52:29.705Z",
+                "End time": "2026-02-09T18:38:26.763Z",
+                "Department": "Operations",
+                "Cost": 5.36083333333333,
+                "Created By": "1743437337037x628864891167617800",
+                "Activity (Text)": "Client Check-in",
+                "Activity ": "Client Check-in"
+              },
+              {
+                "End time": "2026-02-09T18:55:49.098Z",
+                "_id": "1770659697539x983488429655326700",
+                "Requirement Title": "Research and Development (R&D)",
+                "Department": "Process Development",
+                "Modified Date": "2026-02-09T18:55:49.695Z",
+                "Week": 7,
+                "Duration": 3497,
+                "Start time": "2026-02-09T17:57:32.418Z",
+                "Cost": 5.82833333333333,
+                "Activity (Text)": "Team Meeting",
+                "Activity ": "Team Meeting",
+                "Created By": "1726312706566x817931580685263400",
+                "Effective start": "2026-02-09T17:57:32.418Z",
+                "Duration (hours)": 0.971388888888889,
+                "Effective End": "2026-02-09T18:55:49.098Z",
+                "Date": "Feb 9, 2026",
+                "Client": "1731172472784x174447688502408450",
+                "Contractor": "1726312706371x405192808264106000",
+                "Created Date": "2026-02-09T17:57:32.999Z"
+              }
+            ],
+            "count": 100,
+            "remaining": 36
+          }
+        }
+      },
+      {
+        "json": {
+          "response": {
+            "cursor": 100,
+            "results": [
+              {
+                "Week": 7,
+                "Activity (Text)": "General Admin",
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Duration": 1770674400,
+                "_id": "1770659935372x895305237882732500",
+                "Department": "Operations",
+                "Created Date": "2026-02-09T17:58:57.602Z",
+                "End time": "2026-02-09T22:30:01.515Z",
+                "Created By": "1750703236845x810507358928078500",
+                "Modified Date": "2026-02-09T22:30:01.582Z",
+                "Cost": 3442978,
+                "Contractor": "1750703234147x348369781247442940",
+                "Duration (hours)": 491854,
+                "Activity ": "General Admin",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T17:58:56.610Z"
+              },
+              {
+                "Duration": 3641,
+                "Duration (hours)": 1.01138888888889,
+                "Created Date": "2026-02-09T18:01:41.551Z",
+                "Start time": "2026-02-09T18:01:41.151Z",
+                "Created By": "1745583900502x718979250155050800",
+                "Client": "1731172472784x174447688502408450",
+                "Department": "Process Development",
+                "End time": "2026-02-09T19:02:21.874Z",
+                "Effective End": "2026-02-09T19:02:21.874Z",
+                "Effective start": "2026-02-09T18:01:41.151Z",
+                "Modified Date": "2026-02-09T19:02:22.368Z",
+                "Cost": 7.07972222222222,
+                "Activity (Text)": "Lunch",
+                "Contractor": "1745583900015x439635007573065700",
+                "Date": "Feb 9, 2026",
+                "Week": 7,
+                "_id": "1770660100168x985068877296435200"
+              },
+              {
+                "End time": "2026-02-09T18:52:22.395Z",
+                "Duration": 2941,
+                "Department": "Placements",
+                "Modified Date": "2026-02-09T18:52:22.170Z",
+                "Effective start": "2026-02-09T18:03:21.025Z",
+                "Start time": "2026-02-09T18:03:21.025Z",
+                "Week": 7,
+                "Created By": "1769800279344x247001719815216360",
+                "Client": "1731172472784x174447688502408450",
+                "Duration (hours)": 0.816944444444444,
+                "Effective End": "2026-02-09T18:52:22.395Z",
+                "_id": "1770660201509x133587295951388670",
+                "Created Date": "2026-02-09T18:03:20.935Z",
+                "Contractor": "1769800278893x384262004593393660",
+                "Cost": 6.12708333333333,
+                "Activity (Text)": "Lunch",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Requirement Title": "Research and Development (R&D)",
+                "Contractor": "1726312807986x753937460428800000",
+                "Duration": 14336,
+                "Created Date": "2026-02-09T18:06:55.166Z",
+                "Modified Date": "2026-02-09T22:05:50.754Z",
+                "Client": "1731172472784x174447688502408450",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 3.98222222222222,
+                "Effective End": "2026-02-09T22:05:50.460Z",
+                "Department": "Process Development",
+                "Activity ": "Project work",
+                "Created By": "1726312808513x392675972200963400",
+                "_id": "1770660414650x117398474396270600",
+                "Cost": 39.8222222222222,
+                "Activity (Text)": "Project work",
+                "Start time": "2026-02-09T18:06:54.657Z",
+                "Effective start": "2026-02-09T18:06:54.657Z",
+                "End time": "2026-02-09T22:05:50.460Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Week": 7
+              },
+              {
+                "Created By": "1769800195867x816906915551230700",
+                "End time": "2026-02-09T19:09:53.181Z",
+                "Department": "Process Development",
+                "Date": "Feb 9, 2026",
+                "_id": "1770660690043x657811117441024000",
+                "Week": 7,
+                "Modified Date": "2026-02-09T19:09:54.181Z",
+                "Effective End": "2026-02-09T19:09:53.181Z",
+                "Duration": 3521,
+                "Start time": "2026-02-09T18:11:12.624Z",
+                "Effective start": "2026-02-09T18:11:12.624Z",
+                "Duration (hours)": 0.978055555555556,
+                "Contractor": "1769800195304x474485569198489600",
+                "Activity (Text)": "Lunch",
+                "Created Date": "2026-02-09T18:11:13.374Z",
+                "Cost": 6.84638888888889,
+                "Client": "1731172472784x174447688502408450"
+              },
+              {
+                "Modified Date": "2026-02-09T19:51:55.689Z",
+                "End time": "2026-02-09T19:51:54.381Z",
+                "Department": "Placements",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Activity ": "Project work",
+                "Start time": "2026-02-09T18:30:45.961Z",
+                "Week": 7,
+                "Created Date": "2026-02-09T18:30:47.469Z",
+                "Duration (hours)": 1.35222222222222,
+                "Client": "1731172472784x174447688502408450",
+                "Contractor": "1726684709441x322729253504286700",
+                "Cost": 10.1416666666667,
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Project work",
+                "_id": "1770661846975x746358081244889100",
+                "Duration": 4868,
+                "Effective start": "2026-02-09T18:30:45.961Z",
+                "Created By": "1726684844519x565068062195410050",
+                "Requirement Title": "Research and Development (R&D)",
+                "Effective End": "2026-02-09T19:51:54.381Z"
+              },
+              {
+                "Modified Date": "2026-02-09T19:47:50.368Z",
+                "Contractor": "1743437334395x793658039923638300",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 1.15444444444444,
+                "Week": 7,
+                "End time": "2026-02-09T19:47:49.653Z",
+                "Start time": "2026-02-09T18:38:33.369Z",
+                "_id": "1770662313529x392148419792076800",
+                "Client": "1731172472784x174447688502408450",
+                "Activity (Text)": "Lunch",
+                "Created By": "1743437337037x628864891167617800",
+                "Cost": 6.92666666666667,
+                "Created Date": "2026-02-09T18:38:34.221Z",
+                "Duration": 4156,
+                "Department": "Operations"
+              },
+              {
+                "Client": "1731172472784x174447688502408450",
+                "Cost": 6.13541666666667,
+                "Modified Date": "2026-02-09T19:41:26.895Z",
+                "Created Date": "2026-02-09T18:52:22.233Z",
+                "Duration (hours)": 0.818055555555556,
+                "Activity (Text)": "Training",
+                "Duration": 2945,
+                "Effective start": "2026-02-09T18:52:22.395Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Effective End": "2026-02-09T19:41:27.156Z",
+                "Date": "Feb 9, 2026",
+                "Contractor": "1769800278893x384262004593393660",
+                "Created By": "1769800279344x247001719815216360",
+                "End time": "2026-02-09T19:41:27.156Z",
+                "Activity ": "Training",
+                "Requirement Title": "Research and Development (R&D)",
+                "_id": "1770663142879x316475813634768900",
+                "Start time": "2026-02-09T18:52:22.395Z",
+                "Department": "Placements",
+                "Week": 7
+              },
+              {
+                "Duration": 867,
+                "Department": "Process Development",
+                "Client": "1731172472784x174447688502408450",
+                "Start time": "2026-02-09T18:55:49.098Z",
+                "Week": 7,
+                "End time": "2026-02-09T19:10:16.140Z",
+                "Modified Date": "2026-02-09T19:10:17.044Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "_id": "1770663194220x850421191309000700",
+                "Activity ": "Project work",
+                "Created By": "1726312706566x817931580685263400",
+                "Cost": 1.445,
+                "Duration (hours)": 0.240833333333333,
+                "Created Date": "2026-02-09T18:55:49.725Z",
+                "Effective start": "2026-02-09T18:55:49.098Z",
+                "Contractor": "1726312706371x405192808264106000",
+                "Activity (Text)": "Project work",
+                "Date": "Feb 9, 2026",
+                "Effective End": "2026-02-09T19:10:16.140Z"
+              },
+              {
+                "Created By": "1757940889533x584761027197428900",
+                "Requirement Title": "Transaction Coordinator EVA",
+                "Client": "1765894242629x115258530215493630",
+                "End time": "2026-02-09T21:26:47.148Z",
+                "Modified Date": "2026-02-09T21:26:48.210Z",
+                "Date": "Feb 9, 2026",
+                "Activity ": "PEC",
+                "Department": "Process Development",
+                "_id": "1770663565040x596961259886477300",
+                "Cost": 19.6488888888889,
+                "PDev Requirement": "1767362521798x553910229287305200",
+                "Created Date": "2026-02-09T18:59:26.157Z",
+                "Effective start": "2026-02-09T18:59:25.267Z",
+                "Activity (Text)": "PEC",
+                "Duration": 8842,
+                "Duration (hours)": 2.45611111111111,
+                "Effective End": "2026-02-09T21:26:47.148Z",
+                "Week": 7,
+                "Start time": "2026-02-09T18:59:25.267Z",
+                "Contractor": "1757940888979x875922658562670600"
+              },
+              {
+                "Date": "Feb 9, 2026",
+                "Cost": 27.7238888888889,
+                "Client": "1731172472784x174447688502408450",
+                "Duration (hours)": 3.96055555555556,
+                "Activity (Text)": "Communication",
+                "Created Date": "2026-02-09T19:02:22.527Z",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Created By": "1745583900502x718979250155050800",
+                "Duration": 14258,
+                "Start time": "2026-02-09T19:02:21.874Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "End time": "2026-02-09T23:26:30.216Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Effective start": "2026-02-09T19:02:21.874Z",
+                "Department": "Process Development",
+                "Modified Date": "2026-02-09T23:26:30.233Z",
+                "Contractor": "1745583900015x439635007573065700",
+                "Week": 7,
+                "Activity ": "Communication",
+                "_id": "1770663740890x734517318389334000"
+              },
+              {
+                "Date": "Feb 9, 2026",
+                "_id": "1770663842595x138308686068842500",
+                "Created By": "1723218516828x972750650208924500",
+                "Client": "1731172472784x174447688502408450",
+                "Activity (Text)": "Lunch",
+                "Cost": 0.02,
+                "Modified Date": "2026-02-09T19:04:13.686Z",
+                "End time": "2026-02-09T19:04:12.491Z",
+                "Duration (hours)": 0.00277777777777778,
+                "Created Date": "2026-02-09T19:04:03.516Z",
+                "Duration": 10,
+                "Contractor": "1725877283065x988502472917061100",
+                "Start time": "2026-02-09T19:04:02.606Z",
+                "Department": "Operations",
+                "Week": 7
+              },
+              {
+                "Created By": "1723218516828x972750650208924500",
+                "Activity (Text)": "Lunch",
+                "Cost": 6.83763888888889,
+                "Start time": "2026-02-09T19:04:12.491Z",
+                "Duration": 3787,
+                "Modified Date": "2026-02-09T20:07:20.404Z",
+                "Client": "1731172472784x174447688502408450",
+                "Duration (hours)": 1.05194444444444,
+                "End time": "2026-02-09T20:07:19.499Z",
+                "Department": "Operations",
+                "_id": "1770663852481x200593181432348670",
+                "Created Date": "2026-02-09T19:04:14.059Z",
+                "Week": 7,
+                "Contractor": "1725877283065x988502472917061100",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Start time": "2026-02-09T19:10:16.140Z",
+                "Date": "Feb 9, 2026",
+                "Client": "1731172472784x174447688502408450",
+                "Effective start": "2026-02-09T19:10:16.140Z",
+                "Created By": "1726312706566x817931580685263400",
+                "Duration (hours)": 0.988888888888889,
+                "Week": 7,
+                "Cost": 5.93333333333333,
+                "Duration": 3560,
+                "Created Date": "2026-02-09T19:10:17.141Z",
+                "Activity (Text)": "Lunch",
+                "End time": "2026-02-09T20:09:36.547Z",
+                "Effective End": "2026-02-09T20:09:36.547Z",
+                "Modified Date": "2026-02-09T20:09:37.241Z",
+                "Contractor": "1726312706371x405192808264106000",
+                "_id": "1770664061261x266765046360571900",
+                "Department": "Process Development"
+              },
+              {
+                "_id": "1770664210599x937129346847211500",
+                "Requirement Title": "Research and Development (R&D)",
+                "Client": "1731172472784x174447688502408450",
+                "End time": "2026-02-09T23:13:58.072Z",
+                "Cost": 26.8469444444444,
+                "Week": 7,
+                "Activity (Text)": "Training",
+                "Date": "Feb 9, 2026",
+                "Created By": "1769800195867x816906915551230700",
+                "Created Date": "2026-02-09T19:09:54.274Z",
+                "Department": "Process Development",
+                "Duration (hours)": 3.83527777777778,
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Effective start": "2026-02-09T19:09:53.181Z",
+                "Start time": "2026-02-09T19:09:53.181Z",
+                "Contractor": "1769800195304x474485569198489600",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Duration": 13807,
+                "Activity ": "Training",
+                "Modified Date": "2026-02-09T23:13:59.048Z"
+              },
+              {
+                "Activity ": "Prep for Client Interview",
+                "Start time": "2026-02-09T19:41:56.767Z",
+                "Week": 7,
+                "Duration (hours)": 0.38,
+                "Modified Date": "2026-02-09T20:04:43.902Z",
+                "_id": "1770666117251x911886929598611500",
+                "PDev Requirement": "1767362521798x553910229287305200",
+                "Client": "1765894242629x115258530215493630",
+                "Activity (Text)": "Prep for Client Interview",
+                "End time": "2026-02-09T20:04:44.340Z",
+                "Contractor": "1769800278893x384262004593393660",
+                "Requirement Title": "Transaction Coordinator EVA",
+                "Date": "Feb 9, 2026",
+                "Created By": "1769800279344x247001719815216360",
+                "Effective End": "2026-02-09T20:04:44.340Z",
+                "Created Date": "2026-02-09T19:41:56.322Z",
+                "Department": "Placements",
+                "Duration": 1368,
+                "Effective start": "2026-02-09T19:41:56.767Z",
+                "Cost": 2.85
+              },
+              {
+                "Contractor": "1743437334395x793658039923638300",
+                "_id": "1770666469814x648137867414995000",
+                "End time": "2026-02-09T22:30:00.695Z",
+                "Week": 7,
+                "Department": "Operations",
+                "Activity ": "General Admin",
+                "Duration": 1770674400,
+                "Activity (Text)": "General Admin",
+                "Start time": "2026-02-09T19:47:49.653Z",
+                "Created By": "1743437337037x628864891167617800",
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Cost": 3442978,
+                "Modified Date": "2026-02-09T22:30:00.744Z",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 491854,
+                "Created Date": "2026-02-09T19:47:50.416Z"
+              },
+              {
+                "Start time": "2026-02-09T19:51:54.381Z",
+                "Modified Date": "2026-02-09T20:57:34.739Z",
+                "_id": "1770666715394x895935779755262000",
+                "Cost": 8.20625,
+                "End time": "2026-02-09T20:57:32.918Z",
+                "Duration (hours)": 1.09416666666667,
+                "Contractor": "1726684709441x322729253504286700",
+                "Activity (Text)": "Lunch",
+                "Duration": 3939,
+                "Created By": "1726684844519x565068062195410050",
+                "Department": "Placements",
+                "Date": "Feb 9, 2026",
+                "Effective start": "2026-02-09T19:51:54.381Z",
+                "Week": 7,
+                "Created Date": "2026-02-09T19:51:55.794Z",
+                "Client": "1731172472784x174447688502408450",
+                "Effective End": "2026-02-09T20:57:32.918Z"
+              },
+              {
+                "Start time": "2026-02-09T20:04:44.340Z",
+                "Effective End": "2026-02-09T21:23:26.222Z",
+                "Department": "Placements",
+                "Activity ": "Client Interview",
+                "_id": "1770667484825x262864043903549440",
+                "Activity (Text)": "Client Interview",
+                "Contractor": "1769800278893x384262004593393660",
+                "Duration": 4722,
+                "Cost": 9.8375,
+                "Created Date": "2026-02-09T20:04:43.953Z",
+                "Client": "1765894242629x115258530215493630",
+                "Effective start": "2026-02-09T20:04:44.340Z",
+                "Duration (hours)": 1.31166666666667,
+                "End time": "2026-02-09T21:23:26.222Z",
+                "Modified Date": "2026-02-09T21:23:25.800Z",
+                "Date": "Feb 9, 2026",
+                "Week": 7,
+                "Requirement Title": "Transaction Coordinator EVA",
+                "Created By": "1769800279344x247001719815216360"
+              },
+              {
+                "Start time": "2026-02-09T20:07:19.499Z",
+                "Date": "Feb 9, 2026",
+                "Duration (hours)": 491854,
+                "Activity ": "General Admin",
+                "Duration": 1770674400,
+                "Created Date": "2026-02-09T20:07:20.484Z",
+                "Cost": 3688905,
+                "End time": "2026-02-09T22:30:01.363Z",
+                "Activity (Text)": "General Admin",
+                "Description": "deliverables",
+                "Week": 7,
+                "Department": "Operations",
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "Contractor": "1725877283065x988502472917061100",
+                "Created By": "1723218516828x972750650208924500",
+                "_id": "1770667639488x510302746670530560",
+                "Modified Date": "2026-02-09T22:30:01.508Z"
+              },
+              {
+                "Duration": 10223,
+                "Client": "1731172472784x174447688502408450",
+                "Department": "Process Development",
+                "Modified Date": "2026-02-09T23:30:02.741Z",
+                "Start time": "2026-02-09T20:09:36.547Z",
+                "Cost": 17.0383333333333,
+                "Activity ": "Project work",
+                "End time": "2026-02-09T23:30:02.685Z",
+                "Duration (hours)": 2.83972222222222,
+                "_id": "1770667776536x196288603870986240",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Week": 7,
+                "Created By": "1726312706566x817931580685263400",
+                "Created Date": "2026-02-09T20:09:37.309Z",
+                "Activity (Text)": "Project work",
+                "Date": "Feb 9, 2026",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Effective start": "2026-02-09T20:09:36.547Z",
+                "Contractor": "1726312706371x405192808264106000",
+                "Requirement Title": "Research and Development (R&D)"
+              },
+              {
+                "Start time": "2026-02-09T20:23:44.996Z",
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Lunch",
+                "Contractor": "1725877239809x814794223374582900",
+                "Modified Date": "2026-02-09T22:30:02.529Z",
+                "Duration": 1770674400,
+                "Effective End": "2026-02-09T22:00:00.000Z",
+                "_id": "1770668625092x295204983014686700",
+                "Cost": 3688905,
+                "Department": "Operations",
+                "End time": "2026-02-09T22:30:02.461Z",
+                "Week": 7,
+                "Duration (hours)": 491854,
+                "Created By": "1723218532697x459908362594547700",
+                "Created Date": "2026-02-09T20:23:45.147Z",
+                "Client": "1731172472784x174447688502408450"
+              },
+              {
+                "Activity (Text)": "Project work",
+                "Activity ": "Project work",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Modified Date": "2026-02-09T23:30:03.917Z",
+                "Date": "Feb 9, 2026",
+                "_id": "1770670653931x558274963216007200",
+                "Week": 7,
+                "Requirement Title": "Research and Development (R&D)",
+                "Duration": 7347,
+                "Client": "1731172472784x174447688502408450",
+                "Start time": "2026-02-09T20:57:32.918Z",
+                "Effective start": "2026-02-09T20:57:32.918Z",
+                "Created Date": "2026-02-09T20:57:34.862Z",
+                "End time": "2026-02-09T23:30:03.870Z",
+                "Cost": 15.30625,
+                "Created By": "1726684844519x565068062195410050",
+                "Duration (hours)": 2.04083333333333,
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Department": "Placements",
+                "Contractor": "1726684709441x322729253504286700"
+              },
+              {
+                "Cost": 12.0708333333333,
+                "Modified Date": "2026-02-09T23:24:49.363Z",
+                "Created By": "1769800279344x247001719815216360",
+                "Duration (hours)": 1.60944444444444,
+                "Created Date": "2026-02-09T21:23:25.845Z",
+                "Start time": "2026-02-09T21:23:26.222Z",
+                "Client": "1765894242629x115258530215493630",
+                "Duration": 5794,
+                "Activity ": "Post Client Interview",
+                "_id": "1770672206706x395888922312310800",
+                "Week": 7,
+                "Department": "Placements",
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T23:24:50.196Z",
+                "Requirement Title": "Transaction Coordinator EVA",
+                "Activity (Text)": "Post Client Interview",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Effective start": "2026-02-09T21:23:26.222Z",
+                "Contractor": "1769800278893x384262004593393660"
+              },
+              {
+                "_id": "1770672418646x490788066995208200",
+                "Start time": "2026-02-09T21:26:58.873Z",
+                "Duration (hours)": 1.55027777777778,
+                "Activity (Text)": "Internal Meeting",
+                "Department": "Process Development",
+                "Week": 7,
+                "Cost": 12.4022222222222,
+                "End time": "2026-02-09T23:30:04.021Z",
+                "Contractor": "1757940888979x875922658562670600",
+                "Requirement Title": "REI",
+                "Modified Date": "2026-02-09T23:30:04.084Z",
+                "Duration": 5581,
+                "Activity ": "Internal Meeting",
+                "Client": "1750957410381x189965038506475520",
+                "Effective start": "2026-02-09T21:26:58.873Z",
+                "Created By": "1757940889533x584761027197428900",
+                "Created Date": "2026-02-09T21:27:00.000Z",
+                "PDev Requirement": "1761931721978x804970513268736000",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Duration (hours)": 1.22166666666667,
+                "Created By": "1750165499534x619804877570468700",
+                "Effective End": "2026-02-09T22:49:18.187Z",
+                "_id": "1770672961317x800268174183628800",
+                "Cost": 7.94083333333333,
+                "Client": "1731172472784x174447688502408450",
+                "Start time": "2026-02-09T21:36:00.449Z",
+                "Department": "Process Development",
+                "Contractor": "1750165498756x354495896319688700",
+                "Date": "Feb 9, 2026",
+                "Effective start": "2026-02-09T21:36:00.449Z",
+                "Modified Date": "2026-02-09T22:49:19.630Z",
+                "Week": 7,
+                "Duration": 4398,
+                "End time": "2026-02-09T22:49:18.187Z",
+                "Activity (Text)": "Lunch",
+                "Created Date": "2026-02-09T21:36:01.992Z"
+              },
+              {
+                "Department": "Process Development",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "Requirement Title": "REI",
+                "Contractor": "1726312807986x753937460428800000",
+                "Client": "1750957410381x189965038506475520",
+                "Cost": 8.98611111111111,
+                "Created By": "1726312808513x392675972200963400",
+                "Created Date": "2026-02-09T22:06:05.566Z",
+                "Week": 7,
+                "Duration": 3235,
+                "Modified Date": "2026-02-09T23:30:01.084Z",
+                "Activity ": "Internal Meeting",
+                "Effective start": "2026-02-09T22:06:05.166Z",
+                "Date": "Feb 9, 2026",
+                "End time": "2026-02-09T23:30:01.029Z",
+                "Activity (Text)": "Internal Meeting",
+                "Start time": "2026-02-09T22:06:05.166Z",
+                "Duration (hours)": 0.898611111111111,
+                "PDev Requirement": "1761931721978x804970513268736000",
+                "_id": "1770674765142x801577346379022300"
+              },
+              {
+                "_id": "1770675128985x646733050334675000",
+                "Start time": "2026-02-09T22:12:09.381Z",
+                "Modified Date": "2026-02-09T22:12:10.513Z",
+                "Activity (Text)": "Clocked out",
+                "Created Date": "2026-02-09T22:12:10.512Z",
+                "Created By": "1747229472212x341496887901366900",
+                "Contractor": "1747229470046x430046894219067400",
+                "Date": "Feb 9, 2026",
+                "Effective start": "2026-02-09T22:12:09.381Z"
+              },
+              {
+                "Date": "Feb 9, 2026",
+                "Modified Date": "2026-02-09T22:12:35.758Z",
+                "Activity (Text)": "Clocked out",
+                "Contractor": "1725877044461x325983423807804300",
+                "Created By": "1723218576819x273183038733971330",
+                "Created Date": "2026-02-09T22:12:35.757Z",
+                "Start time": "2026-02-09T22:12:35.170Z",
+                "_id": "1770675155384x365629443554148350"
+              },
+              {
+                "Client": "1731172472784x174447688502408450",
+                "Contractor": "1750165498756x354495896319688700",
+                "Start time": "2026-02-09T22:49:18.187Z",
+                "Requirement Title": "Research and Development (R&D)",
+                "Effective start": "2026-02-09T22:49:18.187Z",
+                "Activity ": "Communication",
+                "Cost": 1.15916666666667,
+                "Modified Date": "2026-02-09T23:30:02.959Z",
+                "Duration": 642,
+                "Created Date": "2026-02-09T22:49:19.714Z",
+                "Effective End": "2026-02-09T23:00:00.000Z",
+                "PDev Requirement": "1741725349887x662314241295033300",
+                "Activity (Text)": "Communication",
+                "_id": "1770677359054x114315181961773060",
+                "End time": "2026-02-09T23:30:02.891Z",
+                "Duration (hours)": 0.178333333333333,
+                "Date": "Feb 9, 2026",
+                "Created By": "1750165499534x619804877570468700",
+                "Department": "Process Development",
+                "Week": 7
+              },
+              {
+                "Date": "Feb 9, 2026",
+                "Activity (Text)": "Clocked out",
+                "Contractor": "1755522654123x962060312717557800",
+                "Modified Date": "2026-02-09T23:01:20.763Z",
+                "Created By": "1755522655052x399139381190599900",
+                "_id": "1770678081009x601035774152933400",
+                "Start time": "2026-02-09T23:01:20.951Z",
+                "Created Date": "2026-02-09T23:01:20.762Z",
+                "Effective start": "2026-02-09T23:01:20.951Z"
+              },
+              {
+                "Modified Date": "2026-02-09T23:03:34.864Z",
+                "Created By": "1767998128170x962734020242454500",
+                "Activity (Text)": "Clocked out",
+                "Start time": "2026-02-09T23:03:34.092Z",
+                "Effective start": "2026-02-09T23:03:34.092Z",
+                "Contractor": "1767998126774x575461642916331500",
+                "_id": "1770678214091x740824887926456300",
+                "Created Date": "2026-02-09T23:03:34.864Z",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "_id": "1770678855488x189605923728130050",
+                "Created By": "1769800195867x816906915551230700",
+                "Effective start": "2026-02-09T23:13:58.072Z",
+                "Start time": "2026-02-09T23:13:58.072Z",
+                "Contractor": "1769800195304x474485569198489600",
+                "Activity (Text)": "Clocked out",
+                "Created Date": "2026-02-09T23:13:59.079Z",
+                "Modified Date": "2026-02-09T23:13:59.079Z",
+                "Date": "Feb 9, 2026"
+              },
+              {
+                "Contractor": "1766505879508x482087829691432960",
+                "Activity (Text)": "Clocked out",
+                "Date": "Feb 9, 2026",
+                "_id": "1770679095444x908992091141701600",
+                "Created By": "1766505880780x943088046758825600",
+                "Effective start": "2026-02-09T23:18:11.615Z",
+                "Start time": "2026-02-09T23:18:11.615Z",
+                "Created Date": "2026-02-09T23:18:15.205Z",
+                "Modified Date": "2026-02-09T23:18:15.206Z"
+              },
+              {
+                "Contractor": "1769800278893x384262004593393660",
+                "Created Date": "2026-02-09T23:24:49.383Z",
+                "Modified Date": "2026-02-09T23:24:49.384Z",
+                "Activity (Text)": "Clocked out",
+                "Date": "Feb 9, 2026",
+                "Start time": "2026-02-09T23:24:50.196Z",
+                "_id": "1770679490679x268381474697248770",
+                "Effective start": "2026-02-09T23:24:50.196Z",
+                "Created By": "1769800279344x247001719815216360"
+              },
+              {
+                "_id": "1770679589227x221720492093997060",
+                "Contractor": "1745583900015x439635007573065700",
+                "Effective start": "2026-02-09T23:26:30.216Z",
+                "Modified Date": "2026-02-09T23:26:30.266Z",
+                "Created By": "1745583900502x718979250155050800",
+                "Start time": "2026-02-09T23:26:30.216Z",
+                "Date": "Feb 9, 2026",
+                "Created Date": "2026-02-09T23:26:30.266Z",
+                "Activity (Text)": "Clocked out"
+              }
+            ],
+            "count": 36,
+            "remaining": 0
+          }
+        }
+      }
+    ]
+  },
+  "versionId": "c8dd0634-f9db-4baa-985f-9cfd389cb1d7",
+  "activeVersionId": "c8dd0634-f9db-4baa-985f-9cfd389cb1d7",
+  "versionCounter": 191,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-01-21T13:51:15.965Z",
+      "createdAt": "2026-01-21T13:51:15.965Z",
+      "role": "workflow:owner",
+      "workflowId": "8Jc8VsrzhuaWHYHi",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:07:05.462Z",
+    "createdAt": "2026-07-04T13:07:05.462Z",
+    "versionId": "c8dd0634-f9db-4baa-985f-9cfd389cb1d7",
+    "workflowId": "8Jc8VsrzhuaWHYHi",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          -208,
+          240
+        ],
+        "id": "6740e907-ea6e-4eaa-8820-a54d8513df02",
+        "name": "When clicking \u2018Execute workflow\u2019"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  2,
+                  3,
+                  4,
+                  5,
+                  6
+                ],
+                "triggerAtHour": 8
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -208,
+          448
+        ],
+        "id": "82e167b2-21d1-4a4e-b34f-54907075880e",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "response.results",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          464,
+          240
+        ],
+        "id": "a31de837-2510-4acb-bde9-9a381cae8224",
+        "name": "Split Out"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "a357083a-4b49-44a5-b416-cf8382aa8ebe",
+                "leftValue": "={{ $json[\"Department\"] }}",
+                "rightValue": "Process Development",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "7f32908d-525b-4a39-9aa4-879be472a330",
+                "leftValue": "={{ $json[\"Department\"] }}",
+                "rightValue": "Placements",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          688,
+          240
+        ],
+        "id": "037dafd5-9314-44a3-87eb-273344ec245f",
+        "name": "Filter"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "advanced": true,
+          "mergeByFields": {
+            "values": [
+              {
+                "field1": "Client",
+                "field2": "Bubble Unique ID"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1360,
+          -48
+        ],
+        "id": "55f9790c-47c6-4292-b264-0fc29ed7b16b",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "advanced": true,
+          "mergeByFields": {
+            "values": [
+              {
+                "field1": "Contractor",
+                "field2": "Bubble Unique ID"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1360,
+          240
+        ],
+        "id": "c10ee0b2-e351-4919-94aa-cad45532d5fc",
+        "name": "Merge1"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblaf3mkvcrgSSBSZ",
+            "mode": "list",
+            "cachedResultName": "Clients",
+            "cachedResultUrl": "https://airtable.com/appNQQgamg8cKV5kA/tblaf3mkvcrgSSBSZ"
+          },
+          "filterByFormula": "=AND({Bubble Unique ID} != '', {Bubble Unique ID} = '{{ $json.Client }}')",
+          "options": {
+            "fields": [
+              "Client Name",
+              "Bubble Unique ID",
+              "Record ID"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          912,
+          32
+        ],
+        "id": "53308eb4-82e6-408d-b46e-dadc38680c4f",
+        "name": "Search Clients",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "fieldsToMatchString": "_id",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1584,
+          96
+        ],
+        "id": "79b3a1b2-50a6-4f60-bb3e-e74f4ceb2f39",
+        "name": "Merge2"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblxho5QOix1I061r",
+            "mode": "list",
+            "cachedResultName": "SV Support",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+          },
+          "filterByFormula": "={Bubble Unique ID} = '{{ $json.Contractor }}'",
+          "options": {
+            "fields": [
+              "Name",
+              "Bubble Unique ID",
+              "Support Record ID"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          912,
+          320
+        ],
+        "id": "59b8da21-e73f-4e59-a9ef-b2d852dfa9a1",
+        "name": "Search Contractors",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const uniqueIds = new Set();\nconst uniqueRecords = [];\n\nfor (const item of items) {\n  // Check if we've already added this Airtable record ID\n  if (!uniqueIds.has(item.json.id)) {\n    uniqueIds.add(item.json.id);\n    uniqueRecords.push(item);\n  }\n}\n\nreturn uniqueRecords;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1136,
+          32
+        ],
+        "id": "1c88aaf3-9c85-4c2e-b818-0d84bbe8ce4a",
+        "name": "Get Unique Clients"
+      },
+      {
+        "parameters": {
+          "jsCode": "const uniqueIds = new Set();\nconst uniqueSupportRecords = [];\n\nfor (const item of items) {\n  // Check if we've already added this Airtable record ID\n  if (!uniqueIds.has(item.json.id)) {\n    uniqueIds.add(item.json.id);\n    uniqueSupportRecords.push(item);\n  }\n}\n\nreturn uniqueSupportRecords;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1136,
+          320
+        ],
+        "id": "1937e989-ab14-45ff-9b0a-b6aed9f4e470",
+        "name": "Get Unique Contractors"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "advanced": true,
+          "mergeByFields": {
+            "values": [
+              {
+                "field1": "PDev Requirement",
+                "field2": "Bubble Unique ID"
+              }
+            ]
+          },
+          "joinMode": "enrichInput1",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1360,
+          528
+        ],
+        "id": "deaf3b4a-4f39-45aa-ad2c-072dd27a7848",
+        "name": "Merge3"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblwf4ikeTB158oZV",
+            "mode": "list",
+            "cachedResultName": "PDEV Requirements",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+          },
+          "filterByFormula": "={Bubble Unique ID} = '{{ $json[\"PDev Requirement\"] }}'",
+          "options": {
+            "fields": [
+              "PDEV Requirement",
+              "Bubble Unique ID",
+              "Requirement ID"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          912,
+          608
+        ],
+        "id": "b891114a-dfaa-436e-99df-a68eab455ba7",
+        "name": "Search PDEV Requirements",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const uniqueIds = new Set();\nconst uniqueRequirementRecords = [];\n\nfor (const item of items) {\n  // Check if we've already added this Airtable record ID\n  if (!uniqueIds.has(item.json.id)) {\n    uniqueIds.add(item.json.id);\n    uniqueRequirementRecords.push(item);\n  }\n}\n\nreturn uniqueRequirementRecords;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1136,
+          608
+        ],
+        "id": "1b06bd3d-20fa-4621-a753-9797d68209c9",
+        "name": "Get Unique Requirement"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "fieldsToMatchString": "_id",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1808,
+          240
+        ],
+        "id": "288c2f0c-fe92-4e4c-8c71-6f5f42b28adb",
+        "name": "Final Merge"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblhK2ZvtenhtaFCv",
+            "mode": "list",
+            "cachedResultName": "Billable Activities",
+            "cachedResultUrl": "https://airtable.com/appXeNvT0ib83dUlt/tblhK2ZvtenhtaFCv"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Activity": "={{ $json[\"Activity (Text)\"] }}",
+              "Client": "={{ [$json[\"Record ID\"]] }}",
+              "Owner": "={{ [$json[\"Support Record ID\"]] }}",
+              "Activity Date": "={{ $json[\"Created Date\"] }}",
+              "Billable Hours": "={{ $json.Duration }}",
+              "PDEV Requirements (from Client)": "={{ [$json[\"Requirement ID\"]] }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Subject",
+                "displayName": "Subject",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Activity",
+                "displayName": "Activity",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Internal Meeting",
+                    "value": "Internal Meeting"
+                  },
+                  {
+                    "name": "PEC",
+                    "value": "PEC"
+                  },
+                  {
+                    "name": "Research and Preparation",
+                    "value": "Research and Preparation"
+                  },
+                  {
+                    "name": "Building",
+                    "value": "Building"
+                  },
+                  {
+                    "name": "Documentation",
+                    "value": "Documentation"
+                  },
+                  {
+                    "name": "CIO and PDOC Onboarding",
+                    "value": "CIO and PDOC Onboarding"
+                  },
+                  {
+                    "name": "Research and preparation",
+                    "value": "Research and preparation"
+                  },
+                  {
+                    "name": "CIO and PDoc Onboarding",
+                    "value": "CIO and PDoc Onboarding"
+                  },
+                  {
+                    "name": "Project work",
+                    "value": "Project work"
+                  },
+                  {
+                    "name": "Documentation/Coordination",
+                    "value": "Documentation/Coordination"
+                  },
+                  {
+                    "name": "Candidate Shortlisting",
+                    "value": "Candidate Shortlisting"
+                  },
+                  {
+                    "name": "Prep for Client Interview",
+                    "value": "Prep for Client Interview"
+                  },
+                  {
+                    "name": "Placements Call",
+                    "value": "Placements Call"
+                  },
+                  {
+                    "name": "Post Client Interview",
+                    "value": "Post Client Interview"
+                  },
+                  {
+                    "name": "Client Interview",
+                    "value": "Client Interview"
+                  },
+                  {
+                    "name": "Meeting",
+                    "value": "Meeting"
+                  },
+                  {
+                    "name": "Pre-placements prep",
+                    "value": "Pre-placements prep"
+                  },
+                  {
+                    "name": "Team Meeting",
+                    "value": "Team Meeting"
+                  },
+                  {
+                    "name": "Profiling",
+                    "value": "Profiling"
+                  },
+                  {
+                    "name": "Resume/Intro Video Review",
+                    "value": "Resume/Intro Video Review"
+                  },
+                  {
+                    "name": "1-on-1 or Coaching",
+                    "value": "1-on-1 or Coaching"
+                  },
+                  {
+                    "name": "Communication",
+                    "value": "Communication"
+                  },
+                  {
+                    "name": "Team Support",
+                    "value": "Team Support"
+                  },
+                  {
+                    "name": "Away",
+                    "value": "Away"
+                  },
+                  {
+                    "name": "AT Audit",
+                    "value": "AT Audit"
+                  },
+                  {
+                    "name": "Lunch",
+                    "value": "Lunch"
+                  },
+                  {
+                    "name": "System Audit",
+                    "value": "System Audit"
+                  },
+                  {
+                    "name": "Project Work",
+                    "value": "Project Work"
+                  },
+                  {
+                    "name": "Upskilling and PDoc Onboarding",
+                    "value": "Upskilling and PDoc Onboarding"
+                  },
+                  {
+                    "name": "Training",
+                    "value": "Training"
+                  }
+                ],
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Client",
+                "displayName": "Client",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Owner",
+                "displayName": "Owner",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "PDEV Requirements (from Client)",
+                "displayName": "PDEV Requirements (from Client)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "SUF (from PDEV Requirements) (from Client)",
+                "displayName": "SUF (from PDEV Requirements) (from Client)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Activity Date",
+                "displayName": "Activity Date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Billable Hours",
+                "displayName": "Billable Hours",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Team (from Owner)",
+                "displayName": "Team (from Owner)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Attachment Download Link",
+                "displayName": "Attachment Download Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Original Email Link",
+                "displayName": "Original Email Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "To",
+                "displayName": "To",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CC",
+                "displayName": "CC",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Sender",
+                "displayName": "Sender",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Attachments",
+                "displayName": "Attachments",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Due Date",
+                "displayName": "Due Date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Message ID",
+                "displayName": "Message ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Tags",
+                "displayName": "Tags",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "options": [
+                  {
+                    "name": "Todo",
+                    "value": "Todo"
+                  },
+                  {
+                    "name": "Urgent",
+                    "value": "Urgent"
+                  },
+                  {
+                    "name": "Not started",
+                    "value": "Not started"
+                  },
+                  {
+                    "name": "In progress",
+                    "value": "In progress"
+                  },
+                  {
+                    "name": "Done",
+                    "value": "Done"
+                  },
+                  {
+                    "name": "viaBCC",
+                    "value": "viaBCC"
+                  },
+                  {
+                    "name": "viaAutoForward",
+                    "value": "viaAutoForward"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Bubble Roles",
+                "displayName": "Bubble Roles",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Auto Link",
+                "displayName": "Auto Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Symmetric Column",
+                "displayName": "Symmetric Column",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PLACEMENTS Requirements (from PDEV Requirements (from Client))",
+                "displayName": "PLACEMENTS Requirements (from PDEV Requirements (from Client))",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PDEV Requirements",
+                "displayName": "PDEV Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Value",
+                "displayName": "Value",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Billable Hours (hrs)",
+                "displayName": "Billable Hours (hrs)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Amount Billable",
+                "displayName": "Amount Billable",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "SUF Paid Amount (from Projects_New) (from PDEV Requirements (from Client))",
+                "displayName": "SUF Paid Amount (from Projects_New) (from PDEV Requirements (from Client))",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Team (From Activity)",
+                "displayName": "Team (From Activity)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {
+            "typecast": true
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          2032,
+          240
+        ],
+        "id": "ab99f0ce-3304-41aa-935a-11cc2ba6b277",
+        "name": "Create Billable Activities",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "url": "https://scalevirtually.net/api/1.1/obj/supportactivity",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "constraints",
+                "value": "=[{\"key\": \"Date\", \"constraint_type\": \"equals\", \"value\": \"Feb 13, 2026\"}]"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer fdb31500af0a0df85c7d2f7c7a0c8681"
+              }
+            ]
+          },
+          "options": {
+            "pagination": {
+              "pagination": {
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "value": "={{ $pageCount * 100 }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ $response.body.response.remaining === 0 }}"
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          240,
+          672
+        ],
+        "id": "dce5d6d5-1c81-42c3-ad3f-336ca268b679",
+        "name": "Test"
+      },
+      {
+        "parameters": {
+          "url": "https://scalevirtually.net/api/1.1/meta",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer fdb31500af0a0df85c7d2f7c7a0c8681"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          16,
+          240
+        ],
+        "id": "e97e711d-76ba-46db-be7f-b4c187d85734",
+        "name": "Fetch WBR"
+      },
+      {
+        "parameters": {
+          "url": "https://scalevirtually.net/api/1.1/obj/supportactivity",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "constraints",
+                "value": "=[{\"key\": \"Date\", \"constraint_type\": \"equals\", \"value\": \"{{ $now.setZone('America/Chicago').toFormat('MMM d, yyyy') }}\"}]"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer fdb31500af0a0df85c7d2f7c7a0c8681"
+              }
+            ]
+          },
+          "options": {
+            "pagination": {
+              "pagination": {
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "value": "={{ $pageCount * 100 }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ $response.body.response.remaining === 0 }}"
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          256,
+          240
+        ],
+        "id": "af960571-e3db-49f8-949c-01196389a081",
+        "name": "Fetch Time Logs"
+      }
+    ],
+    "connections": {
+      "When clicking \u2018Execute workflow\u2019": {
+        "main": [
+          [
+            {
+              "node": "Fetch WBR",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Fetch WBR",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out": {
+        "main": [
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter": {
+        "main": [
+          [
+            {
+              "node": "Search Clients",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Search Contractors",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Search PDEV Requirements",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Merge3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "Merge2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search Clients": {
+        "main": [
+          [
+            {
+              "node": "Get Unique Clients",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge2": {
+        "main": [
+          [
+            {
+              "node": "Final Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge1": {
+        "main": [
+          [
+            {
+              "node": "Merge2",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Search Contractors": {
+        "main": [
+          [
+            {
+              "node": "Get Unique Contractors",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Unique Clients": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Get Unique Contractors": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge3": {
+        "main": [
+          [
+            {
+              "node": "Final Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Search PDEV Requirements": {
+        "main": [
+          [
+            {
+              "node": "Get Unique Requirement",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Unique Requirement": {
+        "main": [
+          [
+            {
+              "node": "Merge3",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Final Merge": {
+        "main": [
+          [
+            {
+              "node": "Create Billable Activities",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Test": {
+        "main": [
+          []
+        ]
+      },
+      "Fetch WBR": {
+        "main": [
+          [
+            {
+              "node": "Fetch Time Logs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Time Logs": {
+        "main": [
+          [
+            {
+              "node": "Split Out",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

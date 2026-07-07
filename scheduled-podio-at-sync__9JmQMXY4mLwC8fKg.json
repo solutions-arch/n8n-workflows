@@ -1,0 +1,918 @@
+{
+  "updatedAt": "2026-04-30T21:06:19.000Z",
+  "createdAt": "2026-03-26T17:55:06.282Z",
+  "id": "9JmQMXY4mLwC8fKg",
+  "name": "[Scheduled] Podio-AT Sync",
+  "description": "Syncs MVA pair records from Podio to Airtable by fetching Podio records, cleaning key client/VA contract details, matching them to VA Placements through a match key, and upserting the cleaned data into the Podio Data table.",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://podio.com/oauth/token",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "app"
+            },
+            {
+              "name": "client_id",
+              "value": "sv-timekeeping"
+            },
+            {
+              "name": "client_secret",
+              "value": "9y5LtlYXU8q5EFVKdaeLBLziHzue6BOwTPZ0806rjJqshKQJB0Y2qHwE4711XA1P"
+            },
+            {
+              "name": "app_id",
+              "value": "25201878"
+            },
+            {
+              "name": "app_token",
+              "value": "f1085136f2964605b372e2812fc0af51"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        432,
+        -464
+      ],
+      "id": "aeda68a6-1401-4b0a-8f95-b06d707062db",
+      "name": "Get Podio OAuth Token"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.podio.com/item/app/25201878/filter/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "offset",
+              "value": "={{ $runIndex * 50 }}"
+            },
+            {
+              "name": "limit",
+              "value": "={{ 50 }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        656,
+        -464
+      ],
+      "id": "08da42d9-2f65-4d73-93c2-4709a686b463",
+      "name": "Fetch MVA Pair"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map((inputItem) => {\n  const record = inputItem.json; // Each item IS already one Podio record\n\n  const fields = Array.isArray(record.fields) ? record.fields : [];\n\n  const findField = (label) => fields.find((f) => f.label === label);\n\n  // All calculation/text fields have: values[0].value (a plain string)\n  // Category fields have: values[0].value.text and values[0].value.id\n  // Money fields have: values[0].value (string amount) and values[0].currency\n  // Date fields have: values[0].start_date\n  const getFieldValue = (label) => {\n    const field = findField(label);\n    if (!field || !Array.isArray(field.values) || field.values.length === 0) return null;\n\n    const raw = field.values[0];\n    if (raw === null || raw === undefined) return null;\n\n    // Category type: { value: { id, text, color, status } }\n    if (raw.value && typeof raw.value === 'object' && raw.value.text !== undefined) {\n      return raw.value.text;\n    }\n\n    // Plain string/number value (calculation, text, number)\n    if (raw.value !== undefined && raw.value !== null) {\n      return raw.value;\n    }\n\n    return null;\n  };\n\n  const getFieldId = (label) => {\n    const field = findField(label);\n    if (!field || !Array.isArray(field.values) || field.values.length === 0) return null;\n    const raw = field.values[0];\n    if (raw && raw.value && typeof raw.value === 'object' && raw.value.id !== undefined) {\n      return raw.value.id;\n    }\n    return null;\n  };\n\n  const getMoney = (label) => {\n    const field = findField(label);\n    if (!field || !Array.isArray(field.values) || field.values.length === 0) {\n      return { amount: null, currency: null };\n    }\n    const raw = field.values[0];\n    return {\n      amount: raw.value !== undefined && raw.value !== null && raw.value !== ''\n        ? Number(raw.value)\n        : null,\n      currency: raw.currency || null,\n    };\n  };\n\n  const getDate = (label) => {\n    const field = findField(label);\n    if (!field || !Array.isArray(field.values) || field.values.length === 0) return null;\n    const raw = field.values[0];\n    return raw.start_date || raw.start || raw.end_date || raw.end || null;\n  };\n\n  const stripHtml = (value) => {\n    if (value === null || value === undefined || value === '') return null;\n    return String(value)\n      .replace(/<br\\s*\\/?>/gi, '\\n')\n      .replace(/<\\/p>/gi, '\\n')\n      .replace(/<\\/li>/gi, '\\n')\n      .replace(/<li>/gi, '- ')\n      .replace(/<[^>]*>/g, '')\n      .replace(/&nbsp;/g, ' ')\n      .replace(/&amp;/g, '&')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>')\n      .replace(/\\n{3,}/g, '\\n\\n')\n      .trim() || null;\n  };\n\n  const parseNumber = (value) => {\n    if (value === null || value === undefined || value === '') return null;\n    const cleaned = String(value).replace(/[^0-9.-]+/g, '');\n    if (!cleaned) return null;\n    const parsed = Number(cleaned);\n    return Number.isNaN(parsed) ? null : parsed;\n  };\n\n  const normalizeEmail = (value) => {\n    if (!value) return null;\n    return String(value).trim().toLowerCase();\n  };\n\n  const clientRate = getMoney('Client Rate');\n  const svCurrentRate = getMoney('SV Current Rate');\n\n  const vaEmail = normalizeEmail(getFieldValue('VA Email Address'));\n  const clientEmail = normalizeEmail(getFieldValue('Client Email Address'));\n\n  const matchKey = vaEmail && clientEmail ? `${vaEmail}|${clientEmail}` : null;\n\n  return {\n    json: {\n      'Podio Item ID': record.item_id || null,\n      'App Item ID': record.app_item_id || null,\n      'Revision': record.revision || null,\n      'Created On': record.created_on || null,\n      'Last Event On': record.last_event_on || null,\n      'Title': record.title || null,\n\n      'MVA Record ID': getFieldValue('MVA Record ID'),\n      'Match Key': matchKey,\n\n      'Contractor Full Name': getFieldValue('Contractor Full Name'),\n      'Client Name': getFieldValue('Client Name'),\n      'Company Name': getFieldValue('Company Name'),\n      'Client Email Address': clientEmail,\n      'Client Billing Email Address': getFieldValue('Client Billing Email Address'),\n      'VA Email Address': vaEmail,\n\n      'MVA Record Status': getFieldValue('MVA Record Status'),\n      'MVA Record Status ID': getFieldId('MVA Record Status'),\n\n      'MVA Contract': getFieldValue('MVA Contract'),\n      'MVA Contract ID': getFieldId('MVA Contract'),\n\n      'MVA': parseNumber(getFieldValue('MVA')),\n      'Work Hours': parseNumber(getFieldValue('WorkHours')),\n\n      'Client Rate Amount': clientRate.amount,\n      'Client Rate Currency': clientRate.currency,\n\n      'SV Current Rate Amount': svCurrentRate.amount,\n      'SV Current Rate Currency': svCurrentRate.currency,\n\n      'SV Base Rate Contract': parseNumber(getFieldValue('SV Base Rate (Contract)')),\n\n      'MVA Type': getFieldValue('MVA Type'),\n      'MVA Type ID': getFieldId('MVA Type'),\n\n      'MVA Start Date': getDate('MVA Start Date'),\n      'Work Days': getFieldValue('Work Days'),\n\n      'Rest Day 1': getFieldValue('Rest Day 1'),\n      'Rest Day 1 ID': getFieldId('Rest Day 1'),\n\n      'Rest Day 2': getFieldValue('Rest Day 2'),\n      'Rest Day 2 ID': getFieldId('Rest Day 2'),\n\n      'Start Time': getFieldValue('Start Time'),\n      'End Time': getFieldValue('End Time'),\n\n      'VA Task List': stripHtml(getFieldValue('VA Task List')),\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        -544
+      ],
+      "id": "11a9e9b6-3092-4c39-84f6-72af28974253",
+      "name": "Cleaner"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6228434c-aed5-49a3-a546-b0ad723a30a2",
+              "leftValue": "={{ $input.all().length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1328,
+        -544
+      ],
+      "id": "00916137-3af1-4778-bdd8-5d9d78f10d21",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblCCWeZz4KHN9QKB",
+          "mode": "list",
+          "cachedResultName": "VA Placements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblCCWeZz4KHN9QKB"
+        },
+        "filterByFormula": "={Match Key} = '{{ $json[\"Match Key\"] }}'",
+        "options": {
+          "fields": [
+            "Record ID",
+            "Match Key",
+            "Podio Data Record ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1776,
+        -608
+      ],
+      "id": "476d66af-76f9-4210-b1f9-97c04c0aaa2e",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "Match Key",
+        "joinMode": "enrichInput2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2000,
+        -544
+      ],
+      "id": "408eb45d-f07c-49ca-802f-15b930ebb9c5",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbls1ubkrPe4vXkih",
+          "mode": "list",
+          "cachedResultName": "Podio Data",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbls1ubkrPe4vXkih"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "MVA Pair": "={{ [$json[\"Record ID\"]] }}",
+            "Contractor Full Name": "={{ $json[\"Contractor Full Name\"] }}",
+            "Client Name": "={{ $json[\"Client Name\"] }}",
+            "Company Name": "={{ $json[\"Company Name\"] }}",
+            "Client Email Address": "={{ $json[\"Client Email Address\"] }}",
+            "Client Billing Email Address": "={{ $json[\"Client Billing Email Address\"] }}",
+            "VA Email Address": "={{ $json[\"VA Email Address\"] }}",
+            "MVA Contract": "={{ $json[\"MVA Contract\"] }}",
+            "MVA": "={{ $json.MVA }}",
+            "Work Hours": "={{ $json[\"Work Hours\"] }}",
+            "Client Rate Amount": "={{ $json[\"Client Rate Amount\"] }}",
+            "Client Rate Currency": "={{ $json[\"Client Rate Currency\"] }}",
+            "SV Current Rate Amount": "={{ $json[\"SV Current Rate Amount\"] }}",
+            "SV Current Rate Currency": "={{ $json[\"SV Current Rate Currency\"] }}",
+            "SV Base Rate Contract": "={{ $json[\"SV Base Rate Contract\"] }}",
+            "MVA Type": "={{ $json[\"MVA Type\"] }}",
+            "MVA Start Date": "={{ $json[\"MVA Start Date\"] }}",
+            "Work Days": "={{ $json[\"Work Days\"] }}",
+            "Rest Day 1": "={{ $json[\"Rest Day 1\"] }}",
+            "Rest Day 2": "={{ $json[\"Rest Day 2\"] }}",
+            "Start Time": "={{ $json[\"Start Time\"] }}",
+            "End Time": "={{ $json[\"End Time\"] }}",
+            "VA Task List": "={{ $json[\"VA Task List\"] }}",
+            "MVA Podio Record ID": "={{ $json[\"MVA Record ID\"] }}"
+          },
+          "matchingColumns": [
+            "MVA Podio Record ID"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Podio Record",
+              "displayName": "Podio Record",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "MVA Pair",
+              "displayName": "MVA Pair",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contractor Full Name",
+              "displayName": "Contractor Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client Email Address",
+              "displayName": "Client Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client Billing Email Address",
+              "displayName": "Client Billing Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "VA Email Address",
+              "displayName": "VA Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "MVA Contract",
+              "displayName": "MVA Contract",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "MVA",
+              "displayName": "MVA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Work Hours",
+              "displayName": "Work Hours",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client Rate Amount",
+              "displayName": "Client Rate Amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Client Rate Currency",
+              "displayName": "Client Rate Currency",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SV Current Rate Amount",
+              "displayName": "SV Current Rate Amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SV Current Rate Currency",
+              "displayName": "SV Current Rate Currency",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SV Base Rate Contract",
+              "displayName": "SV Base Rate Contract",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "MVA Type",
+              "displayName": "MVA Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "MVA Start Date",
+              "displayName": "MVA Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Work Days",
+              "displayName": "Work Days",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Rest Day 1",
+              "displayName": "Rest Day 1",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Rest Day 2",
+              "displayName": "Rest Day 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Start Time",
+              "displayName": "Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "End Time",
+              "displayName": "End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "VA Task List",
+              "displayName": "VA Task List",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "MVA Podio Record ID",
+              "displayName": "MVA Podio Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Record ID",
+              "displayName": "Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2224,
+        -544
+      ],
+      "id": "fd02d970-cfd2-4e48-97a0-7977d2076f82",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://podio.com/oauth/token",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "app"
+            },
+            {
+              "name": "client_id",
+              "value": "sv-timekeeping"
+            },
+            {
+              "name": "client_secret",
+              "value": "9y5LtlYXU8q5EFVKdaeLBLziHzue6BOwTPZ0806rjJqshKQJB0Y2qHwE4711XA1P"
+            },
+            {
+              "name": "app_id",
+              "value": "25201878"
+            },
+            {
+              "name": "app_token",
+              "value": "f1085136f2964605b372e2812fc0af51"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2448,
+        -544
+      ],
+      "id": "256a829a-acd7-48d7-9c4e-de500b73e861",
+      "name": "Get Podio OAuth Token1",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "55eadc12-150e-4c7d-a061-149bf0c6cb21",
+              "leftValue": "={{ $json.fields[10].values[0].value }}",
+              "rightValue": "admin@scalevirtually.com",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        -544
+      ],
+      "id": "c70383fa-7ec1-4d30-80c5-ef5065300eab",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2672,
+        -464
+      ],
+      "id": "e4e42b69-f55b-4799-9886-5e9cf34fda2d",
+      "name": "Wait",
+      "webhookId": "ad1c26a6-1ba2-4cf7-ac86-0c91da5e9bd7"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        880,
+        -544
+      ],
+      "id": "771c8f46-fa09-4453-a6cd-d3fdb8f58841",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 5 1-11,13-26,28-31 * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        -464
+      ],
+      "id": "b28dead2-67ac-419b-8086-c937d5b893a8",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "connections": {
+    "Get Podio OAuth Token": {
+      "main": [
+        [
+          {
+            "node": "Fetch MVA Pair",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch MVA Pair": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or update a record": {
+      "main": [
+        [
+          {
+            "node": "Get Podio OAuth Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Podio OAuth Token1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Fetch MVA Pair",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Podio OAuth Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "toZk8fLW9s9OWJYj"
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "5c6f8505-22ea-472a-872a-6e525cdae9af",
+  "activeVersionId": null,
+  "versionCounter": 172,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-03-26T17:55:06.292Z",
+      "createdAt": "2026-03-26T17:55:06.292Z",
+      "role": "workflow:owner",
+      "workflowId": "9JmQMXY4mLwC8fKg",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": null
+}

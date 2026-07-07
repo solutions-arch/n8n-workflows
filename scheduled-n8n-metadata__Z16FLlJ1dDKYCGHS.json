@@ -1,0 +1,883 @@
+{
+  "updatedAt": "2026-07-04T13:05:57.258Z",
+  "createdAt": "2026-04-15T13:26:08.966Z",
+  "id": "Z16FLlJ1dDKYCGHS",
+  "name": "[Scheduled] n8n Metadata",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://svsolutionarchitects.app.n8n.cloud/api/v1/executions",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "250"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "value": "={{ $response.body.nextCursor }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.nextCursor }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        112,
+        -112
+      ],
+      "id": "756adc3c-5f45-4ff2-8384-3c007afacef4",
+      "name": "GET /executions",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "250"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        112,
+        80
+      ],
+      "id": "12044ff7-18a4-4c4f-8387-6853990a714c",
+      "name": "GET /workflows",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        336,
+        -16
+      ],
+      "id": "ffd8e3fe-5716-4e2b-9658-18f2b073bbfa",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Grab all the items from the previous node\nconst allWorkflows = $input.all().map(item => {\n    // If the node is connected AFTER Airtable, the data is hidden inside \"fields\"\n    if (item.json.fields) {\n        return item.json.fields;\n    }\n    // If it's connected before Airtable, the data is right at the top\n    return item.json;\n});\n\n// 1. Generate Date Internally (Bulletproof: no longer relies on upstream data)\nconst today = new Date();\nconst formattedDate = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });\n\n// 2. Safety Net: Check if the array is actually empty\nif (allWorkflows.length === 0 || !allWorkflows[0].workflowName) {\n    return [{\n        json: {\n            text: `\ud83d\udcca *n8n Daily Digest \u2013 ${formattedDate}*\\n\\nTotal runs: 0   |   Success rate: 100.0%   |   Errors: 0\\n\\n\ud83d\udca4 *Quiet day. No automated workflows were triggered in the last 24 hours.*\\n\\n\ud83d\udd17 View full dashboard \u2192 <https://airtable.com/YOUR_BASE_ID|Airtable link>`\n        }\n    }];\n}\n\n// 3. Calculate Global Metrics (Total runs, total errors, overall success)\nlet globalRuns = 0;\nlet globalErrors = 0;\n\nallWorkflows.forEach(wf => {\n    // We use fallback || 0 just in case the numbers are missing\n    globalRuns += (wf.totalRuns || 0);\n    globalErrors += (wf.errorCount || 0);\n});\n\nlet globalSuccessRate = \"100.0\";\nif (globalRuns > 0) {\n    globalSuccessRate = (((globalRuns - globalErrors) / globalRuns) * 100).toFixed(1);\n}\n\n// 4. Build \"Most Active\" Section\nconst topActive = allWorkflows.slice(0, 3);\nlet activeText = \"\";\ntopActive.forEach((wf, index) => {\n    activeText += `${index + 1}. ${wf.workflowName} \u2014 ${wf.totalRuns} runs\\n`;\n});\n\n// 5. Build \"Most Errors\" Section\nconst topErrors = allWorkflows\n    .filter(wf => wf.errorCount > 0)\n    .sort((a, b) => b.errorCount - a.errorCount)\n    .slice(0, 3);\n\nlet errorText = \"\ud83d\udea8 Most errors\\n\";\nif (topErrors.length > 0) {\n    topErrors.forEach((wf, index) => {\n        errorText += `${index + 1}. ${wf.workflowName} \u2014 ${wf.errorCount} errors (${(wf.successRate * 100).toFixed(1)}% success)\\n`;\n    });\n} else {\n    errorText += \"None! Great job today.\\n\";\n}\n\n// 6. Construct the final Slack Message text\nconst slackMessage = `\ud83d\udcca *n8n Daily Digest \u2013 ${formattedDate}*\\n\\n` +\n    `Total runs: ${globalRuns}   |   Success rate: ${globalSuccessRate}%   |   Errors: ${globalErrors}\\n\\n` +\n    `\ud83d\udd25 *Most active*\\n${activeText}\\n` +\n    `${errorText}\\n` +\n    `\ud83d\udd17 View full dashboard \u2192 <https://airtable.com/apptuAm73VyH7pcHA/shrRGRx6Nbj2jg2ms|Airtable link>`;\n\n// Output the fully formatted message\nreturn [{\n    json: {\n        text: slackMessage\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        -16
+      ],
+      "id": "cee4c6fe-87e1-40a8-90f3-51c0af5a5550",
+      "name": "Slack Message Builder",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Pull data from both parallel HTTP branches\n// (This safely looks back past the Merge node to get the raw API data)\nconst executionsData = $('GET /executions').first().json.data;\nconst workflowsData = $('GET /workflows').first().json.data;\n\n// 2. Build the ID-to-Name map from the Workflows data\nconst workflowMap = {};\nif (workflowsData) {\n    workflowsData.forEach(wf => {\n        workflowMap[wf.id] = wf.name;\n    });\n}\n\n// 3. Define the 24-hour cutoff window\nconst cutoffTime = new Date(new Date().getTime() - (24 * 60 * 60 * 1000));\nconst todayDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD for Airtable\n\n// 4. Initialize our aggregation object\nconst stats = {};\n\n// 5. Loop through the executions and aggregate\nif (executionsData) {\n    executionsData.forEach(exec => {\n        const startedAt = new Date(exec.startedAt);\n\n        // PRODUCTION FILTER: Only process runs in the last 24 hours AND ignore manual tests\n        if (startedAt >= cutoffTime && exec.mode !== 'manual') {\n            const wid = exec.workflowId;\n\n            // If this is the first time we're seeing this workflow, set up its profile\n            if (!stats[wid]) {\n                stats[wid] = {\n                    workflowId: wid,\n                    workflowName: workflowMap[wid] || `Unknown Workflow (${wid})`,\n                    totalRuns: 0,\n                    successCount: 0,\n                    errorCount: 0\n                };\n            }\n\n            // Increment total runs\n            stats[wid].totalRuns += 1;\n\n            // Categorize the status\n            if (exec.status === 'success') {\n                stats[wid].successCount += 1;\n            } else if (exec.status === 'error' || exec.status === 'crashed') {\n                stats[wid].errorCount += 1;\n            }\n        }\n    });\n}\n\n// 6. Format into the final array of items that n8n expects\nconst results = Object.values(stats).map(stat => {\n    // Calculate success rate safely as a pure decimal (0.000 to 1.000) for Airtable\n    let successRate = 0;\n    if (stat.totalRuns > 0) {\n        successRate = parseFloat((stat.successCount / stat.totalRuns).toFixed(3));\n    }\n\n    return {\n        json: {\n            workflowId: stat.workflowId,\n            workflowName: stat.workflowName,\n            totalRuns: stat.totalRuns,\n            errorCount: stat.errorCount,\n            successRate: successRate, // Raw decimal for Airtable\n            date: todayDate\n        }\n    };\n});\n\n// 7. Sort by totalRuns (highest to lowest) to establish the activityRank\nresults.sort((a, b) => b.json.totalRuns - a.json.totalRuns);\n\n// Assign the rank based on the sorted order\nresults.forEach((item, index) => {\n    item.json.activityRank = index + 1;\n});\n\n// Output the final shaped data\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -16
+      ],
+      "id": "5d857d5f-4966-49fd-b416-1e06fdd38de1",
+      "name": "Aggregate",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblfTOUu5SnNrJ0Wj",
+          "mode": "list",
+          "cachedResultName": "n8n Metadata",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblfTOUu5SnNrJ0Wj"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "workflowName": "={{ $json.workflowName }}",
+            "totalRuns": "={{ $json.totalRuns }}",
+            "successRate": "={{ $json.successRate }}",
+            "errorCount": "={{ $json.errorCount }}",
+            "activityRank": "={{ $json.activityRank }}",
+            "runId": "={{ $json.workflowId }}_{{ $json.date }}"
+          },
+          "matchingColumns": [
+            "runId"
+          ],
+          "schema": [
+            {
+              "id": "runId",
+              "displayName": "runId",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "workflowName",
+              "displayName": "workflowName",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "totalRuns",
+              "displayName": "totalRuns",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "successRate",
+              "displayName": "successRate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "errorCount",
+              "displayName": "errorCount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "activityRank",
+              "displayName": "activityRank",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        784,
+        -16
+      ],
+      "id": "de4e0fd3-73d5-4120-be09-bbf160fb1674",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "unfurl_links": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1232,
+        -16
+      ],
+      "id": "976d8e6b-19db-48a9-9ebe-86c2d5a955b1",
+      "name": "Send a message",
+      "webhookId": "5acc09b9-cd56-4439-bf54-cca8367a51ca",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * 2-6"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -128,
+        -32
+      ],
+      "id": "24c5a73b-0358-4eac-b24c-8ba23f2e1dd7",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "connections": {
+    "GET /executions": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET /workflows": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create or update a record": {
+      "main": [
+        [
+          {
+            "node": "Slack Message Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Message Builder": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET /executions",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET /workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "rGzixtwYBsqnFWBo",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "49b0d666-05c2-4057-aadf-8c4c0d6f2add",
+  "activeVersionId": "49b0d666-05c2-4057-aadf-8c4c0d6f2add",
+  "versionCounter": 172,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T13:26:08.971Z",
+      "createdAt": "2026-04-15T13:26:08.971Z",
+      "role": "workflow:owner",
+      "workflowId": "Z16FLlJ1dDKYCGHS",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:05:57.259Z",
+    "createdAt": "2026-07-04T13:05:57.259Z",
+    "versionId": "49b0d666-05c2-4057-aadf-8c4c0d6f2add",
+    "workflowId": "Z16FLlJ1dDKYCGHS",
+    "nodes": [
+      {
+        "parameters": {
+          "url": "https://svsolutionarchitects.app.n8n.cloud/api/v1/executions",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "limit",
+                "value": "250"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-N8N-API-KEY",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+              }
+            ]
+          },
+          "options": {
+            "pagination": {
+              "pagination": {
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "value": "={{ $response.body.nextCursor }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ !$response.body.nextCursor }}"
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          112,
+          -112
+        ],
+        "id": "756adc3c-5f45-4ff2-8384-3c007afacef4",
+        "name": "GET /executions",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000
+      },
+      {
+        "parameters": {
+          "url": "https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "limit",
+                "value": "250"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-N8N-API-KEY",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          112,
+          80
+        ],
+        "id": "12044ff7-18a4-4c4f-8387-6853990a714c",
+        "name": "GET /workflows",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          336,
+          -16
+        ],
+        "id": "ffd8e3fe-5716-4e2b-9658-18f2b073bbfa",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Grab all the items from the previous node\nconst allWorkflows = $input.all().map(item => {\n    // If the node is connected AFTER Airtable, the data is hidden inside \"fields\"\n    if (item.json.fields) {\n        return item.json.fields;\n    }\n    // If it's connected before Airtable, the data is right at the top\n    return item.json;\n});\n\n// 1. Generate Date Internally (Bulletproof: no longer relies on upstream data)\nconst today = new Date();\nconst formattedDate = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });\n\n// 2. Safety Net: Check if the array is actually empty\nif (allWorkflows.length === 0 || !allWorkflows[0].workflowName) {\n    return [{\n        json: {\n            text: `\ud83d\udcca *n8n Daily Digest \u2013 ${formattedDate}*\\n\\nTotal runs: 0   |   Success rate: 100.0%   |   Errors: 0\\n\\n\ud83d\udca4 *Quiet day. No automated workflows were triggered in the last 24 hours.*\\n\\n\ud83d\udd17 View full dashboard \u2192 <https://airtable.com/YOUR_BASE_ID|Airtable link>`\n        }\n    }];\n}\n\n// 3. Calculate Global Metrics (Total runs, total errors, overall success)\nlet globalRuns = 0;\nlet globalErrors = 0;\n\nallWorkflows.forEach(wf => {\n    // We use fallback || 0 just in case the numbers are missing\n    globalRuns += (wf.totalRuns || 0);\n    globalErrors += (wf.errorCount || 0);\n});\n\nlet globalSuccessRate = \"100.0\";\nif (globalRuns > 0) {\n    globalSuccessRate = (((globalRuns - globalErrors) / globalRuns) * 100).toFixed(1);\n}\n\n// 4. Build \"Most Active\" Section\nconst topActive = allWorkflows.slice(0, 3);\nlet activeText = \"\";\ntopActive.forEach((wf, index) => {\n    activeText += `${index + 1}. ${wf.workflowName} \u2014 ${wf.totalRuns} runs\\n`;\n});\n\n// 5. Build \"Most Errors\" Section\nconst topErrors = allWorkflows\n    .filter(wf => wf.errorCount > 0)\n    .sort((a, b) => b.errorCount - a.errorCount)\n    .slice(0, 3);\n\nlet errorText = \"\ud83d\udea8 Most errors\\n\";\nif (topErrors.length > 0) {\n    topErrors.forEach((wf, index) => {\n        errorText += `${index + 1}. ${wf.workflowName} \u2014 ${wf.errorCount} errors (${(wf.successRate * 100).toFixed(1)}% success)\\n`;\n    });\n} else {\n    errorText += \"None! Great job today.\\n\";\n}\n\n// 6. Construct the final Slack Message text\nconst slackMessage = `\ud83d\udcca *n8n Daily Digest \u2013 ${formattedDate}*\\n\\n` +\n    `Total runs: ${globalRuns}   |   Success rate: ${globalSuccessRate}%   |   Errors: ${globalErrors}\\n\\n` +\n    `\ud83d\udd25 *Most active*\\n${activeText}\\n` +\n    `${errorText}\\n` +\n    `\ud83d\udd17 View full dashboard \u2192 <https://airtable.com/apptuAm73VyH7pcHA/shrRGRx6Nbj2jg2ms|Airtable link>`;\n\n// Output the fully formatted message\nreturn [{\n    json: {\n        text: slackMessage\n    }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1008,
+          -16
+        ],
+        "id": "cee4c6fe-87e1-40a8-90f3-51c0af5a5550",
+        "name": "Slack Message Builder",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "jsCode": "// 1. Pull data from both parallel HTTP branches\n// (This safely looks back past the Merge node to get the raw API data)\nconst executionsData = $('GET /executions').first().json.data;\nconst workflowsData = $('GET /workflows').first().json.data;\n\n// 2. Build the ID-to-Name map from the Workflows data\nconst workflowMap = {};\nif (workflowsData) {\n    workflowsData.forEach(wf => {\n        workflowMap[wf.id] = wf.name;\n    });\n}\n\n// 3. Define the 24-hour cutoff window\nconst cutoffTime = new Date(new Date().getTime() - (24 * 60 * 60 * 1000));\nconst todayDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD for Airtable\n\n// 4. Initialize our aggregation object\nconst stats = {};\n\n// 5. Loop through the executions and aggregate\nif (executionsData) {\n    executionsData.forEach(exec => {\n        const startedAt = new Date(exec.startedAt);\n\n        // PRODUCTION FILTER: Only process runs in the last 24 hours AND ignore manual tests\n        if (startedAt >= cutoffTime && exec.mode !== 'manual') {\n            const wid = exec.workflowId;\n\n            // If this is the first time we're seeing this workflow, set up its profile\n            if (!stats[wid]) {\n                stats[wid] = {\n                    workflowId: wid,\n                    workflowName: workflowMap[wid] || `Unknown Workflow (${wid})`,\n                    totalRuns: 0,\n                    successCount: 0,\n                    errorCount: 0\n                };\n            }\n\n            // Increment total runs\n            stats[wid].totalRuns += 1;\n\n            // Categorize the status\n            if (exec.status === 'success') {\n                stats[wid].successCount += 1;\n            } else if (exec.status === 'error' || exec.status === 'crashed') {\n                stats[wid].errorCount += 1;\n            }\n        }\n    });\n}\n\n// 6. Format into the final array of items that n8n expects\nconst results = Object.values(stats).map(stat => {\n    // Calculate success rate safely as a pure decimal (0.000 to 1.000) for Airtable\n    let successRate = 0;\n    if (stat.totalRuns > 0) {\n        successRate = parseFloat((stat.successCount / stat.totalRuns).toFixed(3));\n    }\n\n    return {\n        json: {\n            workflowId: stat.workflowId,\n            workflowName: stat.workflowName,\n            totalRuns: stat.totalRuns,\n            errorCount: stat.errorCount,\n            successRate: successRate, // Raw decimal for Airtable\n            date: todayDate\n        }\n    };\n});\n\n// 7. Sort by totalRuns (highest to lowest) to establish the activityRank\nresults.sort((a, b) => b.json.totalRuns - a.json.totalRuns);\n\n// Assign the rank based on the sorted order\nresults.forEach((item, index) => {\n    item.json.activityRank = index + 1;\n});\n\n// Output the final shaped data\nreturn results;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          560,
+          -16
+        ],
+        "id": "5d857d5f-4966-49fd-b416-1e06fdd38de1",
+        "name": "Aggregate",
+        "executeOnce": true
+      },
+      {
+        "parameters": {
+          "operation": "upsert",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblfTOUu5SnNrJ0Wj",
+            "mode": "list",
+            "cachedResultName": "n8n Metadata",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblfTOUu5SnNrJ0Wj"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "workflowName": "={{ $json.workflowName }}",
+              "totalRuns": "={{ $json.totalRuns }}",
+              "successRate": "={{ $json.successRate }}",
+              "errorCount": "={{ $json.errorCount }}",
+              "activityRank": "={{ $json.activityRank }}",
+              "runId": "={{ $json.workflowId }}_{{ $json.date }}"
+            },
+            "matchingColumns": [
+              "runId"
+            ],
+            "schema": [
+              {
+                "id": "runId",
+                "displayName": "runId",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "workflowName",
+                "displayName": "workflowName",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "totalRuns",
+                "displayName": "totalRuns",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "successRate",
+                "displayName": "successRate",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "errorCount",
+                "displayName": "errorCount",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "activityRank",
+                "displayName": "activityRank",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "date",
+                "displayName": "date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {
+            "typecast": true
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          784,
+          -16
+        ],
+        "id": "de4e0fd3-73d5-4120-be09-bbf160fb1674",
+        "name": "Create or update a record",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C09ESC12MA5",
+            "mode": "id"
+          },
+          "text": "={{ $json.text }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "unfurl_links": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1232,
+          -16
+        ],
+        "id": "976d8e6b-19db-48a9-9ebe-86c2d5a955b1",
+        "name": "Send a message",
+        "webhookId": "5acc09b9-cd56-4439-bf54-cca8367a51ca",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        },
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 6 * * 2-6"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -128,
+          -32
+        ],
+        "id": "24c5a73b-0358-4eac-b24c-8ba23f2e1dd7",
+        "name": "Schedule Trigger"
+      }
+    ],
+    "connections": {
+      "GET /executions": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GET /workflows": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "Aggregate",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate": {
+        "main": [
+          [
+            {
+              "node": "Create or update a record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create or update a record": {
+        "main": [
+          [
+            {
+              "node": "Slack Message Builder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Slack Message Builder": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "GET /executions",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "GET /workflows",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

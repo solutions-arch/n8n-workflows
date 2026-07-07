@@ -1,0 +1,730 @@
+{
+  "updatedAt": "2026-07-04T13:19:23.836Z",
+  "createdAt": "2025-10-16T20:12:38.360Z",
+  "id": "25jKXfSiCK17b5s0",
+  "name": "[Scheduled] Daily Scrubbing Notifier (Placements)",
+  "description": "Pulls the latest daily scrubbing results for VA and Placement Requirement records, scores and ranks records with missing data, then sends a Slack digest showing completeness, priority gaps, and direct Airtable links.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "triggerAtHour": 22,
+              "triggerAtMinute": 35
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -64
+      ],
+      "id": "fc1766f4-a65c-49d4-98b4-615d844e0b9f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"config\": {\n    \"env\": \"prod\",\n    \"slack\": { \"channel_id\": \"C09KTPH4WHJ\" },\n    \"airtable\": {\n      \"base_id\": \"apptuAm73VyH7pcHA\",\n      \"tables\": {\n        \"VA\": \"tbl5uteWre548NeMZ\",\n        \"PR\": \"tblzMCMKzacW1QxcW\",\n        \"Daily Scrubbing\": \"tbl0yFjYm1N3Boq8w\",\n        \"Weekly Scrubbing\": \"tbllSdFi4RWUTLJcG\"\n      }\n    },\n    \"display\": {\n      \"title_prefix\": \"Daily Scrubbing - VA & PR\",\n      \"topN_global\": 5,\n      \"topN_VA\": 5,\n      \"topN_PR\": 3,\n      \"show_key_gaps_count\": 3\n    },\n    \"thresholds\": {\n      \"p0_score_min\": 8,\n      \"p0_missing_min\": 4,\n      \"p1_score_min\": 4,\n      \"p1_missing_min\": 2\n    },\n    \"labels\": { \"time_label\": \"9:30 PM PHT\" },\n    \"links\": {\n      \"use_blocks_hide\": true,\n      \"include_view_id\": false\n    },\n    \"idempotency\": {\n      \"strategy\": \"per-day-single-message\",\n      \"run_id_format\": \"YYYY-MM-DD-2130-PHT\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -64
+      ],
+      "id": "1e534c32-1dd4-4f04-9c22-47951f1454cc",
+      "name": "Set: Config (ENV)"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "={{$json.config.airtable.base_id}}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "={{$json.config.airtable.tables[\"Daily Scrubbing\"]}}",
+          "mode": "id"
+        },
+        "filterByFormula": "{Table} = 'Virtual Assistants'",
+        "returnAll": false,
+        "limit": 1,
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "Date Scrubbed",
+              "direction": "desc"
+            },
+            {
+              "field": "Created",
+              "direction": "desc"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        -160
+      ],
+      "id": "3e112200-2081-4134-b508-23ba25ab4dfe",
+      "name": "Search VA records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "U3gBjpF0dhVqmzWx",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "={{$json.config.airtable.base_id}}",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "={{$json.config.airtable.tables[\"Daily Scrubbing\"]}}",
+          "mode": "id"
+        },
+        "filterByFormula": "{Table} = 'Placements Requirements'",
+        "returnAll": false,
+        "limit": 1,
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "Date Scrubbed",
+              "direction": "desc"
+            },
+            {
+              "field": "Created",
+              "direction": "desc"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        32
+      ],
+      "id": "2439bdfb-7c22-404f-b1e3-0b5fd93fd12c",
+      "name": "Search PR records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "U3gBjpF0dhVqmzWx",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        672,
+        -64
+      ],
+      "id": "d433d558-a69f-4112-ada8-c93b12b20807",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node \u2014 Score & Rank Digest (VA & PR Only)\nconst parsedItems = $input.all().map(i => i.json);\n\n// ---- Airtable IDs (VA & PR Focus) ----\nconst BASE_ID = \"apptuAm73VyH7pcHA\";\nconst TBL_IDS = {\n  VA:   \"tbl5uteWre548NeMZ\",\n  PR:   \"tblzMCMKzacW1QxcW\"\n};\nconst VIEW_IDS = {\n  VA:   \"viw0GjDXTmRj1RWBc\",\n  PR:   \"viw4Q3WXTrmFBaq2P\"\n};\n\n// Static link for \u201cRecords with gaps\u201d\nconst GAPS_URL = \"https://airtable.com/appEreBPNnEyIcHnn/tble5jOajrvuhMVUW/viw1bgcEI2ohVmECT?blocks=hide\";\n\n// Pull config from Set node\nlet cfg = {};\ntry { cfg = ($items(0, 'Set: Config (ENV)')[0].json || {}).config || {}; } catch {}\n\nconst topN = {\n  global: cfg.display?.topN_global ?? 5,\n  VA:     cfg.display?.topN_VA ?? 5,\n  PR:     cfg.display?.topN_PR ?? 3,\n  keyGapsPerLine: cfg.display?.show_key_gaps_count ?? 3,\n};\n\nconst th = {\n  p0_score_min:   cfg.thresholds?.p0_score_min    ?? 8,\n  p0_missing_min: cfg.thresholds?.p0_missing_min ?? 4,\n  p1_score_min:   cfg.thresholds?.p1_score_min    ?? 4,\n  p1_missing_min: cfg.thresholds?.p1_missing_min ?? 2,\n};\n\n// ---- URL builders ----\nfunction basePath(tableKey, includeView = true) {\n  const tbl  = TBL_IDS[tableKey];\n  const view = includeView ? VIEW_IDS[tableKey] : null;\n  if (!BASE_ID || !tbl) return null;\n  const parts = [`https://airtable.com/${BASE_ID}`, tbl];\n  if (view) parts.push(view);\n  return parts.join(\"/\");\n}\n\nfunction recordUrl(tableKey, recId) {\n  const root = basePath(tableKey, cfg.links?.include_view_id ?? true);\n  if (!root || !recId) return null;\n  const addBlocksHide = (cfg.links?.use_blocks_hide ?? true);\n  const url = `${root}/${String(recId)}`;\n  return addBlocksHide ? `${url}?blocks=hide` : url;\n}\n\nfunction viewUrl(tableKey) {\n  const root = basePath(tableKey, true);\n  if (!root) return null;\n  const addBlocksHide = (cfg.links?.use_blocks_hide ?? true);\n  return addBlocksHide ? `${root}?blocks=hide` : root;\n}\n\n// ---------------- Weights (VA & PR Only) ----------------\nconst W = { VA: {}, PR: {} }; \n\nfunction add(table, names, w) { names.forEach(n => W[table][n.toLowerCase()] = w); }\n\n// VA Weights\nadd('VA', ['Resume','Intro Video','Personal Email','SV Email','SV Base Rate'], 3);\nadd('VA', ['Resume [Link]','PI - Behavioral','PI - Cognitive','DISC','DISC [Link]'], 2);\nadd('VA', ['VA Source','VA Status','Endorsed to Placements','Phone Number','Photo','Priority Role','Secondary Role','Tertiary Role'], 1);\n\n// PR Weights\nadd('PR', ['REQUIRED MVA','Final Client Rate','JD + C'], 3);\nadd('PR', ['Clients','PDEV Requirement','Company','Full/Part Time','PLACEMENT TYPE'], 2);\nadd('PR', ['PL STAGE'], 1);\n\nfunction norm(s){ return String(s||'').replace(/\\s+/g,' ').replace(/\\s*:\\s*$/,'').trim().toLowerCase(); }\nfunction weight(t,f){ const k=norm(f); if (W[t]?.[k]!=null) return W[t][k]; if(t==='VA'&&(k==='disc'||k==='resume link')) return 2; return 1; }\nfunction classify(score, miss){ if (score>=th.p0_score_min || miss>=th.p0_missing_min) return 'P0'; if (score>=th.p1_score_min || miss>=th.p1_missing_min) return 'P1'; return 'P2'; }\n\n// ---------------- Slack helpers ----------------\nconst esc = (s) => String(s || \"\").replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\");\nconst link = (text, url) => (url ? `<${url}|${esc(text)}>` : esc(text));\n\n// ---- Record detection ----\nfunction extractRecIdFromUrl(url) {\n  if (!url || typeof url !== 'string') return null;\n  const m = url.match(/\\/(rec[a-zA-Z0-9]{14})\\b/);\n  return m ? m[1] : null;\n}\nfunction getRecId(it){\n  const direct = it.origin_recId || it.source_recId || it.record_id || it.id || null;\n  if (direct) return String(direct);\n  const candUrls = [it.record_url, it.url, it.link].filter(Boolean);\n  for (const u of candUrls) {\n    const rec = extractRecIdFromUrl(u);\n    if (rec) return rec;\n  }\n  return null;\n}\n\n// Score + link\nconst scored = parsedItems.map(it => {\n  const ws = (it.missing_fields||[]).map(f=>weight(it.table,f));\n  const score = ws.reduce((a,b)=>a+b,0) + (it.extra_missing||0)*1;\n  const severity = classify(score, it.missing_count);\n  const recId = getRecId(it);\n  const deep = it.record_url || (recId ? recordUrl(it.table, recId) : null);\n  const fallback = viewUrl(it.table);\n\n  return {\n    ...it,\n    score, severity,\n    has_w3: ws.some(w=>w===3),\n    record_url: deep || fallback || null\n  };\n});\n\n// Totals\nconst totals = { with_gaps: 0 };\nconst kpisByTable = {};\nfor (const it of parsedItems) {\n  const t = it.table;\n  if (!kpisByTable[t] && it.kpis) kpisByTable[t] = { ...it.kpis };\n}\ntotals.with_gaps = Object.values(kpisByTable).reduce((a,b)=>a+(b?.flagged??0),0);\ntotals.p0 = scored.filter(r=>r.severity==='P0').length;\ntotals.p1 = scored.filter(r=>r.severity==='P1').length;\ntotals.p2 = scored.filter(r=>r.severity==='P2').length;\n\n// Sort & pick\nfunction sortRecords(arr){\n  return [...arr].sort((a,b)=>{\n    if (b.score!==a.score) return b.score-a.score;\n    if (b.missing_count!==a.missing_count) return b.missing_count-a.missing_count;\n    return String(a.display_name).localeCompare(String(b.display_name));\n  });\n}\n\nconst byTable = {\n  VA: sortRecords(scored.filter(r=>r.table==='VA')).slice(0, topN.VA),\n  PR: sortRecords(scored.filter(r=>r.table==='PR')).slice(0, topN.PR)\n};\n\nfunction lineFor(r){\n  const keys=(r.missing_fields||[]).slice(0, topN.keyGapsPerLine);\n  const more=Math.max(0, r.missing_count-keys.length);\n  const gaps=keys.join(', ')+(more>0?` (+${more} more)`:'');\n  return `\u2022 ${link(r.display_name, r.record_url)} \u2014 score ${r.score}, ${r.missing_count} missing (${gaps})`;\n}\n\nconst dateStr = (scored[0]?.date) || '';\nconst date_label = new Date(dateStr).toLocaleDateString('en-US',{month:'long',day:'numeric'});\n\nreturn [{\n  json: {\n    date_label,\n    kpis: {\n      VA: kpisByTable.VA || { scanned:0, flagged:0, completeness:null },\n      PR: kpisByTable.PR || { scanned:0, flagged:0, completeness:null },\n      totals: { ...totals, with_gaps_url: GAPS_URL }\n    },\n    top_global: sortRecords(scored).slice(0, topN.global).map(r => ({ ...r, line: lineFor(r) })),\n    top_by_table: {\n      VA: byTable.VA.map(r => ({ ...r, line: lineFor(r) })),\n      PR: byTable.PR.map(r => ({ ...r, line: lineFor(r) }))\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -64
+      ],
+      "id": "adb600bf-7aca-41fd-a146-9f5ca7fce18a",
+      "name": "Score & Rank Digest"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node \u2014 Parse & Normalize (VA & PR Only)\n// Focuses exclusively on Virtual Assistants and Placement Requirements\n\nconst items = $input.all();\n\n// Filtered to only include VA and PR for this specific automation\nconst TABLE_MAP = {\n  \"Virtual Assistants\": \"VA\",\n  \"Placements Requirements\": \"PR\"\n};\n\n// ---------- helpers ----------\nconst isStr = (v) => typeof v === \"string\";\nconst isObj = (v) => v && typeof v === \"object\" && !Array.isArray(v);\n\nfunction extractRecIdFromUrl(url) {\n  if (!isStr(url)) return null;\n  const m = url.match(/\\/(rec[a-zA-Z0-9]{14})\\b/);\n  return m ? m[1] : null;\n}\n\nfunction pickIdFromObj(rec) {\n  if (!isObj(rec)) return null;\n  const direct =\n    rec?.id ?? rec?.recId ?? rec?.record_id ?? rec?.recordId ??\n    rec?.origin_recId ?? rec?.airtable_id ?? rec?.rid ?? null;\n  if (direct && /^rec[a-zA-Z0-9]{14}$/.test(String(direct))) return String(direct);\n\n  const url =\n    rec?.record_url ?? rec?.url ?? rec?.airtable_url ?? rec?.airtable_record_url ?? null;\n  const fromUrl = extractRecIdFromUrl(url);\n  if (fromUrl) return fromUrl;\n\n  if (isObj(rec?.record)) {\n    const nested = rec.record.id ?? rec.record.record_id ?? rec.record.recordId ?? null;\n    if (nested && /^rec[a-zA-Z0-9]{14}$/.test(String(nested))) return String(nested);\n  }\n\n  for (const k of Object.keys(rec)) {\n    const v = rec[k];\n    if (isStr(v)) {\n      const m = v.match(/\\b(rec[a-zA-Z0-9]{14})\\b/);\n      if (m) return m[1];\n    }\n  }\n  return null;\n}\n\nfunction parseJsonLoose(val) {\n  if (Array.isArray(val)) return val;\n  if (isObj(val)) return [val];\n  if (!isStr(val)) return null;\n\n  let s = val.trim();\n  if (!s) return null;\n\n  try {\n    const once = JSON.parse(s);\n    if (Array.isArray(once)) return once;\n    if (isObj(once)) return [once];\n    if (isStr(once)) {\n      const t = once.trim();\n      if (t.startsWith(\"[\") || t.startsWith(\"{\")) {\n        const twice = JSON.parse(t);\n        if (Array.isArray(twice)) return twice;\n        if (isObj(twice)) return [twice];\n      }\n    }\n  } catch {}\n\n  try {\n    const deEscaped = s\n      .replace(/^\"(.*)\"$/s, \"$1\")\n      .replace(/\\\\\"/g, '\"')\n      .replace(/\\\\n/g, \"\\n\")\n      .replace(/\\\\\\\\/g, \"\\\\\");\n    const once = JSON.parse(deEscaped);\n    if (Array.isArray(once)) return once;\n    if (isObj(once)) return [once];\n  } catch {}\n\n  return null;\n}\n\nfunction regexExtractEntries(raw) {\n  if (!isStr(raw)) return [];\n  const s = raw;\n  const results = [];\n  const re = /\\{[^{}]*?\"id\"\\s*:\\s*\"(?<id>rec[a-zA-Z0-9]{14})\"[^{}]*?\\}/g;\n  let m;\n  while ((m = re.exec(s)) !== null) {\n    const chunk = m[0];\n    const id = m.groups.id;\n    const nameMatch = chunk.match(/\"name\"\\s*:\\s*\"([^\"]+)\"/) ||\n                      chunk.match(/\"display_name\"\\s*:\\s*\"([^\"]+)\"/) ||\n                      chunk.match(/\"title\"\\s*:\\s*\"([^\"]+)\"/);\n    const name = nameMatch ? nameMatch[1] : \"\";\n    const mcMatch = chunk.match(/\"missing_count\"\\s*:\\s*(\\d+)/) ||\n                    chunk.match(/\"missingcount\"\\s*:\\s*(\\d+)/);\n    const missing_count = mcMatch ? Number(mcMatch[1]) : null;\n\n    const missArrMatch = chunk.match(/\"missing\"\\s*:\\s*\\[([^\\]]*)\\]/) ||\n                         chunk.match(/\"missing_fields\"\\s*:\\s*\\[([^\\]]*)\\]/);\n    let missing_fields = [];\n    if (missArrMatch) {\n      const list = missArrMatch[1];\n      const qre = /\"([^\"]+)\"/g;\n      let qm;\n      while ((qm = qre.exec(list)) !== null) missing_fields.push(qm[1]);\n    }\n\n    results.push({\n      id,\n      name,\n      missing_fields,\n      missing_count: missing_count ?? (missing_fields.length || 0),\n    });\n  }\n  return results;\n}\n\n// ---------- main ----------\nconst out = [];\n\nfor (const it of items) {\n  const row = it.json ?? it;\n  const fullTable = row[\"Table\"];\n  \n  // Skip if table is not Virtual Assistants or Placements Requirements\n  if (!TABLE_MAP[fullTable]) continue; \n\n  const table = TABLE_MAP[fullTable];\n  const date = row[\"Date Scrubbed\"] || row[\"Created\"] || null;\n  const kpis = {\n    scanned: row[\"Scanned\"] ?? null,\n    flagged: row[\"Flagged\"] ?? null,\n    completeness: row[\"Completeness %\"] ?? null,\n  };\n  const runId = row[\"Run ID\"] || null;\n\n  const jsonRaw = row[\"Display Missing (JSON)\"] ?? row[\"display_missing_json\"] ?? null;\n\n  let entries = parseJsonLoose(jsonRaw);\n  if (!entries) {\n    const rescued = regexExtractEntries(String(jsonRaw ?? \"\"));\n    if (rescued.length) entries = rescued;\n  }\n\n  if (!entries || !entries.length) continue;\n\n  for (const rec of entries) {\n    const nameRaw = String(rec?.name ?? rec?.display_name ?? rec?.title ?? \"\").trim();\n    const url = rec?.record_url ?? rec?.url ?? rec?.airtable_url ?? null;\n    const recId = pickIdFromObj(rec) || extractRecIdFromUrl(url);\n    \n    const fields = Array.isArray(rec?.missing) ? rec.missing\n                  : Array.isArray(rec?.missing_fields) ? rec.missing_fields\n                  : [];\n    \n    const mcount = (rec?.missing_count != null) ? Number(rec.missing_count)\n                  : (rec?.missingcount != null) ? Number(rec.missingcount)\n                  : fields.length;\n\n    out.push({\n      json: {\n        table,\n        date,\n        display_name: nameRaw || (recId ? `${recId.slice(0,5)}\u2026${recId.slice(-4)}` : \"Untitled\"),\n        missing_fields: fields,\n        extra_missing: Math.max(0, mcount - fields.length),\n        missing_count: mcount,\n        kpis,\n        source_run_id: runId,\n        source_table_label: fullTable,\n        origin_recId: recId || null,\n        record_url: url || null,\n      }\n    });\n  }\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -64
+      ],
+      "id": "87364f04-6f4e-4b5d-9fd7-4987f8bf208c",
+      "name": "Parse & Normalize"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input: ONE item (the daily digest object)\n// Output: { blocks } for Slack formatted for VA & PR\n\nconst d = $input.item.json;\n\n// ---- Airtable IDs (VA & PR Only) ----\nconst BASE_ID = \"apptuAm73VyH7pcHA\";\nconst TBL_IDS = {\n  VA:   \"tbl5uteWre548NeMZ\",\n  PR:   \"tblzMCMKzacW1QxcW\"\n};\nconst VIEW_IDS = {\n  VA:   \"viw0GjDXTmRj1RWBc\",\n  PR:   \"viw4Q3WXTrmFBaq2P\"\n};\n\n// link prefs from upstream digest\nconst INCLUDE_VIEW = d?.config?.links?.include_view_id ?? true;\nconst HIDE_BLOCKS  = d?.config?.links?.use_blocks_hide ?? true;\nconst GAPS_URL      = d?.kpis?.totals?.with_gaps_url || \n                     \"https://airtable.com/apptuAm73VyH7pcHA/tbl0yFjYm1N3Boq8w/viwf3nL5O9YjhBXxs?blocks=hide\";\n\n// ---- KPIs ----\nconst k = d.kpis || { VA:{}, PR:{}, totals:{} };\n\nconst gapsCount = (k.VA.flagged || 0) + (k.PR.flagged || 0);\nconst gapsLink  = `<${GAPS_URL}|Records with gaps: ${gapsCount}>`;\n\nconst totalsLine =\n  `VA ${k.VA.scanned || 0} \u2022 PR ${k.PR.scanned || 0}` +\n  `  |  ${gapsLink}` +\n  `  |  P0 ${k.totals.p0 || 0} \u2022 P1 ${k.totals.p1 || 0} \u2022 P2 ${k.totals.p2 || 0}`;\n\n// ---- Helpers ----\nconst SHOW_GAPS = d?.config?.display?.show_key_gaps_count ?? 3;\nconst esc = (s) => String(s || \"\").replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\");\nconst link = (url, text) => (url ? `<${url}|${esc(text)}>` : esc(text));\n\nfunction pickSourceRecId(it) {\n  return it.origin_recId || it.source_recId || it.record_id || it.id || null;\n}\n\nfunction buildUrl(tableKey, recId, fallbackUrl) {\n  if (fallbackUrl) return fallbackUrl;\n  const tbl  = TBL_IDS[tableKey];\n  const view = INCLUDE_VIEW ? VIEW_IDS[tableKey] : null;\n  if (!BASE_ID || !tbl) return \"\";\n  const parts = [`https://airtable.com/${BASE_ID}`, tbl];\n  if (view) parts.push(view);\n  if (recId) parts.push(recId);\n  const base = parts.join(\"/\");\n  return HIDE_BLOCKS ? `${base}?blocks=hide` : base;\n}\n\nfunction getName(it) {\n  const n = (it.display_name || it.name || it.title || \"\").toString().trim();\n  if (n) return n;\n  const id = pickSourceRecId(it);\n  return id ? `${id.slice(0,5)}\u2026${id.slice(-4)}` : \"Untitled\";\n}\n\nfunction makeBullet(it) {\n  const tableKey = it.table;\n  const srcId    = pickSourceRecId(it);\n  const url      = buildUrl(tableKey, srcId, it.record_url);\n  const name     = getName(it);\n  const fields   = (it.key_gaps || it.missing_fields || []);\n  const preview  = fields.slice(0, SHOW_GAPS);\n  const baseCnt  = (it.missing_count != null) ? it.missing_count : fields.length;\n  const more     = Math.max(0, baseCnt - preview.length);\n  const moreTag  = more > 0 ? ` (+${more} more)` : \"\";\n  const missTxt  = `${baseCnt} missing`;\n  const gapsTxt  = preview.length ? ` (${preview.join(\", \")}${moreTag})` : \"\";\n  return `\u2022 ${link(url, name)} \u2014 ${missTxt}${gapsTxt}`;\n}\n\nfunction completenessEmoji(pct) {\n  if (pct == null) return \"\u26ab\ufe0f\";\n  const val = Math.round(pct * 100);\n  return val >= 85 ? \"\ud83d\udfe2\" : val >= 50 ? \"\ud83d\udfe1\" : \"\ud83d\udd34\";\n}\n\nfunction sectionHeader(label, completeness) {\n  const pct = completeness != null ? Math.round(completeness * 100) : \"\u2014\";\n  const emoji = completenessEmoji(completeness);\n  return `*${label}: Record Completeness ${pct}% ${emoji}*\\n_Top Records with Missing Fields:_`;\n}\n\nfunction section(label, items = [], completeness = null) {\n  const forcedCompleteness = (Array.isArray(items) && items.length === 0) ? 1 : completeness;\n  const body = items.length ? items.map(makeBullet).join(\"\\n\") : \"_No items_\";\n  return [\n    { type: \"section\", text: { type: \"mrkdwn\", text: sectionHeader(label, forcedCompleteness) } },\n    { type: \"section\", text: { type: \"mrkdwn\", text: body } },\n    { type: \"divider\" },\n  ];\n}\n\n// ---- Assemble blocks ----\nconst blocks = [\n  { type: \"header\", text: { type: \"plain_text\", text: `Scrubbing Digest: VA & PR \u2014 ${d.date_label}`, emoji: true } },\n  { type: \"section\", text: { type: \"mrkdwn\", text: `_${totalsLine}_` } },\n  { type: \"divider\" },\n  ...section(\"Virtual Assistants\", d.top_by_table?.VA || [], (d.kpis?.VA?.completeness ?? null)),\n  ...section(\"Placement Requirements\", d.top_by_table?.PR || [], (d.kpis?.PR?.completeness ?? null)),\n];\n\nreturn [{ json: { blocks } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -64
+      ],
+      "id": "c158a410-1215-4299-bf1d-a5fc26e57622",
+      "name": "Build Slack Blocks (Daily)"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C03MZJZU687",
+          "mode": "id"
+        },
+        "messageType": "block",
+        "blocksUi": "={{\n  {\n    blocks: $json.blocks   // array (do NOT stringify)\n  }\n}}",
+        "text": "={{\"Daily Scrubbing: \" + ($json.date_label || \"\")}}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        -64
+      ],
+      "id": "c00845cf-894f-44a3-b503-afa6f03851d5",
+      "name": "Send a message",
+      "webhookId": "d7d60941-935e-46fb-8a6a-71dd19c6dae5",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set: Config (ENV)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Config (ENV)": {
+      "main": [
+        [
+          {
+            "node": "Search VA records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search PR records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search VA records": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search PR records": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Parse & Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Normalize": {
+      "main": [
+        [
+          {
+            "node": "Score & Rank Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score & Rank Digest": {
+      "main": [
+        [
+          {
+            "node": "Build Slack Blocks (Daily)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Slack Blocks (Daily)": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "89e3661b-b13e-4659-b937-4a869cef885b",
+  "activeVersionId": "89e3661b-b13e-4659-b937-4a869cef885b",
+  "versionCounter": 180,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-10-16T21:39:30.280Z",
+      "createdAt": "2025-10-16T21:39:30.280Z",
+      "role": "workflow:owner",
+      "workflowId": "25jKXfSiCK17b5s0",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:19:23.837Z",
+    "createdAt": "2026-07-04T13:19:23.837Z",
+    "versionId": "89e3661b-b13e-4659-b937-4a869cef885b",
+    "workflowId": "25jKXfSiCK17b5s0",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5
+                ],
+                "triggerAtHour": 22,
+                "triggerAtMinute": 35
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          -64
+        ],
+        "id": "fc1766f4-a65c-49d4-98b4-615d844e0b9f",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "mode": "raw",
+          "jsonOutput": "{\n  \"config\": {\n    \"env\": \"prod\",\n    \"slack\": { \"channel_id\": \"C09KTPH4WHJ\" },\n    \"airtable\": {\n      \"base_id\": \"apptuAm73VyH7pcHA\",\n      \"tables\": {\n        \"VA\": \"tbl5uteWre548NeMZ\",\n        \"PR\": \"tblzMCMKzacW1QxcW\",\n        \"Daily Scrubbing\": \"tbl0yFjYm1N3Boq8w\",\n        \"Weekly Scrubbing\": \"tbllSdFi4RWUTLJcG\"\n      }\n    },\n    \"display\": {\n      \"title_prefix\": \"Daily Scrubbing - VA & PR\",\n      \"topN_global\": 5,\n      \"topN_VA\": 5,\n      \"topN_PR\": 3,\n      \"show_key_gaps_count\": 3\n    },\n    \"thresholds\": {\n      \"p0_score_min\": 8,\n      \"p0_missing_min\": 4,\n      \"p1_score_min\": 4,\n      \"p1_missing_min\": 2\n    },\n    \"labels\": { \"time_label\": \"9:30 PM PHT\" },\n    \"links\": {\n      \"use_blocks_hide\": true,\n      \"include_view_id\": false\n    },\n    \"idempotency\": {\n      \"strategy\": \"per-day-single-message\",\n      \"run_id_format\": \"YYYY-MM-DD-2130-PHT\"\n    }\n  }\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          224,
+          -64
+        ],
+        "id": "1e534c32-1dd4-4f04-9c22-47951f1454cc",
+        "name": "Set: Config (ENV)"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "={{$json.config.airtable.base_id}}",
+            "mode": "id"
+          },
+          "table": {
+            "__rl": true,
+            "value": "={{$json.config.airtable.tables[\"Daily Scrubbing\"]}}",
+            "mode": "id"
+          },
+          "filterByFormula": "{Table} = 'Virtual Assistants'",
+          "returnAll": false,
+          "limit": 1,
+          "options": {},
+          "sort": {
+            "property": [
+              {
+                "field": "Date Scrubbed",
+                "direction": "desc"
+              },
+              {
+                "field": "Created",
+                "direction": "desc"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          448,
+          -160
+        ],
+        "id": "3e112200-2081-4134-b508-23ba25ab4dfe",
+        "name": "Search VA records",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "U3gBjpF0dhVqmzWx",
+            "name": "Airtable Personal Access Token account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "={{$json.config.airtable.base_id}}",
+            "mode": "id"
+          },
+          "table": {
+            "__rl": true,
+            "value": "={{$json.config.airtable.tables[\"Daily Scrubbing\"]}}",
+            "mode": "id"
+          },
+          "filterByFormula": "{Table} = 'Placements Requirements'",
+          "returnAll": false,
+          "limit": 1,
+          "options": {},
+          "sort": {
+            "property": [
+              {
+                "field": "Date Scrubbed",
+                "direction": "desc"
+              },
+              {
+                "field": "Created",
+                "direction": "desc"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          448,
+          32
+        ],
+        "id": "2439bdfb-7c22-404f-b1e3-0b5fd93fd12c",
+        "name": "Search PR records",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "U3gBjpF0dhVqmzWx",
+            "name": "Airtable Personal Access Token account 2"
+          }
+        }
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          672,
+          -64
+        ],
+        "id": "d433d558-a69f-4112-ada8-c93b12b20807",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "jsCode": "// n8n Code node \u2014 Score & Rank Digest (VA & PR Only)\nconst parsedItems = $input.all().map(i => i.json);\n\n// ---- Airtable IDs (VA & PR Focus) ----\nconst BASE_ID = \"apptuAm73VyH7pcHA\";\nconst TBL_IDS = {\n  VA:   \"tbl5uteWre548NeMZ\",\n  PR:   \"tblzMCMKzacW1QxcW\"\n};\nconst VIEW_IDS = {\n  VA:   \"viw0GjDXTmRj1RWBc\",\n  PR:   \"viw4Q3WXTrmFBaq2P\"\n};\n\n// Static link for \u201cRecords with gaps\u201d\nconst GAPS_URL = \"https://airtable.com/appEreBPNnEyIcHnn/tble5jOajrvuhMVUW/viw1bgcEI2ohVmECT?blocks=hide\";\n\n// Pull config from Set node\nlet cfg = {};\ntry { cfg = ($items(0, 'Set: Config (ENV)')[0].json || {}).config || {}; } catch {}\n\nconst topN = {\n  global: cfg.display?.topN_global ?? 5,\n  VA:     cfg.display?.topN_VA ?? 5,\n  PR:     cfg.display?.topN_PR ?? 3,\n  keyGapsPerLine: cfg.display?.show_key_gaps_count ?? 3,\n};\n\nconst th = {\n  p0_score_min:   cfg.thresholds?.p0_score_min    ?? 8,\n  p0_missing_min: cfg.thresholds?.p0_missing_min ?? 4,\n  p1_score_min:   cfg.thresholds?.p1_score_min    ?? 4,\n  p1_missing_min: cfg.thresholds?.p1_missing_min ?? 2,\n};\n\n// ---- URL builders ----\nfunction basePath(tableKey, includeView = true) {\n  const tbl  = TBL_IDS[tableKey];\n  const view = includeView ? VIEW_IDS[tableKey] : null;\n  if (!BASE_ID || !tbl) return null;\n  const parts = [`https://airtable.com/${BASE_ID}`, tbl];\n  if (view) parts.push(view);\n  return parts.join(\"/\");\n}\n\nfunction recordUrl(tableKey, recId) {\n  const root = basePath(tableKey, cfg.links?.include_view_id ?? true);\n  if (!root || !recId) return null;\n  const addBlocksHide = (cfg.links?.use_blocks_hide ?? true);\n  const url = `${root}/${String(recId)}`;\n  return addBlocksHide ? `${url}?blocks=hide` : url;\n}\n\nfunction viewUrl(tableKey) {\n  const root = basePath(tableKey, true);\n  if (!root) return null;\n  const addBlocksHide = (cfg.links?.use_blocks_hide ?? true);\n  return addBlocksHide ? `${root}?blocks=hide` : root;\n}\n\n// ---------------- Weights (VA & PR Only) ----------------\nconst W = { VA: {}, PR: {} }; \n\nfunction add(table, names, w) { names.forEach(n => W[table][n.toLowerCase()] = w); }\n\n// VA Weights\nadd('VA', ['Resume','Intro Video','Personal Email','SV Email','SV Base Rate'], 3);\nadd('VA', ['Resume [Link]','PI - Behavioral','PI - Cognitive','DISC','DISC [Link]'], 2);\nadd('VA', ['VA Source','VA Status','Endorsed to Placements','Phone Number','Photo','Priority Role','Secondary Role','Tertiary Role'], 1);\n\n// PR Weights\nadd('PR', ['REQUIRED MVA','Final Client Rate','JD + C'], 3);\nadd('PR', ['Clients','PDEV Requirement','Company','Full/Part Time','PLACEMENT TYPE'], 2);\nadd('PR', ['PL STAGE'], 1);\n\nfunction norm(s){ return String(s||'').replace(/\\s+/g,' ').replace(/\\s*:\\s*$/,'').trim().toLowerCase(); }\nfunction weight(t,f){ const k=norm(f); if (W[t]?.[k]!=null) return W[t][k]; if(t==='VA'&&(k==='disc'||k==='resume link')) return 2; return 1; }\nfunction classify(score, miss){ if (score>=th.p0_score_min || miss>=th.p0_missing_min) return 'P0'; if (score>=th.p1_score_min || miss>=th.p1_missing_min) return 'P1'; return 'P2'; }\n\n// ---------------- Slack helpers ----------------\nconst esc = (s) => String(s || \"\").replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\");\nconst link = (text, url) => (url ? `<${url}|${esc(text)}>` : esc(text));\n\n// ---- Record detection ----\nfunction extractRecIdFromUrl(url) {\n  if (!url || typeof url !== 'string') return null;\n  const m = url.match(/\\/(rec[a-zA-Z0-9]{14})\\b/);\n  return m ? m[1] : null;\n}\nfunction getRecId(it){\n  const direct = it.origin_recId || it.source_recId || it.record_id || it.id || null;\n  if (direct) return String(direct);\n  const candUrls = [it.record_url, it.url, it.link].filter(Boolean);\n  for (const u of candUrls) {\n    const rec = extractRecIdFromUrl(u);\n    if (rec) return rec;\n  }\n  return null;\n}\n\n// Score + link\nconst scored = parsedItems.map(it => {\n  const ws = (it.missing_fields||[]).map(f=>weight(it.table,f));\n  const score = ws.reduce((a,b)=>a+b,0) + (it.extra_missing||0)*1;\n  const severity = classify(score, it.missing_count);\n  const recId = getRecId(it);\n  const deep = it.record_url || (recId ? recordUrl(it.table, recId) : null);\n  const fallback = viewUrl(it.table);\n\n  return {\n    ...it,\n    score, severity,\n    has_w3: ws.some(w=>w===3),\n    record_url: deep || fallback || null\n  };\n});\n\n// Totals\nconst totals = { with_gaps: 0 };\nconst kpisByTable = {};\nfor (const it of parsedItems) {\n  const t = it.table;\n  if (!kpisByTable[t] && it.kpis) kpisByTable[t] = { ...it.kpis };\n}\ntotals.with_gaps = Object.values(kpisByTable).reduce((a,b)=>a+(b?.flagged??0),0);\ntotals.p0 = scored.filter(r=>r.severity==='P0').length;\ntotals.p1 = scored.filter(r=>r.severity==='P1').length;\ntotals.p2 = scored.filter(r=>r.severity==='P2').length;\n\n// Sort & pick\nfunction sortRecords(arr){\n  return [...arr].sort((a,b)=>{\n    if (b.score!==a.score) return b.score-a.score;\n    if (b.missing_count!==a.missing_count) return b.missing_count-a.missing_count;\n    return String(a.display_name).localeCompare(String(b.display_name));\n  });\n}\n\nconst byTable = {\n  VA: sortRecords(scored.filter(r=>r.table==='VA')).slice(0, topN.VA),\n  PR: sortRecords(scored.filter(r=>r.table==='PR')).slice(0, topN.PR)\n};\n\nfunction lineFor(r){\n  const keys=(r.missing_fields||[]).slice(0, topN.keyGapsPerLine);\n  const more=Math.max(0, r.missing_count-keys.length);\n  const gaps=keys.join(', ')+(more>0?` (+${more} more)`:'');\n  return `\u2022 ${link(r.display_name, r.record_url)} \u2014 score ${r.score}, ${r.missing_count} missing (${gaps})`;\n}\n\nconst dateStr = (scored[0]?.date) || '';\nconst date_label = new Date(dateStr).toLocaleDateString('en-US',{month:'long',day:'numeric'});\n\nreturn [{\n  json: {\n    date_label,\n    kpis: {\n      VA: kpisByTable.VA || { scanned:0, flagged:0, completeness:null },\n      PR: kpisByTable.PR || { scanned:0, flagged:0, completeness:null },\n      totals: { ...totals, with_gaps_url: GAPS_URL }\n    },\n    top_global: sortRecords(scored).slice(0, topN.global).map(r => ({ ...r, line: lineFor(r) })),\n    top_by_table: {\n      VA: byTable.VA.map(r => ({ ...r, line: lineFor(r) })),\n      PR: byTable.PR.map(r => ({ ...r, line: lineFor(r) }))\n    }\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1120,
+          -64
+        ],
+        "id": "adb600bf-7aca-41fd-a146-9f5ca7fce18a",
+        "name": "Score & Rank Digest"
+      },
+      {
+        "parameters": {
+          "jsCode": "// n8n Code node \u2014 Parse & Normalize (VA & PR Only)\n// Focuses exclusively on Virtual Assistants and Placement Requirements\n\nconst items = $input.all();\n\n// Filtered to only include VA and PR for this specific automation\nconst TABLE_MAP = {\n  \"Virtual Assistants\": \"VA\",\n  \"Placements Requirements\": \"PR\"\n};\n\n// ---------- helpers ----------\nconst isStr = (v) => typeof v === \"string\";\nconst isObj = (v) => v && typeof v === \"object\" && !Array.isArray(v);\n\nfunction extractRecIdFromUrl(url) {\n  if (!isStr(url)) return null;\n  const m = url.match(/\\/(rec[a-zA-Z0-9]{14})\\b/);\n  return m ? m[1] : null;\n}\n\nfunction pickIdFromObj(rec) {\n  if (!isObj(rec)) return null;\n  const direct =\n    rec?.id ?? rec?.recId ?? rec?.record_id ?? rec?.recordId ??\n    rec?.origin_recId ?? rec?.airtable_id ?? rec?.rid ?? null;\n  if (direct && /^rec[a-zA-Z0-9]{14}$/.test(String(direct))) return String(direct);\n\n  const url =\n    rec?.record_url ?? rec?.url ?? rec?.airtable_url ?? rec?.airtable_record_url ?? null;\n  const fromUrl = extractRecIdFromUrl(url);\n  if (fromUrl) return fromUrl;\n\n  if (isObj(rec?.record)) {\n    const nested = rec.record.id ?? rec.record.record_id ?? rec.record.recordId ?? null;\n    if (nested && /^rec[a-zA-Z0-9]{14}$/.test(String(nested))) return String(nested);\n  }\n\n  for (const k of Object.keys(rec)) {\n    const v = rec[k];\n    if (isStr(v)) {\n      const m = v.match(/\\b(rec[a-zA-Z0-9]{14})\\b/);\n      if (m) return m[1];\n    }\n  }\n  return null;\n}\n\nfunction parseJsonLoose(val) {\n  if (Array.isArray(val)) return val;\n  if (isObj(val)) return [val];\n  if (!isStr(val)) return null;\n\n  let s = val.trim();\n  if (!s) return null;\n\n  try {\n    const once = JSON.parse(s);\n    if (Array.isArray(once)) return once;\n    if (isObj(once)) return [once];\n    if (isStr(once)) {\n      const t = once.trim();\n      if (t.startsWith(\"[\") || t.startsWith(\"{\")) {\n        const twice = JSON.parse(t);\n        if (Array.isArray(twice)) return twice;\n        if (isObj(twice)) return [twice];\n      }\n    }\n  } catch {}\n\n  try {\n    const deEscaped = s\n      .replace(/^\"(.*)\"$/s, \"$1\")\n      .replace(/\\\\\"/g, '\"')\n      .replace(/\\\\n/g, \"\\n\")\n      .replace(/\\\\\\\\/g, \"\\\\\");\n    const once = JSON.parse(deEscaped);\n    if (Array.isArray(once)) return once;\n    if (isObj(once)) return [once];\n  } catch {}\n\n  return null;\n}\n\nfunction regexExtractEntries(raw) {\n  if (!isStr(raw)) return [];\n  const s = raw;\n  const results = [];\n  const re = /\\{[^{}]*?\"id\"\\s*:\\s*\"(?<id>rec[a-zA-Z0-9]{14})\"[^{}]*?\\}/g;\n  let m;\n  while ((m = re.exec(s)) !== null) {\n    const chunk = m[0];\n    const id = m.groups.id;\n    const nameMatch = chunk.match(/\"name\"\\s*:\\s*\"([^\"]+)\"/) ||\n                      chunk.match(/\"display_name\"\\s*:\\s*\"([^\"]+)\"/) ||\n                      chunk.match(/\"title\"\\s*:\\s*\"([^\"]+)\"/);\n    const name = nameMatch ? nameMatch[1] : \"\";\n    const mcMatch = chunk.match(/\"missing_count\"\\s*:\\s*(\\d+)/) ||\n                    chunk.match(/\"missingcount\"\\s*:\\s*(\\d+)/);\n    const missing_count = mcMatch ? Number(mcMatch[1]) : null;\n\n    const missArrMatch = chunk.match(/\"missing\"\\s*:\\s*\\[([^\\]]*)\\]/) ||\n                         chunk.match(/\"missing_fields\"\\s*:\\s*\\[([^\\]]*)\\]/);\n    let missing_fields = [];\n    if (missArrMatch) {\n      const list = missArrMatch[1];\n      const qre = /\"([^\"]+)\"/g;\n      let qm;\n      while ((qm = qre.exec(list)) !== null) missing_fields.push(qm[1]);\n    }\n\n    results.push({\n      id,\n      name,\n      missing_fields,\n      missing_count: missing_count ?? (missing_fields.length || 0),\n    });\n  }\n  return results;\n}\n\n// ---------- main ----------\nconst out = [];\n\nfor (const it of items) {\n  const row = it.json ?? it;\n  const fullTable = row[\"Table\"];\n  \n  // Skip if table is not Virtual Assistants or Placements Requirements\n  if (!TABLE_MAP[fullTable]) continue; \n\n  const table = TABLE_MAP[fullTable];\n  const date = row[\"Date Scrubbed\"] || row[\"Created\"] || null;\n  const kpis = {\n    scanned: row[\"Scanned\"] ?? null,\n    flagged: row[\"Flagged\"] ?? null,\n    completeness: row[\"Completeness %\"] ?? null,\n  };\n  const runId = row[\"Run ID\"] || null;\n\n  const jsonRaw = row[\"Display Missing (JSON)\"] ?? row[\"display_missing_json\"] ?? null;\n\n  let entries = parseJsonLoose(jsonRaw);\n  if (!entries) {\n    const rescued = regexExtractEntries(String(jsonRaw ?? \"\"));\n    if (rescued.length) entries = rescued;\n  }\n\n  if (!entries || !entries.length) continue;\n\n  for (const rec of entries) {\n    const nameRaw = String(rec?.name ?? rec?.display_name ?? rec?.title ?? \"\").trim();\n    const url = rec?.record_url ?? rec?.url ?? rec?.airtable_url ?? null;\n    const recId = pickIdFromObj(rec) || extractRecIdFromUrl(url);\n    \n    const fields = Array.isArray(rec?.missing) ? rec.missing\n                  : Array.isArray(rec?.missing_fields) ? rec.missing_fields\n                  : [];\n    \n    const mcount = (rec?.missing_count != null) ? Number(rec.missing_count)\n                  : (rec?.missingcount != null) ? Number(rec.missingcount)\n                  : fields.length;\n\n    out.push({\n      json: {\n        table,\n        date,\n        display_name: nameRaw || (recId ? `${recId.slice(0,5)}\u2026${recId.slice(-4)}` : \"Untitled\"),\n        missing_fields: fields,\n        extra_missing: Math.max(0, mcount - fields.length),\n        missing_count: mcount,\n        kpis,\n        source_run_id: runId,\n        source_table_label: fullTable,\n        origin_recId: recId || null,\n        record_url: url || null,\n      }\n    });\n  }\n}\n\nreturn out;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          896,
+          -64
+        ],
+        "id": "87364f04-6f4e-4b5d-9fd7-4987f8bf208c",
+        "name": "Parse & Normalize"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Input: ONE item (the daily digest object)\n// Output: { blocks } for Slack formatted for VA & PR\n\nconst d = $input.item.json;\n\n// ---- Airtable IDs (VA & PR Only) ----\nconst BASE_ID = \"apptuAm73VyH7pcHA\";\nconst TBL_IDS = {\n  VA:   \"tbl5uteWre548NeMZ\",\n  PR:   \"tblzMCMKzacW1QxcW\"\n};\nconst VIEW_IDS = {\n  VA:   \"viw0GjDXTmRj1RWBc\",\n  PR:   \"viw4Q3WXTrmFBaq2P\"\n};\n\n// link prefs from upstream digest\nconst INCLUDE_VIEW = d?.config?.links?.include_view_id ?? true;\nconst HIDE_BLOCKS  = d?.config?.links?.use_blocks_hide ?? true;\nconst GAPS_URL      = d?.kpis?.totals?.with_gaps_url || \n                     \"https://airtable.com/apptuAm73VyH7pcHA/tbl0yFjYm1N3Boq8w/viwf3nL5O9YjhBXxs?blocks=hide\";\n\n// ---- KPIs ----\nconst k = d.kpis || { VA:{}, PR:{}, totals:{} };\n\nconst gapsCount = (k.VA.flagged || 0) + (k.PR.flagged || 0);\nconst gapsLink  = `<${GAPS_URL}|Records with gaps: ${gapsCount}>`;\n\nconst totalsLine =\n  `VA ${k.VA.scanned || 0} \u2022 PR ${k.PR.scanned || 0}` +\n  `  |  ${gapsLink}` +\n  `  |  P0 ${k.totals.p0 || 0} \u2022 P1 ${k.totals.p1 || 0} \u2022 P2 ${k.totals.p2 || 0}`;\n\n// ---- Helpers ----\nconst SHOW_GAPS = d?.config?.display?.show_key_gaps_count ?? 3;\nconst esc = (s) => String(s || \"\").replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\");\nconst link = (url, text) => (url ? `<${url}|${esc(text)}>` : esc(text));\n\nfunction pickSourceRecId(it) {\n  return it.origin_recId || it.source_recId || it.record_id || it.id || null;\n}\n\nfunction buildUrl(tableKey, recId, fallbackUrl) {\n  if (fallbackUrl) return fallbackUrl;\n  const tbl  = TBL_IDS[tableKey];\n  const view = INCLUDE_VIEW ? VIEW_IDS[tableKey] : null;\n  if (!BASE_ID || !tbl) return \"\";\n  const parts = [`https://airtable.com/${BASE_ID}`, tbl];\n  if (view) parts.push(view);\n  if (recId) parts.push(recId);\n  const base = parts.join(\"/\");\n  return HIDE_BLOCKS ? `${base}?blocks=hide` : base;\n}\n\nfunction getName(it) {\n  const n = (it.display_name || it.name || it.title || \"\").toString().trim();\n  if (n) return n;\n  const id = pickSourceRecId(it);\n  return id ? `${id.slice(0,5)}\u2026${id.slice(-4)}` : \"Untitled\";\n}\n\nfunction makeBullet(it) {\n  const tableKey = it.table;\n  const srcId    = pickSourceRecId(it);\n  const url      = buildUrl(tableKey, srcId, it.record_url);\n  const name     = getName(it);\n  const fields   = (it.key_gaps || it.missing_fields || []);\n  const preview  = fields.slice(0, SHOW_GAPS);\n  const baseCnt  = (it.missing_count != null) ? it.missing_count : fields.length;\n  const more     = Math.max(0, baseCnt - preview.length);\n  const moreTag  = more > 0 ? ` (+${more} more)` : \"\";\n  const missTxt  = `${baseCnt} missing`;\n  const gapsTxt  = preview.length ? ` (${preview.join(\", \")}${moreTag})` : \"\";\n  return `\u2022 ${link(url, name)} \u2014 ${missTxt}${gapsTxt}`;\n}\n\nfunction completenessEmoji(pct) {\n  if (pct == null) return \"\u26ab\ufe0f\";\n  const val = Math.round(pct * 100);\n  return val >= 85 ? \"\ud83d\udfe2\" : val >= 50 ? \"\ud83d\udfe1\" : \"\ud83d\udd34\";\n}\n\nfunction sectionHeader(label, completeness) {\n  const pct = completeness != null ? Math.round(completeness * 100) : \"\u2014\";\n  const emoji = completenessEmoji(completeness);\n  return `*${label}: Record Completeness ${pct}% ${emoji}*\\n_Top Records with Missing Fields:_`;\n}\n\nfunction section(label, items = [], completeness = null) {\n  const forcedCompleteness = (Array.isArray(items) && items.length === 0) ? 1 : completeness;\n  const body = items.length ? items.map(makeBullet).join(\"\\n\") : \"_No items_\";\n  return [\n    { type: \"section\", text: { type: \"mrkdwn\", text: sectionHeader(label, forcedCompleteness) } },\n    { type: \"section\", text: { type: \"mrkdwn\", text: body } },\n    { type: \"divider\" },\n  ];\n}\n\n// ---- Assemble blocks ----\nconst blocks = [\n  { type: \"header\", text: { type: \"plain_text\", text: `Scrubbing Digest: VA & PR \u2014 ${d.date_label}`, emoji: true } },\n  { type: \"section\", text: { type: \"mrkdwn\", text: `_${totalsLine}_` } },\n  { type: \"divider\" },\n  ...section(\"Virtual Assistants\", d.top_by_table?.VA || [], (d.kpis?.VA?.completeness ?? null)),\n  ...section(\"Placement Requirements\", d.top_by_table?.PR || [], (d.kpis?.PR?.completeness ?? null)),\n];\n\nreturn [{ json: { blocks } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1344,
+          -64
+        ],
+        "id": "c158a410-1215-4299-bf1d-a5fc26e57622",
+        "name": "Build Slack Blocks (Daily)"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C03MZJZU687",
+            "mode": "id"
+          },
+          "messageType": "block",
+          "blocksUi": "={{\n  {\n    blocks: $json.blocks   // array (do NOT stringify)\n  }\n}}",
+          "text": "={{\"Daily Scrubbing: \" + ($json.date_label || \"\")}}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true,
+            "unfurl_links": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          1568,
+          -64
+        ],
+        "id": "c00845cf-894f-44a3-b503-afa6f03851d5",
+        "name": "Send a message",
+        "webhookId": "d7d60941-935e-46fb-8a6a-71dd19c6dae5",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Set: Config (ENV)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set: Config (ENV)": {
+        "main": [
+          [
+            {
+              "node": "Search VA records",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Search PR records",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search VA records": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search PR records": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "Parse & Normalize",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse & Normalize": {
+        "main": [
+          [
+            {
+              "node": "Score & Rank Digest",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Score & Rank Digest": {
+        "main": [
+          [
+            {
+              "node": "Build Slack Blocks (Daily)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Slack Blocks (Daily)": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

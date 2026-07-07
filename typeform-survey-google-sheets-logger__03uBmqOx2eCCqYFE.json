@@ -1,0 +1,170 @@
+{
+  "updatedAt": "2026-06-28T11:40:36.000Z",
+  "createdAt": "2026-06-28T11:39:24.396Z",
+  "id": "03uBmqOx2eCCqYFE",
+  "name": "Typeform Survey \u2192 Google Sheets Logger",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Typeform Trigger",
+      "type": "n8n-nodes-base.typeformTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "formId": "YOUR_TYPEFORM_FORM_ID",
+        "simplifyAnswers": true
+      }
+    },
+    {
+      "id": "2",
+      "name": "Map Response Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "fields": {
+          "values": [
+            {
+              "name": "Submission ID",
+              "stringValue": "={{ $json.token }}"
+            },
+            {
+              "name": "Submitted At",
+              "stringValue": "={{ $json.submitted_at }}"
+            },
+            {
+              "name": "Respondent Email",
+              "stringValue": "={{ $json.answers?.email ?? '' }}"
+            },
+            {
+              "name": "Response Data",
+              "stringValue": "={{ JSON.stringify($json.answers) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Append to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Typeform Responses",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Submission ID": "={{ $json['Submission ID'] }}",
+            "Submitted At": "={{ $json['Submitted At'] }}",
+            "Respondent Email": "={{ $json['Respondent Email'] }}",
+            "Response Data": "={{ $json['Response Data'] }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Typeform Trigger": {
+      "main": [
+        [
+          {
+            "node": "Map Response Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Response Fields": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "32ffc442-a4f9-4a58-b9d9-e3b807513904",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-06-28T11:39:24.400Z",
+      "createdAt": "2026-06-28T11:39:24.400Z",
+      "role": "workflow:owner",
+      "workflowId": "03uBmqOx2eCCqYFE",
+      "projectId": "1F2FqOomzP82L5v5",
+      "project": {
+        "updatedAt": "2026-04-09T17:48:06.104Z",
+        "createdAt": "2026-04-09T17:37:55.795Z",
+        "id": "1F2FqOomzP82L5v5",
+        "name": "Jenneiline Manuel <jenn@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2026-04-09T17:37:55.797Z",
+            "createdAt": "2026-04-09T17:37:55.797Z",
+            "userId": "18e9efa4-131e-4ef0-bf66-99bbaa47c61f",
+            "projectId": "1F2FqOomzP82L5v5",
+            "user": {
+              "updatedAt": "2026-07-02T16:12:02.000Z",
+              "createdAt": "2026-04-09T17:37:55.790Z",
+              "id": "18e9efa4-131e-4ef0-bf66-99bbaa47c61f",
+              "email": "jenn@scalevirtually.com",
+              "firstName": "Jenneiline",
+              "lastName": "Manuel",
+              "personalizationAnswers": null,
+              "settings": {
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "cvOi0g9fl0PcWFt0",
+                "userActivated": true,
+                "userActivatedAt": 1776884151639,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1777936404035
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-02",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

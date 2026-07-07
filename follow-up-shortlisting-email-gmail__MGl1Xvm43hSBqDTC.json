@@ -1,0 +1,865 @@
+{
+  "updatedAt": "2026-04-14T13:07:23.000Z",
+  "createdAt": "2025-10-31T16:08:18.738Z",
+  "id": "MGl1Xvm43hSBqDTC",
+  "name": "Follow-up Shortlisting Email (Gmail)",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour"
+            }
+          ]
+        },
+        "filters": {
+          "labelIds": [
+            "Label_4906411501534844457"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -3600,
+        880
+      ],
+      "id": "7350c6e7-e7aa-412a-b581-e41a93aead1a",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Name: Parse + Normalize (Subject/Recipients/Meta) + Sender Role\n// Mode: Run Once for All Items\n\n// --- CONFIG ---\nconst INTERNAL_DOMAINS = ['scalevirtually.com'];\nconst INTERNAL_ADDRESSES = [\n  'placements@scalevirtually.com',\n  'placements.sv@scalevirtually.com',\n  'pdev@scalevirtually.com',\n  'coach@scalevirtually.com',\n  'placements@scalevirtually.com',\n].map(a => a.toLowerCase());\n\n// --- Helpers ---\nconst getHeader = (obj, key) => {\n  if (!obj) return '';\n  const k = Object.keys(obj).find(h => h.toLowerCase() === key.toLowerCase());\n  return k ? obj[k] : '';\n};\n\nconst isInternalEmail = (addr='') => {\n  const a = String(addr).toLowerCase().trim();\n  if (!a) return false;\n  if (INTERNAL_ADDRESSES.includes(a)) return true;\n  const dom = a.split('@')[1] || '';\n  return INTERNAL_DOMAINS.some(d => dom.endsWith(d));\n};\n\nconst extractEmails = (value) => {\n  // Accept comma-separated strings or arrays; return array of bare emails (lowercased)\n  const texts = Array.isArray(value) ? value : [value];\n  const out = [];\n  for (const t of texts) {\n    if (!t) continue;\n    const matches = String(t).match(/[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}/g) || [];\n    for (const m of matches) out.push(m.toLowerCase());\n  }\n  return [...new Set(out)];\n};\n\nconst firstExternal = (emails) => {\n  for (const e of emails) if (!isInternalEmail(e)) return e;\n  return '';\n};\n\nconst normalizeSubject = (subj) => {\n  let s = String(subj || '');\n  s = s.replace(/^\\s*(re|fwd|fw)\\s*:\\s*/i, '');\n  return s.trim();\n};\n\nconst parseCompanyFromSubject = (subj) => {\n  const s = normalizeSubject(subj);\n  const rx = /scale\\s+virtually\\s*:\\s*va\\s*candidates\\s*for\\s+(.+)$/i;\n  const m = s.match(rx);\n  if (m && m[1]) return m[1].trim().replace(/^[\"'\\s]+|[\"'\\s]+$/g, '');\n  return '';\n};\n\nconst toISO = (msOrStr) => {\n  if (!msOrStr) return '';\n  if (/^\\d+$/.test(String(msOrStr))) {\n    const n = Number(msOrStr);\n    if (!Number.isNaN(n)) return new Date(n).toISOString();\n  }\n  const d = new Date(msOrStr);\n  return isNaN(d.getTime()) ? '' : d.toISOString();\n};\n\nconst boolFlag = (v) => Boolean(v);\n\n// --- Main ---\nconst out = [];\n\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const headers = j.headers || {};\n\n  // Subject / company\n  const subjectRaw =\n    j.Subject || j.subject || getHeader(headers, 'subject') || '';\n  const subjectNorm = normalizeSubject(subjectRaw);\n  const company = parseCompanyFromSubject(subjectRaw);\n\n  // Participants (handle CC in any casing)\n  const toList = extractEmails(\n    j.To ?? j.to ?? getHeader(headers, 'to') ?? []\n  );\n  const ccList = extractEmails(\n    j.CC ?? j.Cc ?? j.cc ?? getHeader(headers, 'cc') ?? getHeader(headers, 'CC') ?? []\n  );\n\n  const fromRaw = j.From ?? j.from ?? getHeader(headers, 'from') ?? '';\n  const fromEmail = extractEmails(fromRaw)[0] || '';\n\n  // Reply-To priority for primary client\n  const replyToList = extractEmails(getHeader(headers, 'reply-to') || []);\n  const externals = [...new Set([...toList, ...ccList].filter(e => !isInternalEmail(e)))];\n\n  const primaryClientEmail =\n    firstExternal(replyToList) ||\n    firstExternal(toList) ||\n    firstExternal(ccList) ||\n    (!isInternalEmail(fromEmail) ? fromEmail : '') ||\n    '';\n\n  // Meta / IDs\n  const threadId = j.threadId || j.thread_id || '';\n  const gmailMessageId =\n    j.id ||\n    j.messageId ||\n    j['Message-Id'] ||\n    getHeader(headers, 'Message-Id') ||\n    getHeader(headers, 'message-id') ||\n    '';\n  const rfcMessageId =\n    getHeader(headers, 'Message-Id') ||\n    getHeader(headers, 'message-id') ||\n    '';\n  const inReplyTo = getHeader(headers, 'In-Reply-To') || getHeader(headers, 'in-reply-to') || '';\n  const references = getHeader(headers, 'References') || getHeader(headers, 'references') || '';\n\n  const sentAtISO = toISO(j.internalDate || j.Date || getHeader(headers, 'date'));\n  const sentAtEpoch = sentAtISO ? new Date(sentAtISO).getTime() : 0;\n\n  // Flags\n  const autoSubmitted = (getHeader(headers, 'Auto-Submitted') || '').toLowerCase();\n  const precedence = (getHeader(headers, 'Precedence') || '').toLowerCase();\n  const xAutoreply = (getHeader(headers, 'X-Autoreply') || '').toLowerCase();\n  const maybeAutoReply =\n    autoSubmitted.includes('auto') ||\n    xAutoreply.includes('auto') ||\n    precedence === 'bulk' || precedence === 'list' ||\n    /out of office|automatic reply/i.test(subjectRaw);\n\n  const maybeBounce =\n    /mailer-daemon@|postmaster@/i.test(fromEmail) ||\n    /undeliverable|delivery status notification|address not found/i.test(subjectRaw);\n\n  // Participants snapshots\n  const participantsAll = [...new Set([fromEmail, ...toList, ...ccList].filter(Boolean))];\n  const participantsExternal = participantsAll.filter(e => !isInternalEmail(e));\n  const participantsInternal = participantsAll.filter(e => isInternalEmail(e));\n\n  // \ud83d\udc49 NEW: latest message role/direction\n  const latest_message_from_email = fromEmail || '';\n  const latest_message_role = isInternalEmail(latest_message_from_email) ? 'internal' : 'client';\n  const latest_message_direction = latest_message_role === 'internal' ? 'outbound' : 'inbound';\n\n  out.push({\n    json: {\n      // Parsed\n      company,\n      subject_normalized: subjectNorm,\n      primary_client_email: primaryClientEmail,\n      external_recipients: externals,     // array (non-internal recipients in To/Cc)\n      to_list: toList,                    // array\n      cc_list: ccList,                    // array\n      participants_external: participantsExternal,\n      participants_internal: participantsInternal,\n\n      // IDs / Meta\n      thread_id: threadId,\n      message_id: gmailMessageId,\n      gmail_message_id: gmailMessageId,\n      rfc_message_id: rfcMessageId || '',\n      in_reply_to: inReplyTo,\n      references: references,\n      sent_at: sentAtISO,\n      sent_at_epoch: sentAtEpoch,\n\n      // Originals / audit\n      subject_raw: subjectRaw,\n      from: fromRaw,\n\n      // Heuristics\n      maybe_auto_reply: boolFlag(maybeAutoReply),\n      maybe_bounce: boolFlag(maybeBounce),\n\n      // \ud83d\udc49 NEW: role/direction of the latest message\n      latest_message_from_email,\n      latest_message_role,          // 'internal' | 'client'\n      latest_message_direction,     // 'outbound' | 'inbound'\n\n      // Versioning\n      schema_version: 'p+n.v2',\n    }\n  });\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3216,
+        1776
+      ],
+      "id": "9d450232-d8fe-42cb-8c69-63534269b774",
+      "name": "Parse + Normalize"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Name: Dedupe (Static Data) \u2014 Gmail messageId + threadId\n// Mode: Run Once for All Items\n\nconst SD = $getWorkflowStaticData('global');  // <- correct helper for Code node\nconst TTL_MS   = 7 * 24 * 60 * 60 * 1000; // 7 days\nconst MAX_KEYS = 500;\n\nif (!SD.processedMsg) SD.processedMsg = {};\nconst now = Date.now();\n\n// GC old entries\nfor (const [k, ts] of Object.entries(SD.processedMsg)) {\n  if (!ts || (now - ts) > TTL_MS) delete SD.processedMsg[k];\n}\n\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const msgId =\n    j.id ||\n    j.messageId ||\n    j[\"Message-Id\"] ||\n    j.headers?.[\"Message-Id\"] ||\n    j.headers?.[\"message-id\"];\n\n  const threadId = j.threadId || j.thread_id || '';\n\n  if (!msgId) { out.push(item); continue; } // don\u2019t block if missing\n  const key = `${msgId}::${threadId}`;\n\n  if (SD.processedMsg[key]) {\n    // seen before \u2192 drop\n    continue;\n  }\n\n  SD.processedMsg[key] = now; // mark seen\n  out.push(item);\n}\n\n// Size cap eviction (oldest first)\nconst keys = Object.keys(SD.processedMsg);\nif (keys.length > MAX_KEYS) {\n  keys.sort((a, b) => SD.processedMsg[a] - SD.processedMsg[b]);\n  for (let i = 0; i < keys.length - MAX_KEYS; i++) delete SD.processedMsg[keys[i]];\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3440,
+        1776
+      ],
+      "id": "6cf3103b-31d9-4542-8f2e-051cac90a2ed",
+      "name": "Sanity check / Dedupe"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Name: Prepare Thread for AI\n// Mode: Run Once for All Items\n\n// ===== CONFIG =====\nconst INTERNAL_DOMAINS = ['scalevirtually.com'];\nconst INTERNAL_ADDRESSES = [\n  'placements@scalevirtually.com',\n  'placements.sv@scalevirtually.com',\n  'pdev@scalevirtually.com',\n  'coach@scalevirtually.com',\n  'placements@scalevirtually.com',\n];\n// Char budgets\nconst MAX_EXCERPT_CHARS = 1200;\nconst MAX_TURN_CHARS = 600;     // per message, after cleanup\nconst MAX_QUOTED_TAIL = 2000;   // cap leftover quoted text if any leaks\nconst SCHEMA_VERSION = 'prep.v1';\n\n// ===== Helpers =====\nconst getHeaderVal = (headers, name) => {\n  if (!headers) return '';\n  if (Array.isArray(headers)) {\n    const h = headers.find(h => (h.name || '').toLowerCase() === name.toLowerCase());\n    return h ? h.value || '' : '';\n  }\n  const key = Object.keys(headers).find(k => k.toLowerCase() === name.toLowerCase());\n  return key ? headers[key] : '';\n};\n\nconst extractEmails = (value) => {\n  const texts = Array.isArray(value) ? value : [value];\n  const out = [];\n  for (const t of texts) {\n    if (!t) continue;\n    const matches = String(t).match(/[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}/g) || [];\n    for (const m of matches) out.push(m.toLowerCase());\n  }\n  return [...new Set(out)];\n};\n\nconst isInternalEmail = (addr) => {\n  const a = (addr || '').toLowerCase().trim();\n  if (!a) return false;\n  if (INTERNAL_ADDRESSES.includes(a)) return true;\n  const dom = a.split('@')[1] || '';\n  return INTERNAL_DOMAINS.some(d => dom.endsWith(d));\n};\n\nconst base64UrlDecode = (input) => {\n  if (!input) return '';\n  let s = String(input).replace(/-/g, '+').replace(/_/g, '/');\n  while (s.length % 4) s += '=';\n  try { return Buffer.from(s, 'base64').toString('utf8'); } catch { return ''; }\n};\n\nconst decodeQuotedPrintable = (str) => {\n  if (!str) return '';\n  let s = str.replace(/=\\r?\\n/g, '');\n  s = s.replace(/=([A-Fa-f0-9]{2})/g, (_, hex) => {\n    try { return String.fromCharCode(parseInt(hex, 16)); } catch { return _; }\n  });\n  return s;\n};\n\nconst htmlToText = (html) => {\n  if (!html) return '';\n  let s = String(html)\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<\\/(p|div|br|li|tr|h[1-6])>/gi, '\\n')\n    .replace(/<(ul|ol|table|thead|tbody|tfoot|tr)>/gi, '\\n')\n    .replace(/<[^>]+>/g, '')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;/gi, \"'\")\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>');\n  s = s.replace(/\\r/g, '').replace(/\\t/g, '  ');\n  s = s.split('\\n').map(l => l.replace(/\\s+$/,'')).join('\\n');\n  s = s.replace(/\\n{3,}/g, '\\n\\n').trim();\n  return s;\n};\n\nconst stripQuotedAndSignature = (text) => {\n  if (!text) return '';\n  let s = text;\n  s = s.replace(/(^|\\n)On .*wrote:\\n[\\s\\S]*$/i, '$1');\n  s = s.replace(/(^|\\n)From: .*?\\nSent: .*?\\nTo: [\\s\\S]*$/i, '$1');\n  s = s.split('\\n').filter(l => !/^\\s*>/.test(l)).join('\\n');\n  s = s.replace(/(^|\\n)--\\s*\\n[\\s\\S]*$/g, '$1');\n  s = s.replace(/(^|\\n)Regards?,?[\\s\\S]{0,200}$/i, '$1');\n  s = s.replace(/(^|\\n)Best(?: regards)?,?[\\s\\S]{0,200}$/i, '$1');\n  if (s.length > MAX_EXCERPT_CHARS + MAX_QUOTED_TAIL) {\n    s = s.slice(0, MAX_EXCERPT_CHARS + MAX_QUOTED_TAIL);\n  }\n  return s.trim();\n};\n\nconst extractBodyText = (payload) => {\n  if (!payload) return '';\n  const mime = (payload.mimeType || '').toLowerCase();\n  const data = payload.body && payload.body.data ? payload.body.data : null;\n\n  let current = '';\n  if (data && (mime.includes('text/plain') || mime === 'text/html')) {\n    const decoded = base64UrlDecode(data);\n    current = mime.includes('html') ? htmlToText(decoded) : decoded;\n  }\n  let bestChild = '';\n  const parts = payload.parts || [];\n  for (const p of parts) {\n    const child = extractBodyText(p);\n    if (child && child.length > bestChild.length) bestChild = child;\n  }\n  const chosen = (bestChild.length > current.length) ? bestChild : current;\n  const maybeQP = /=\\r?\\n|=[A-Fa-f0-9]{2}/.test(chosen);\n  const cleaned = maybeQP ? decodeQuotedPrintable(chosen) : chosen;\n  return cleaned;\n};\n\nconst clip = (s, n) => (s && s.length > n ? s.slice(0, n).trim() : s || '');\n\nconst parseNameEmail = (fromHeader) => {\n  const email = extractEmails(fromHeader)[0] || '';\n  if (!fromHeader) return { name: '', email };\n  const m = String(fromHeader).match(/^\\s*(\"?)([^\"<]+?)\\1\\s*<[^>]+>\\s*$/);\n  if (m && m[2]) return { name: m[2].trim(), email };\n  const name = String(fromHeader).replace(email, '').replace(/[<>\"]/g,'').trim();\n  return { name, email };\n};\n\nconst hasZoomLink = (t) => /(zoom\\.us\\/j|zoom\\.us\\/my|teams\\.microsoft\\.com|meet\\.google\\.com)\\//i.test(t || '');\nconst hasAnyLink = (t) => /https?:\\/\\/\\S+/i.test(t || '');\n// Broadened schedule and approval detectors\nconst containsScheduley = (t) =>\n  /\\b(schedule|reschedul|calendar|call|meeting|interview|availability|slot|time|start date|start on|working schedule|shift|8[:.]?00\\s*(am|pm)?|9[:.]?00\\s*(am|pm)?|11[:.]?00\\s*(am|pm)?)\\b/i.test(t || '');\nconst containsApproval = (t) =>\n  /\\b(approved|proceed|go ahead|let'?s move|green[-\\s]?light|move forward|offer|hire|welcome aboard|invite(d)?\\s+.*\\s+to\\s+(our|the)\\s+team)\\b/i.test(t || '');\n\n// ===== Build =====\nconst items = $input.all();\n\n// --- Pull canonical fields from \"Parse + Normalize\" (Option B) ---\nlet pnn = {};\ntry { pnn = ($items('Parse + Normalize')[0] || {}).json || {}; } catch { /* ignore if node not present */ }\n\nlet company = pnn.company || '';\nlet subject = pnn.subject_normalized || pnn.subject_raw || 'VA Candidates';\nlet participantsExternal = Array.isArray(pnn.participants_external) ? pnn.participants_external : [];\nlet participantsInternal = Array.isArray(pnn.participants_internal) ? pnn.participants_internal : [];\nlet maybeAutoReplyUpstream = !!pnn.maybe_auto_reply;\nlet maybeBounceUpstream = !!pnn.maybe_bounce;\n\n// Determine thread messages input shape (do NOT overwrite p+n fields if they exist)\nlet threadId = '';\nlet messages = [];\nif (items.length === 1 && Array.isArray(items[0].json.messages)) {\n  const j = items[0].json;\n  messages = j.messages || [];\n  threadId = j.threadId || j.thread_id || (messages[0]?.threadId || '');\n  if (!participantsExternal.length && Array.isArray(j.participants_external)) participantsExternal = j.participants_external;\n  if (!participantsInternal.length && Array.isArray(j.participants_internal)) participantsInternal = j.participants_internal;\n  if (!subject && (j.subject || j.subject_normalized)) subject = j.subject || j.subject_normalized;\n  if (!company && j.company) company = j.company;\n} else {\n  messages = items.map(i => i.json);\n  const first = items[0]?.json || {};\n  threadId = first.threadId || first.thread_id || '';\n  if (!subject && (first.subject || first.subject_normalized)) subject = first.subject || first.subject_normalized;\n  if (!company && first.company) company = first.company;\n  if (!participantsExternal.length && Array.isArray(first.participants_external)) participantsExternal = first.participants_external;\n  if (!participantsInternal.length && Array.isArray(first.participants_internal)) participantsInternal = first.participants_internal;\n}\n\n// Sort by time (ascending)\nmessages.sort((a, b) => {\n  const ta = Number(a.internalDate || 0);\n  const tb = Number(b.internalDate || 0);\n  return ta - tb;\n});\n\n// Build transcript\nconst transcript = [];\nfor (const m of messages) {\n  const headers = m.payload?.headers || m.headers || {};\n  const fromHdr = getHeaderVal(headers, 'From') || m.From || '';\n  const { name: from_name, email: from_email } = parseNameEmail(fromHdr);\n\n  const text = extractBodyText(m.payload) || m.snippet || '';\n  const clean = stripQuotedAndSignature(htmlToText(text));\n  const normalized = clean.replace(/\\r/g, '').replace(/\\n{3,}/g, '\\n\\n').trim();\n\n  const body = clip(normalized, MAX_TURN_CHARS);\n\n  const role = isInternalEmail(from_email) ? 'internal' : 'client';\n  const whenISO = (() => {\n    const ts = Number(m.internalDate || 0);\n    if (ts) return new Date(ts).toISOString();\n    const d = getHeaderVal(headers, 'Date');\n    return d ? new Date(d).toISOString() : '';\n  })();\n\n  const gmail_message_id = m.id || '';\n  const rfc_message_id = getHeaderVal(headers, 'Message-ID') || '';\n\n  transcript.push({\n    i: transcript.length,\n    gmail_message_id,\n    rfc_message_id,\n    date_iso: whenISO,\n    epoch: whenISO ? new Date(whenISO).getTime() : 0,\n    from_email,\n    from_name,\n    role,\n    text: body,\n    has_links: hasAnyLink(body),\n    has_zoom_link: hasZoomLink(body),\n    word_count: body ? body.split(/\\s+/).filter(Boolean).length : 0,\n  });\n}\n\n// Pointers & summary flags\nlet last_client_index = -1;\nlet last_internal_index = -1;\nfor (let i = transcript.length - 1; i >= 0; i--) {\n  if (last_client_index === -1 && transcript[i].role === 'client') last_client_index = i;\n  if (last_internal_index === -1 && transcript[i].role === 'internal') last_internal_index = i;\n  if (last_client_index !== -1 && last_internal_index !== -1) break;\n}\n\nconst latestClientText = last_client_index >= 0 ? transcript[last_client_index].text : '';\nconst summary_flags = {\n  contains_schedule: containsScheduley(latestClientText),\n  contains_offer_or_approval: containsApproval(latestClientText),\n  maybe_auto_reply: Boolean(maybeAutoReplyUpstream) || /out of office|automatic reply/i.test(latestClientText),\n  maybe_bounce: Boolean(maybeBounceUpstream),\n};\n\n// --- NEW: Enrich participants with addresses seen in the transcript ---\nconst allSeen = [...new Set(transcript.map(t => t.from_email).filter(Boolean))];\nconst externalsSeen = allSeen.filter(e => !isInternalEmail(e));\nconst internalsSeen = allSeen.filter(e => isInternalEmail(e));\nparticipantsExternal = [...new Set([...(participantsExternal || []), ...externalsSeen])];\nparticipantsInternal = [...new Set([...(participantsInternal || []), ...internalsSeen])];\n\n// Thread title fallback\nconst thread_title = subject || (company ? `VA Candidates for ${company}` : 'VA Candidates');\n\n// Output\nreturn [\n  {\n    json: {\n      thread_id: threadId,\n      subject: subject || thread_title,\n      company,\n      participants_internal: participantsInternal,\n      participants_external: participantsExternal,\n      transcript,\n      last_client_index,\n      last_internal_index,\n      summary_flags,\n      schema_version: SCHEMA_VERSION,\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3440,
+        1456
+      ],
+      "id": "5947665d-68f6-4f53-80fe-47375a81e60e",
+      "name": "Prepare Thread for AI"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=SUBJECT: {{$json.subject}}\nCOMPANY: {{$json.company}}\n\nSUMMARY_FLAGS:\n- contains_schedule: {{$json.summary_flags.contains_schedule}}\n- contains_offer_or_approval: {{$json.summary_flags.contains_offer_or_approval}}\n- maybe_auto_reply: {{$json.summary_flags.maybe_auto_reply}}\n- maybe_bounce: {{$json.summary_flags.maybe_bounce}}\n\nLATEST CONTEXT (chronological):\n{{ \n  $json.transcript.map(t => \n    (t.role === 'client' ? 'CLIENT' : 'INTERNAL') + \n    ' | ' + (t.date_iso || '') + \n    ' | ' + (t.from_email || '') + \n    '\\n' + (t.text || '').slice(0, 600)\n  ).join('\\n\\n---\\n\\n')\n}}\n\nReturn ONLY valid JSON per the schema:\n{\n  \"label\": \"...\",\n  \"confidence\": 0.0,\n  \"evidence\": \"...\",\n  \"next_actions\": [\"...\", \"...\"]\n}\n",
+        "options": {
+          "systemMessage": "You are a careful email-thread classifier for a recruiting/placements workflow.\nReturn ONLY a compact JSON blob matching the required schema. No prose.\n\nRules:\n- Read the thread chronologically. Focus on the LATEST EXTERNAL message (role=\"client\").\n- Prefer direct quotes from the latest external turn in the evidence field (<=200 chars).\n- Labels are mutually exclusive. Choose exactly one.\n- If summary_flags.maybe_auto_reply or maybe_bounce is true, label = \"Noise\".\n- If there is NO external message AFTER the most recent internal message, label = \"NoReply\".\n- If the latest external clearly approves (hire, proceed, invite to team, welcome aboard, greenlight), label = \"Approved\".\n- If they clearly decline (not moving forward), label = \"Rejected\".\n- If they ask for more candidates/options, label = \"MoreOptions\".\n- If they want to book, reschedule or discuss times/dates, label = \"Scheduling\".\n- If they mainly ask clarifying questions, label = \"Question\".\n- If you truly cannot tell, label = \"Uncertain\".\n- Confidence:\n  - 0.95\u20130.99 for explicit phrases (e.g., \u201cwe\u2019d like to invite\u2026\u201d, \u201cplease hire\u201d, \u201cnot moving forward\u201d).\n  - 0.80\u20130.94 when strongly implied but not literal.\n  - 0.60\u20130.79 when partial signals or mixed intent.\n  - Otherwise 0.50.\n- next_actions: 2\u20135 short imperative steps tailored to the label (no placeholders)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -3216,
+        1344
+      ],
+      "id": "05a50f9b-6e9f-4901-a7f2-945ccc25f8ad",
+      "name": "AI Agent: Thread Classifier"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Name: Parse + Guardrails\n// Mode: Run Once for All Items\n\n// ---------- CONFIG ----------\nconst NODE_PREPARE = 'Prepare Thread for AI';\nconst NODE_AGENT   = 'AI Agent: Thread Classifier';\n\n// Confidence thresholds\nconst CONF_AUTOSEND_MIN = 0.80;  // min to auto-send a follow-up\nconst CONF_HUMAN_MIN    = 0.60;  // below this -> Uncertain/HUMAN_REVIEW\n\n// Cooldown before a follow-up (ms)\nconst MIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24h\n\n// Quiet hours block (optional). Set to null to disable.\nconst QUIET_HOURS = null; // e.g., { startHour: 21, endHour: 8, tz: 'America/New_York' }\n\n// Unsubscribe/stop phrases (latest external only)\nconst UNSUB_RX = /\\b(unsubscribe|remove me|stop emailing|stop message|do not contact|don't contact)\\b/i;\n\n// Allowed labels\nconst ALLOWED = [\"Approved\",\"Rejected\",\"MoreOptions\",\"Scheduling\",\"Question\",\"NoReply\",\"Noise\",\"Uncertain\"];\n\n// ---------- HELPERS ----------\nconst stripFences = (s='') =>\n  String(s).trim()\n    .replace(/^```(?:json)?\\s*/i,'')\n    .replace(/```$/,'');\n\nconst safeJson = (s) => { try { return JSON.parse(s); } catch { return {}; } };\n\nconst clamp01 = (n) => Math.max(0, Math.min(1, Number(n)));\n\nconst nowMs = () => Date.now();\n\nconst inQuietHours = (cfg) => {\n  if (!cfg) return false;\n  const { startHour, endHour, tz } = cfg;\n  const now = new Date();\n  // Basic local-hour check; if you need strict TZ, precompute in an upstream node.\n  const hr = now.getHours();\n  if (startHour <= endHour) return hr >= startHour && hr < endHour;\n  // Wraps midnight\n  return (hr >= startHour) || (hr < endHour);\n};\n\n// ---------- INPUTS ----------\nconst prep = ($items(NODE_PREPARE)[0] || {}).json || {};\nconst agentRaw = ($items(NODE_AGENT)[0] || {}).json || {};\nlet agentOut = agentRaw;\n\n// If the agent returned { output: \"```json ... ```\" }, parse it\nif (typeof agentRaw.output === 'string') {\n  const str = stripFences(agentRaw.output);\n  agentOut = safeJson(str);\n}\n\n// Normalize + validate\nlet label = ALLOWED.includes(agentOut.label) ? agentOut.label : 'Uncertain';\nlet confidence = clamp01(agentOut.confidence ?? 0.5);\nlet evidence = String(agentOut.evidence || '').slice(0, 200);\nlet next_actions = Array.isArray(agentOut.next_actions)\n  ? agentOut.next_actions.slice(0,5).map(x => String(x).trim()).filter(Boolean)\n  : [];\n\n// ---------- DERIVED CONTEXT ----------\nconst summary = prep.summary_flags || {};\nconst transcript = Array.isArray(prep.transcript) ? prep.transcript : [];\nconst lastClientIdx   = Number.isInteger(prep.last_client_index) ? prep.last_client_index : -1;\nconst lastInternalIdx = Number.isInteger(prep.last_internal_index) ? prep.last_internal_index : -1;\n\nconst latestExternalText = lastClientIdx >= 0 ? (transcript[lastClientIdx]?.text || '') : '';\nconst lastInternalTs = lastInternalIdx >= 0 ? (transcript[lastInternalIdx]?.epoch || 0) : 0;\n\n// Has external since our last outbound?\nconst hasExternalSinceLastOutbound = lastClientIdx > lastInternalIdx;\n\n// Unsubscribe detector (latest external only)\nconst hasUnsubscribe = UNSUB_RX.test(latestExternalText);\n\n// Summary-based hard-stops\nconst isNoise = !!(summary.maybe_auto_reply || summary.maybe_bounce);\n\n// ---------- GUARDRAIL ADJUSTMENTS ----------\nif (isNoise) {\n  label = 'Noise';\n  confidence = Math.max(confidence, 0.9); // deterministic override\n  evidence = evidence || 'Auto-reply/bounce detected.';\n}\n\nif (!ALLOWED.includes(label)) label = 'Uncertain';\n\n// ---------- DECISION ENGINE ----------\nlet action = 'STOP';\nlet reason = 'Default stop.';\n\n// Consider quiet hours\nconst quietNow = inQuietHours(QUIET_HOURS);\n\n// Autosend follow-up is ONLY allowed for NoReply with strict preconditions\nif (label === 'NoReply') {\n  // Must be confident\n  const confOK = confidence >= CONF_AUTOSEND_MIN;\n  // No external after our last outbound\n  const noNewExternal = !hasExternalSinceLastOutbound;\n  // Respect cooldown\n  const cooldownOK = (nowMs() - lastInternalTs) >= MIN_COOLDOWN_MS;\n  // No unsubscribe/stop request\n  const safeToContact = !hasUnsubscribe;\n  // Not noise, not quiet hours\n  const safeContext = !isNoise && !quietNow;\n\n  if (confOK && noNewExternal && cooldownOK && safeToContact && safeContext) {\n    action = 'AUTOSEND_FOLLOWUP';\n    reason = 'NoReply with high confidence, cooldown met, safe to contact.';\n  } else {\n    action = 'HUMAN_REVIEW';\n    reason = [\n      confOK ? null : 'Low confidence',\n      noNewExternal ? null : 'Client replied after last outbound',\n      cooldownOK ? null : 'Cooldown not met',\n      safeToContact ? null : 'Unsubscribe/stop detected',\n      safeContext ? null : 'Quiet hours'\n    ].filter(Boolean).join('; ');\n  }\n}\n// Never auto-send for these labels; we just update state and stop.\nelse if (['Approved','Rejected','Scheduling','MoreOptions','Question','Noise'].includes(label)) {\n  action = 'STOP';\n  reason = `Terminal or handled label: ${label}.`;\n}\n// Fallbacks & uncertainty\nelse {\n  action = 'HUMAN_REVIEW';\n  reason = 'Uncertain or unmatched label.';\n}\n\n// Compute a recommended earliest send time (for Wait-until) if we\u2019re in cooldown or quiet hours\nlet send_after_epoch = 0;\nif (action === 'AUTOSEND_FOLLOWUP') {\n  send_after_epoch = nowMs(); // ready now\n} else if (label === 'NoReply') {\n  const needCooldownMs = Math.max(0, MIN_COOLDOWN_MS - (nowMs() - lastInternalTs));\n  let unblockAt = nowMs() + needCooldownMs;\n  // If quiet hours, push to endHour today/tomorrow (minimal; for strict TZ do upstream)\n  if (quietNow && QUIET_HOURS) {\n    const d = new Date();\n    const target = new Date(d);\n    const { endHour } = QUIET_HOURS;\n    target.setHours(endHour, 0, 0, 0);\n    if (target.getTime() <= d.getTime()) target.setDate(target.getDate() + 1);\n    unblockAt = Math.max(unblockAt, target.getTime());\n  }\n  send_after_epoch = unblockAt || 0;\n}\n\n// ---------- OUTPUT ----------\nreturn [\n  {\n    json: {\n      ...prep,  // \u2705 keep everything from Prepare Thread for AI (participants, transcript, etc.)\n\n      // normalized classifier\n      label,\n      confidence,\n      evidence,\n      next_actions,\n\n      // guardrails context\n      safeguards: {\n        is_noise: isNoise,\n        has_unsubscribe: hasUnsubscribe,\n        has_external_since_last_outbound: hasExternalSinceLastOutbound,\n        cooldown_met: (nowMs() - lastInternalTs) >= MIN_COOLDOWN_MS,\n        quiet_hours: quietNow,\n        min_cooldown_ms: MIN_COOLDOWN_MS,\n        conf_autosend_min: CONF_AUTOSEND_MIN\n      },\n\n      // final decision\n      action,                 // \"AUTOSEND_FOLLOWUP\" | \"HUMAN_REVIEW\" | \"STOP\"\n      reason,\n      send_after_epoch,       // for Wait-until; 0 means \"now\" or not applicable\n\n      // passthroughs / overrides\n      thread_id: prep.thread_id || '',\n      subject: prep.subject || '',\n      company: prep.company || '',\n      last_internal_index: lastInternalIdx,\n      last_client_index: lastClientIdx,\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2864,
+        1456
+      ],
+      "id": "4097666b-a9ca-4e7a-ae12-f589257da2f5",
+      "name": "Parser + Guardrail"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3a441236-ee71-49a4-9490-f70fb38a5c8c",
+              "leftValue": "={{$json.action === \"AUTOSEND_FOLLOWUP\"}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2640,
+        1456
+      ],
+      "id": "e6367ef1-08be-43e8-b8be-c8e91af2697a",
+      "name": "Auto-send path"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"C09ESC12MA5\",\n  \"text\": \"{{$json.label}} \u2014 {{$items('Prepare Thread for AI')[0].json.company || $json.company || ''}} \u00b7 {{$json.subject}}\",\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": { \"type\": \"plain_text\", \"text\": \"{{$json.label}} \u2014 {{$items('Prepare Thread for AI')[0].json.company || $json.company || ''}}\", \"emoji\": true }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        { \"type\": \"mrkdwn\", \"text\": \"*Subject:* {{$json.subject}}\" },\n        { \"type\": \"mrkdwn\", \"text\": \"*Thread ID:* {{$json.thread_id}}\" }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": { \"type\": \"mrkdwn\", \"text\": \"*Evidence:* \u201c{{$json.evidence}}\u201d\\n*Confidence:* {{ Math.round((+$json.confidence || 0)*100) }}%\" }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        { \"type\": \"button\", \"text\": { \"type\": \"plain_text\", \"text\": \"Open Gmail Thread\" }, \"url\": \"https://mail.google.com/mail/u/0/#all/{{$json.thread_id}}\" }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2416,
+        1552
+      ],
+      "id": "a3a213ae-ebf0-463e-a391-bf420962944c",
+      "name": "No More Follow-up"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Follow-Up Template (test mode)\n// Mode: Run Once per Item\n\n// ---------- CONFIG ----------\nconst TEST_MODE = true; // set false when going live\nconst TEST_RECIPIENT = \"pj@scalevirtually.com\";\n\n// ---------- INPUTS ----------\nconst threadId = $json.thread_id || null;\nconst company = $json.company || null;\nconst followupCount = Number($json.followup_count || 0);\n\n// ---------- SUBJECT ----------\nconst subject = \"Following up on your VA candidates\";\n\n// ---------- BODY (light professional tone) ----------\nconst body = `Good day,\n\nHope you\u2019re doing well!\n\nJust checking in to see if you\u2019ve had a chance to review the candidates we sent. We\u2019d appreciate your feedback and your availability so we can move forward with scheduling the interviews.\n\nLooking forward to your response!\n\nBest Regards,\nPlacements Team`;\n\n// ---------- RECIPIENT ----------\nlet sendTo;\nif (TEST_MODE) {\n  sendTo = TEST_RECIPIENT; // test route\n} else {\n  // production route \u2013 pick most recent external sender\n  sendTo =\n    $json.transcript?.[$json.last_client_index]?.from_email ||\n    $json.participants_external?.[0] ||\n    \"\";\n}\n\n// ---------- OUTPUT ----------\nreturn [\n  {\n    json: {\n      subject,\n      body,\n      send_to: sendTo,\n      followup_count: followupCount + 1,\n      thread_id: threadId,\n      template_variant: \"generic\",\n      company,\n      test_mode: TEST_MODE,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2192,
+        1360
+      ],
+      "id": "21154dc1-29e1-4997-9df2-5d031de01231",
+      "name": "Follow-Up Template"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"threadId\": \"{{$json.thread_id}}\",\n  \"raw\": \"{{$json.mime_b64url}}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1744,
+        1360
+      ],
+      "id": "9d959f2d-54c7-44e8-91bd-8f4cabaad632",
+      "name": "HTTP Request: Gmail API Send",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "qFbjh0hWUMdzMDOP",
+          "name": "Docusign 2"
+        },
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// MIME Builder for Gmail API\n// Mode: Run Once per Item\n\n// ---------- INPUTS ----------\nconst to = $json.send_to;                     // recipient from Follow-Up Template\nconst subject = $json.subject || \"(no subject)\";\nconst body = $json.body || \"\";\nconst threadId = $json.thread_id || null;\nconst ccList = Array.isArray($json.participants_internal)\n  ? $json.participants_internal.join(\", \")\n  : \"\";\n\n// ---------- BUILD PLAIN-TEXT MIME ----------\nlet mime = `To: ${to}\\n`;\nif (ccList) mime += `Cc: ${ccList}\\n`;\nmime += `Subject: ${subject}\\n`;\nmime += `Content-Type: text/plain; charset=\"UTF-8\"\\n\\n${body}`;\n\n// ---------- BASE64URL ENCODE ----------\nconst mime_b64url = Buffer.from(mime)\n  .toString(\"base64\")\n  .replace(/\\+/g, \"-\")\n  .replace(/\\//g, \"_\")\n  .replace(/=+$/, \"\");\n\n// ---------- OUTPUT ----------\nreturn [\n  {\n    json: {\n      thread_id: threadId,\n      mime_b64url,\n      to,\n      subject,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        1360
+      ],
+      "id": "6441580e-3230-428b-9153-5b1e65218643",
+      "name": "MIME Builder"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -3152,
+        1568
+      ],
+      "id": "b92d1679-4871-4e1e-b255-f4b46082183a",
+      "name": "Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7BN2R0TQRbTnikkq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        1360
+      ],
+      "id": "feeb908c-7132-4704-ba7a-abec2ae36432",
+      "name": "Update Session Log (Auto Send)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Update Session Log (Mode: Run Once for All Items)\n\n// exact name of the node that has thread_id/label/... fields\nconst SOURCE_NODE = 'Parser + Guardrail'; // <-- change if your node name differs\n\nconst now = Date.now();\nconst slackItems = $input.all();              // items arriving from Slack HTTP node\nconst baseItems  = $items(SOURCE_NODE, 0);    // parallel items from the source node\n\nconst data = $getWorkflowStaticData('global');\ndata.session_log = data.session_log ?? [];\n\nconst out = slackItems.map((curr, idx) => {\n  const base = baseItems[idx]?.json ?? {};  // safe lookup; may be {}\n  const slack = curr.json ?? {};\n\n  const log = {\n    // from source node (may be undefined if the name/index is wrong)\n    thread_id: base.thread_id,\n    label: base.label,\n    confidence: base.confidence,\n    action: base.action,\n    reason: base.reason,\n    followup_count: base.followup_count ?? 0,\n    last_internal_index: base.last_internal_index ?? null,\n    last_client_index: base.last_client_index ?? null,\n\n    // from Slack HTTP response\n    slack_channel: slack.channel,\n    slack_ts: slack.ts,\n    slack_ok: slack.ok,\n\n    decided_at_epoch: now,\n  };\n\n  data.session_log.push(log);\n  return { json: log };\n});\n\n// (optional) cap log size\nconst MAX = 1000;\nif (data.session_log.length > MAX) data.session_log = data.session_log.slice(-MAX);\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2192,
+        1552
+      ],
+      "id": "e308ff60-9c4f-4721-a608-20fe01aad36f",
+      "name": "Update Session Log (No Follow-up)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -2416,
+        1360
+      ],
+      "id": "e4683fc0-e006-450a-b4fb-e079fd9b0be8",
+      "name": "Wait",
+      "webhookId": "9c656d91-1aad-4eff-b4d4-1c66f8353ed6"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -3216,
+        880
+      ],
+      "id": "6a3f038d-b73c-4610-9786-5480075f033c",
+      "name": "Wait 24 hours",
+      "webhookId": "76b20ca9-4b96-48cf-bb3b-49096911b85d"
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "get",
+        "threadId": "={{ $json.threadId }}",
+        "simple": false,
+        "options": {
+          "returnOnlyMessages": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2992,
+        880
+      ],
+      "id": "3aec0c9e-60f1-494d-a9d1-063867ae3bf9",
+      "name": "Get Shortlisting Thread",
+      "webhookId": "012c416f-a562-4b18-9e11-d71193f2b614",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============= LLM Prep (Gmail Thread -> compact prep) =============\n// Mode: Run Once for All Items\n// Input: items[0].json.{ id, historyId, messages: [ ... ] }  (Gmail \"Get a thread\"/Trigger format)\n// Output: [ { prep: {...} } ]  OR [ { prep: { error: \"...\" } } ]\n\nconst INTERNAL_DOMAINS = ['scalevirtually.com'];   // adjust as needed\nconst SUPPRESS_ON_ANY_INTERNAL_OR_EXTERNAL_REPLY = false; // set true if any reply should stop follow-ups\n\nfunction parseAddressList(raw) {\n  if (!raw) return [];\n  // Split on commas that separate addresses (simple but works for common cases)\n  return raw\n    .split(',')\n    .map(s => s.trim())\n    .filter(Boolean)\n    .map(addr => {\n      // Formats: \"Name <email@x.com>\" OR \"email@x.com\"\n      const m = addr.match(/^(.*)<([^>]+)>$/);\n      const email = (m ? m[2] : addr).trim();\n      const name = (m ? m[1] : '').trim().replace(/^\"|\"$/g, '');\n      const domain = (email.split('@')[1] || '').toLowerCase();\n      const isInternal = INTERNAL_DOMAINS.includes(domain);\n      return { email: email.toLowerCase(), name, domain, isInternal };\n    });\n}\n\nfunction uniqBy(arr, keyFn) {\n  const seen = new Set();\n  const out = [];\n  for (const x of arr) {\n    const k = keyFn(x);\n    if (!seen.has(k)) { seen.add(k); out.push(x); }\n  }\n  return out;\n}\n\nfunction header(msg, name) {\n  return msg[name] || (msg.payload?.headers?.find(h => h.name === name)?.value) || undefined;\n}\n\nfunction firstNonEmpty(...vals) {\n  return vals.find(v => v !== undefined && v !== null && v !== '');\n}\n\nfunction getBodySnippet(msg) {\n  // Prefer Gmail 'snippet' (already compact), with a short fallback to payload text if ever needed\n  if (msg.snippet) return msg.snippet;\n  const body = msg.payload?.body?.data || '';\n  if (!body) return '';\n  try {\n    const text = Buffer.from(body, 'base64').toString('utf8');\n    return text.slice(0, 240);\n  } catch {\n    return '';\n  }\n}\n\nfunction normalizeDate(v) {\n  // returns ms timestamp (number) or null\n  if (!v) return null;\n  // Gmail 'internalDate' is ms as string; 'Date' is RFC2822\n  if (/^\\d+$/.test(String(v))) return Number(v);\n  const t = Date.parse(v);\n  return Number.isFinite(t) ? t : null;\n}\n\nfunction buildPrepFromThread(thread) {\n  if (!thread || !Array.isArray(thread.messages) || !thread.messages.length) {\n    return { error: 'Missing Gmail thread' };\n  }\n\n  // Sort messages by internalDate ascending\n  const messages = [...thread.messages].sort((a,b) =>\n    normalizeDate(a.internalDate) - normalizeDate(b.internalDate)\n  );\n\n  const threadId = firstNonEmpty(thread.id, messages[0]?.threadId);\n  const subject = firstNonEmpty(header(messages[0], 'Subject'), messages[0]?.Subject) || '';\n  const startedAt = normalizeDate(firstNonEmpty(messages[0]?.internalDate, header(messages[0],'Date')));\n  const lastMsg = messages[messages.length - 1];\n  const lastAt = normalizeDate(firstNonEmpty(lastMsg?.internalDate, header(lastMsg,'Date')));\n\n  // Collect participants across the thread\n  let allPeople = [];\n  for (const m of messages) {\n    allPeople = allPeople.concat(parseAddressList(header(m, 'From')));\n    allPeople = allPeople.concat(parseAddressList(header(m, 'To')));\n    allPeople = allPeople.concat(parseAddressList(header(m, 'Cc')));\n  }\n  allPeople = uniqBy(allPeople, p => p.email);\n\n  // Original message participants (who to consider for follow-ups)\n  const orig = messages[0];\n  const origFrom = parseAddressList(header(orig, 'From'))[0] || null;\n  const origTo = parseAddressList(header(orig, 'To'));\n  const origCc = parseAddressList(header(orig, 'Cc'));\n  const origRecipients = uniqBy([...origTo, ...origCc], p => p.email);\n\n  // Replies (any message after the first where sender matches recipient)\n  // Also compute whether internal/external replied\n  const repliesByEmail = new Map();\n  let anyReply = false;\n  let anyExternalReply = false;\n  let anyInternalReply = false;\n\n  for (let i = 1; i < messages.length; i++) {\n    const m = messages[i];\n    const from = parseAddressList(header(m, 'From'))[0];\n    if (!from) continue;\n    anyReply = true;\n    if (from.isInternal) anyInternalReply = true; else anyExternalReply = true;\n\n    const ts = normalizeDate(firstNonEmpty(m.internalDate, header(m,'Date')));\n    const prev = repliesByEmail.get(from.email);\n    if (!prev || ts > prev) repliesByEmail.set(from.email, ts);\n  }\n\n  // Mark which original recipients replied\n  const recipients = origRecipients.map(r => {\n    const repliedAt = repliesByEmail.get(r.email) || null;\n    return { ...r, replied: Boolean(repliedAt), repliedAt };\n  });\n\n  // External-only recipients for follow-up targeting\n  const externalRecipients = recipients.filter(r => !r.isInternal);\n\n  // Compute non-repliers (respect the global suppression flag if you want)\n  const nonRepliers = externalRecipients.filter(r => {\n    if (SUPPRESS_ON_ANY_INTERNAL_OR_EXTERNAL_REPLY && anyReply) return false;\n    return !r.replied;\n  });\n\n  // A compact prompt seed for your LLM (token friendly)\n  const lastSnippet = getBodySnippet(lastMsg);\n  const latestHumanFrom = parseAddressList(header(lastMsg, 'From'))[0] || null;\n\n  const compactHistory = messages.slice(-6).map(m => {\n    const from = parseAddressList(header(m,'From'))[0];\n    return {\n      at: normalizeDate(firstNonEmpty(m.internalDate, header(m,'Date'))),\n      from: from?.email || null,\n      internal: from?.isInternal ?? null,\n      snippet: getBodySnippet(m),\n    };\n  });\n\n  return {\n    threadId,\n    subject,\n    startedAt,\n    lastAt,\n    origin: {\n      from: origFrom,\n      to: origTo,\n      cc: origCc,\n    },\n    participants: allPeople,\n    recipients,                // original recipients with replied flags\n    externalRecipients,        // original external recipients\n    nonRepliers,               // external, no reply yet\n    anyReply,\n    anyExternalReply,\n    anyInternalReply,\n    // Minimal, LLM-friendly seed (you can feed only this to your model)\n    llmSeed: {\n      title: subject,\n      latestFrom: latestHumanFrom,\n      latestAt: lastAt,\n      latestSnippet: lastSnippet,\n      audience: nonRepliers.map(r => r.email),\n      compactHistory,          // last few turns, trimmed to snippets/dates\n    },\n  };\n}\n\n// ===== main =====\nconst items = $input.all();\nconst thread = items?.[0]?.json ?? null;\nconst prep = buildPrepFromThread(thread);\n\nreturn [{ prep }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2768,
+        880
+      ],
+      "id": "9ea5d365-ad22-41f9-8795-e4e2571f5895",
+      "name": "LLM Prep"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a follow-up #{{$json.prep.followUpNumber || 1}}.\n\nContext (compact):\nTitle: {{$json.prep.llmSeed.title}}\nLatest: from {{$json.prep.llmSeed.latestFrom.email}} at {{$json.prep.llmSeed.latestAt}}\nLatest snippet: {{$json.prep.llmSeed.latestSnippet}}\n\nRecent thread (newest\u2192oldest):\n{{ $json.prep.llmSeed.compactHistory.map(h => \n  `- ${new Date(h.at).toISOString()} | ${h.from} | ${h.internal ? 'internal' : 'external'} | ${h.snippet}`\n).join('\\n') }}\n\nAudience (send to these exact addresses only):\n{{ $json.prep.llmSeed.audience.join(', ') }}\n\nConstraints:\n- Don\u2019t restate the entire history\u2014assume they remember.\n- CTA: ask for a quick decision/update or propose a next step (e.g., confirm interview or request feedback).\n- If audience is 1 person, address them by name if available in participants; otherwise use a neutral greeting.\n- Keep sensitive info minimal; no candidate PII beyond what exists in the snippets.\n\nReturn JSON only.\n",
+        "options": {
+          "systemMessage": "You are an assistant that writes short, professional follow-up emails.\n- Keep it concise (<= 120 words).\n- Be specific on the ask (clear CTA).\n- Keep names, company and role accurate; do not invent facts.\n- If context suggests a candidate/client conversation, adapt tone appropriately.\nReturn ONLY JSON, no prose.\nJSON schema:\n{\n  \"subject\": \"string\",\n  \"body\": \"string (plain text, no HTML)\",\n  \"to\": [\"string\"],           // external non-repliers\n  \"cc\": [\"string\"],           // safe to CC internal only\n  \"reasoning_tags\": [\"string\"] // very short labels (e.g. \"nudge\",\"decision_request\")\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -2320,
+        912
+      ],
+      "id": "38f5f5ee-c85e-4379-bc42-da4cd433480d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2256,
+        1136
+      ],
+      "id": "5f39fd67-dc46-405d-acb2-a76d66e4b4d9",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7BN2R0TQRbTnikkq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Draft Normalizer (LLM -> send-ready + decision flags)\n * Mode: Run Once for All Items\n *\n * Inputs expected on items[0].json:\n *  - output : string  (LLM response; may be wrapped in ```json fences)\n *  - prep   : object  (from your LLM Prep node; includes nonRepliers, subject, anyReply flags, threadId)\n *  - config : object? (optional policy toggles, see defaults below)\n *  - state  : object? (optional counters: { followUpCount, limit })\n *\n * Output (single item):\n *  {\n *    threadId, subject, to[], cc[], body,\n *    flags: { hasAudience, suppressed, hasError, readyToSend },\n *    decision: \"send\" | \"skip_suppressed\" | \"limit_reached\" | \"no_audience\" | \"invalid_draft\" | \"needs_human\",\n *    reasons: [string],\n *    _rawDraft, _prepSubject\n *  }\n */\n\nconst input = $input.first().json;\n\n// ---------- Config (with safe defaults; override via items[0].json.config) ----------\nconst cfg = Object.assign({\n  enforceToFromPrep: true,        // Only send to prep.nonRepliers\n  allowModelTo: false,            // If true, intersect model 'to' with nonRepliers; else ignore model 'to'\n  allowedCcDomains: [],           // Empty -> block all CC; else allow only these domains\n  suppressOnAnyReply: true,       // If any reply happened, skip send\n  requireHumanReview: false,      // Force manual review gate\n  maxBodyChars: 1200,             // Hard cap on body length\n  trimWhitespace: true,           // Normalize whitespace in body\n}, input.config || {});\n\n// Optional state (for limit logic)\nconst state = Object.assign({\n  followUpCount: 0,\n  limit: 2,                       // e.g., max 2 follow-ups\n}, input.state || {});\n\n// ---------- Helpers ----------\nfunction stripCodeFence(s) {\n  if (typeof s !== 'string') return '';\n  return s\n    .replace(/^\\s*```json\\s*/i, '')\n    .replace(/^\\s*```\\s*/i, '')\n    .replace(/\\s*```\\s*$/i, '')\n    .trim();\n}\nfunction safeEmails(arr) {\n  return (Array.isArray(arr) ? arr : []).filter(v => typeof v === 'string' && v.includes('@'));\n}\nfunction dedupe(arr) { return [...new Set(arr)]; }\nfunction emailDomain(e) { return String(e).split('@')[1]?.toLowerCase() || ''; }\nfunction filterAllowedCc(cc, domains) {\n  if (!domains || !domains.length) return [];\n  const set = new Set(domains.map(d => String(d).toLowerCase()));\n  return cc.filter(e => set.has(emailDomain(e)));\n}\nfunction tidyBody(text) {\n  let t = String(text || '');\n  if (cfg.trimWhitespace) {\n    t = t.replace(/[ \\t]+\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();\n  }\n  if (t.length > cfg.maxBodyChars) t = t.slice(0, cfg.maxBodyChars) + '\u2026';\n  return t;\n}\n\n// ---------- Parse LLM JSON ----------\nconst raw = input.output;\nconst prep = input.prep || {};\nconst jsonStr = stripCodeFence(raw);\n\nlet draft;\ntry {\n  draft = JSON.parse(jsonStr);\n} catch (e) {\n  // Try a lenient fallback: extract first {...} block\n  const m = String(jsonStr).match(/\\{[\\s\\S]*\\}$/);\n  if (m) {\n    try { draft = JSON.parse(m[0]); }\n    catch (e2) {\n      return [{\n        json: {\n          error: 'Failed to parse LLM JSON',\n          details: String(e2),\n          raw: String(raw).slice(0, 500),\n          decision: 'invalid_draft',\n          reasons: ['json_parse_failed'],\n          flags: { hasAudience: false, suppressed: false, hasError: true, readyToSend: false },\n        }\n      }];\n    }\n  } else {\n    return [{\n      json: {\n        error: 'Failed to parse LLM JSON',\n        details: String(e),\n        raw: String(raw).slice(0, 500),\n        decision: 'invalid_draft',\n        reasons: ['json_parse_failed'],\n        flags: { hasAudience: false, suppressed: false, hasError: true, readyToSend: false },\n      }\n    }];\n  }\n}\n\n// ---------- Subject ----------\nlet subject = (draft.subject || '').trim();\nif (!subject) subject = `Re: ${prep.subject || ''}`.trim();\n\n// ---------- Recipients ----------\nconst allowedTo = new Set((prep.nonRepliers || []).map(r => r.email));\nlet to = safeEmails(draft.to);\n\nif (cfg.enforceToFromPrep) {\n  if (cfg.allowModelTo) {\n    // Intersect model 'to' with allowed non-repliers\n    to = to.filter(x => allowedTo.has(x));\n    if (to.length === 0) to = Array.from(allowedTo); // if model gave none/invalid, fallback to all non-repliers\n  } else {\n    // Ignore model 'to'; use all non-repliers\n    to = Array.from(allowedTo);\n  }\n}\nto = dedupe(to);\n\n// CC (default: block all unless domains are whitelisted)\nlet cc = safeEmails(draft.cc || []);\ncc = filterAllowedCc(cc, cfg.allowedCcDomains);\ncc = dedupe(cc);\n\n// ---------- Body ----------\nlet body = tidyBody(draft.body || '');\nconst bodyMissing = body.length === 0;\n\n// ---------- Policy checks / decisions ----------\nconst suppressed = Boolean(cfg.suppressOnAnyReply && (prep.anyExternalReply || prep.anyReply));\nconst overLimit = Number(state.followUpCount || 0) >= Number(state.limit || 0);\nconst hasAudience = Array.isArray(to) && to.length > 0;\nconst hasError = Boolean(draft.error) || bodyMissing;\n\nlet decision = 'send';\nconst reasons = [];\nif (hasError) { decision = 'invalid_draft'; reasons.push(bodyMissing ? 'body_missing' : 'draft_error_flag'); }\nif (suppressed) { decision = 'skip_suppressed'; reasons.push('meaningful_reply_detected'); }\nif (overLimit) { decision = 'limit_reached'; reasons.push('followup_limit_reached'); }\nif (!hasAudience) { decision = (decision === 'send') ? 'no_audience' : decision; reasons.push('no_nonrepliers'); }\nif (cfg.requireHumanReview === true) { decision = 'needs_human'; reasons.push('manual_approval_required'); }\n\n// Ready flag mirrors decision\nconst readyToSend = (decision === 'send');\n\n// ---------- Output ----------\nreturn [{\n  json: {\n    threadId: prep.threadId,\n    subject,\n    to,\n    cc,\n    body,\n    flags: {\n      hasAudience,\n      suppressed,\n      hasError,\n      readyToSend\n    },\n    decision,   // <- drive IF/Switch on this\n    reasons,    // <- useful for Airtable/Slack logs\n    // for observability\n    _rawDraft: draft,\n    _prepSubject: prep.subject\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1296,
+        1024
+      ],
+      "id": "001dfe3d-4b27-420b-be8f-be07a3815a2b",
+      "name": "Normalizer"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"config\": {\n    \"enforceToFromPrep\": true,\n    \"allowModelTo\": false,\n    \"allowedCcDomains\": [\"scalevirtually.com\"],\n    \"suppressOnAnyReply\": true,\n    \"requireHumanReview\": false,\n    \"maxBodyChars\": 1200\n  },\n  \"state\": {\n    \"followUpCount\": 0,\n    \"limit\": 2\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1744,
+        944
+      ],
+      "id": "747c7105-0347-472b-adfb-faf490085023",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1520,
+        1024
+      ],
+      "id": "16868615-2078-4ee8-944d-ecea6f3d341c",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract LLM text into { output: \"<string>\" } and pass through prep if present\nconst j = $input.first().json;\n\nfunction firstText(x) {\n  if (!x) return '';\n  if (typeof x === 'string') return x;\n\n  // Common shapes\n  if (typeof x.output === 'string') return x.output;\n  if (typeof x.result === 'string') return x.result;\n  if (typeof x.text === 'string') return x.text;\n  if (typeof x.response === 'string') return x.response;\n\n  // OpenAI-style\n  const oai = x.choices?.[0]?.message?.content;\n  if (typeof oai === 'string') return oai;\n\n  // Gemini-style (n8n / REST)\n  const gemParts = x.response?.candidates?.[0]?.content?.parts\n                ?? x.candidates?.[0]?.content?.parts;\n  if (Array.isArray(gemParts)) {\n    const txt = gemParts.map(p => p.text).filter(Boolean).join('\\n').trim();\n    if (txt) return txt;\n  }\n\n  // Last resort: stringify\n  try { return JSON.stringify(x); } catch { return ''; }\n}\n\nreturn [{\n  json: {\n    ...j,\n    output: firstText(j)\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1968,
+        944
+      ],
+      "id": "07e6cace-100e-456f-8834-61cb610647c7",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "05d7dec8-d937-4d21-a933-0d2a4623c138",
+              "leftValue": "={{ $json.prep.anyReply }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2544,
+        880
+      ],
+      "id": "e6f7e60f-7218-47cd-909a-044ec6628aa1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09KTPH4WHJ",
+          "mode": "id"
+        },
+        "text": "=*Shortlisting follow-up email suppressed (reply detected).*\n\n*Subject:* {{$json.prep.subject}}\n*Thread ID:* {{$json.prep.threadId}}\n*External replied?* {{$json.prep.anyExternalReply ? 'yes' : 'no'}}\n*Internal replied?* {{$json.prep.anyInternalReply ? 'yes' : 'no'}}\n*Last message from:* {{$json.prep.llmSeed.latestFrom.name || $json.prep.llmSeed.latestFrom.email || 'unknown'}}\n*Non-repliers remaining:* {{($json.prep.nonRepliers || []).map(r => r.email).join(', ') || 'none'}}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -2256,
+        720
+      ],
+      "id": "ac93c84c-4361-4eb6-939a-f6d6b0a6f8a0",
+      "name": "No follow-up needed",
+      "webhookId": "07d36048-e4da-4043-b794-a97603dd6426",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3600,
+        1056
+      ],
+      "id": "15defce6-2e12-4f73-bf7e-7543a7036822",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        []
+      ]
+    },
+    "Parse + Normalize": {
+      "main": [
+        []
+      ]
+    },
+    "Sanity check / Dedupe": {
+      "main": [
+        [
+          {
+            "node": "Parse + Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Thread for AI": {
+      "main": [
+        [
+          {
+            "node": "AI Agent: Thread Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent: Thread Classifier": {
+      "main": [
+        [
+          {
+            "node": "Parser + Guardrail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser + Guardrail": {
+      "main": [
+        [
+          {
+            "node": "Auto-send path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-send path": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No More Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No More Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Update Session Log (No Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-Up Template": {
+      "main": [
+        [
+          {
+            "node": "MIME Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MIME Builder": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: Gmail API Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent: Thread Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: Gmail API Send": {
+      "main": [
+        [
+          {
+            "node": "Update Session Log (Auto Send)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Session Log (Auto Send)": {
+      "main": [
+        []
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Follow-Up Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Session Log (No Follow-up)": {
+      "main": [
+        []
+      ]
+    },
+    "Wait 24 hours": {
+      "main": [
+        [
+          {
+            "node": "Get Shortlisting Thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Shortlisting Thread": {
+      "main": [
+        [
+          {
+            "node": "LLM Prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Prep": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "No follow-up needed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1762869900,
+        "possibleDuplicates": [
+          "19a59fb4b7ebcb2b",
+          "19a59eaad300d13c"
+        ]
+      }
+    },
+    "node:Schedule Trigger": {
+      "recurrenceRules": [
+        4
+      ]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "9d937c8a-0dd5-4406-9cae-28df1d1da8ed",
+  "activeVersionId": null,
+  "versionCounter": 15,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2025-10-31T16:08:18.741Z",
+      "createdAt": "2025-10-31T16:08:18.741Z",
+      "role": "workflow:owner",
+      "workflowId": "MGl1Xvm43hSBqDTC",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

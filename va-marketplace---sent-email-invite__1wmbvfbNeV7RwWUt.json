@@ -1,0 +1,247 @@
+{
+  "updatedAt": "2026-07-04T13:11:13.146Z",
+  "createdAt": "2026-06-18T19:51:28.522Z",
+  "id": "1wmbvfbNeV7RwWUt",
+  "name": "VA Marketplace - Sent Email Invite",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "va-marketplace-invite",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        -16
+      ],
+      "id": "0a6db7bf-1b60-446d-9d80-d332bb6a8097",
+      "name": "Webhook",
+      "webhookId": "c36519b5-c779-41d4-81d0-357ca7cdadd9"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.body.email }}",
+        "subject": "You've been invited to VA Marketplace",
+        "message": "=<p>Hi {{ $json.body.name.split(' ')[0] }},</p>\n\n<p>You've been invited to access the <strong>Scale Virtually VA Marketplace</strong>.</p>\n\n<p>Click the link below to set your password and activate your account:</p>\n\n<p><a href=\"{{ $json.body.invite_url }}\" style=\"display:inline-block;padding:12px 24px;background:#f07d19;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;\">Activate Account</a></p>\n\n<p>This link expires in 7 days.</p>\n\n<p>\u2014 Scale Virtually</p>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Solutions"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "c5d7cef9-5a44-465d-9c62-bf451688601a",
+      "name": "Send a message",
+      "webhookId": "a75b22f6-9b04-4479-acbc-9349aca6f7e6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "node",
+            "content-length": "242",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "*",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "34.204.170.119",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "a0e2d74a0912e5e4-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "sec-fetch-mode": "cors",
+            "x-forwarded-for": "34.204.170.119, 172.71.190.165",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-58786f47b8-79skb",
+            "x-invocation-id": "sin1::tnk8f-1781875328319-a2bddaabe64f",
+            "x-is-trusted": "yes",
+            "x-real-ip": "34.204.170.119",
+            "x-vercel-id": "sin1::tnk8f-1781875328319-a2bddaabe64f"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "email": "bam@scalevirtually.com",
+            "name": "Bhel Alfred Marc Alota",
+            "role": "support",
+            "invite_url": "https://va-marketplace-prototype.vercel.app/va-marketplace/accept-invite?token=d6e8f56b514513f233d9c2c6065e72289d2016165df08ae4c621c2a33d7cf7c0"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/va-marketplace-invite",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "6dcbbe58-fde7-40ff-9496-6c9e320c42c7",
+  "activeVersionId": "6dcbbe58-fde7-40ff-9496-6c9e320c42c7",
+  "versionCounter": 21,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-18T19:51:28.528Z",
+      "createdAt": "2026-06-18T19:51:28.528Z",
+      "role": "workflow:owner",
+      "workflowId": "1wmbvfbNeV7RwWUt",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:11:13.147Z",
+    "createdAt": "2026-07-04T13:11:13.147Z",
+    "versionId": "6dcbbe58-fde7-40ff-9496-6c9e320c42c7",
+    "workflowId": "1wmbvfbNeV7RwWUt",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "va-marketplace-invite",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -144,
+          -16
+        ],
+        "id": "0a6db7bf-1b60-446d-9d80-d332bb6a8097",
+        "name": "Webhook",
+        "webhookId": "c36519b5-c779-41d4-81d0-357ca7cdadd9"
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $json.body.email }}",
+          "subject": "You've been invited to VA Marketplace",
+          "message": "=<p>Hi {{ $json.body.name.split(' ')[0] }},</p>\n\n<p>You've been invited to access the <strong>Scale Virtually VA Marketplace</strong>.</p>\n\n<p>Click the link below to set your password and activate your account:</p>\n\n<p><a href=\"{{ $json.body.invite_url }}\" style=\"display:inline-block;padding:12px 24px;background:#f07d19;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;\">Activate Account</a></p>\n\n<p>This link expires in 7 days.</p>\n\n<p>\u2014 Scale Virtually</p>",
+          "options": {
+            "appendAttribution": false,
+            "senderName": "Solutions"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          208,
+          0
+        ],
+        "id": "c5d7cef9-5a44-465d-9c62-bf451688601a",
+        "name": "Send a message",
+        "webhookId": "a75b22f6-9b04-4479-acbc-9349aca6f7e6",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "QdsxfF1pgD1hbNDT",
+            "name": "Solutions"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,600 @@
+{
+  "updatedAt": "2026-03-11T13:31:23.000Z",
+  "createdAt": "2026-03-11T12:37:32.575Z",
+  "id": "42H1PdqqfLcun0q8",
+  "name": "Daily Bug Reporting",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        112
+      ],
+      "id": "95c45249-e290-4b72-9206-812e3b8e5419",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/task/{{ $json.id }}/comment",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "custom_task_ids",
+              "value": "false"
+            },
+            {
+              "name": "team_id",
+              "value": "9014746495"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 2000
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        816,
+        288
+      ],
+      "id": "953b0b67-fcdf-48a0-a970-f9ceb05d1013",
+      "name": "Get Comments",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const cleanedTasks = [];\nlet totalTasks = 0;\nconst ownerCounts = {};\nconst statusCounts = {};\nlet overdueCount = 0;\nlet completedTasks = 0;\n\n// Grab the bundled array of tasks\nconst allTasks = $input.first().json.compiled_tasks || $input.all().map(item => item.json);\n\nfor (const task of allTasks) {\n  totalTasks++;\n  \n  // 1. Status Aggregation\n  const statusName = task.status?.status || \"unmapped\";\n  const formattedStatus = statusName.charAt(0).toUpperCase() + statusName.slice(1);\n  statusCounts[formattedStatus] = (statusCounts[formattedStatus] || 0) + 1;\n\n  if (statusName.toLowerCase() === 'done' || statusName.toLowerCase() === 'closed') {\n      completedTasks++;\n  }\n\n  // 2. Owner Aggregation\n  const assignees = task.assignees || [];\n  const taskOwner = assignees.length > 0 ? assignees.map(a => a.username).join(', ') : \"Unassigned\";\n  ownerCounts[taskOwner] = (ownerCounts[taskOwner] || 0) + 1;\n\n  // 3. Overdue Check\n  const dueDate = task.due_date;\n  if (dueDate && parseInt(dueDate) < Date.now() && (statusName.toLowerCase() !== 'done' && statusName.toLowerCase() !== 'closed')) {\n      overdueCount++;\n  }\n\n  // 4. Thread extraction (Updated to map the nested comments array)\n  let discussionThread = \"No discussion yet.\";\n  const commentsArray = task.comments || []; // Targets the nested array\n  \n  if (commentsArray.length > 0) {\n      discussionThread = commentsArray.map(c => {\n          const author = c.user?.username || \"Unknown\";\n          const dateStr = new Date(parseInt(c.date)).toLocaleString('en-US', { timeZone: 'Asia/Manila', hour12: true });\n          const cleanText = (c.comment_text || \"\").replace(/\\n{2,}/g, '\\n').trim();\n          return `[${dateStr}] ${author}: ${cleanText}`;\n      }).join('\\n\\n');\n  }\n\n  // Push everything together\n  cleanedTasks.push({\n      task_id: task.id || \"N/A\",\n      task_name: task.name || \"Unnamed Task\",\n      task_owner: taskOwner,\n      status: formattedStatus,\n      discussion_thread: discussionThread\n  });\n}\n\nconst completionRate = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);\n\nreturn [{\n  json: {\n    dashboard_metrics: {\n      total_tasks: totalTasks,\n      completion_rate: completionRate,\n      overdue_tasks: overdueCount,\n      tasks_by_owner: ownerCounts,\n      tasks_by_status: statusCounts\n    },\n    sprint_data: cleanedTasks\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        112
+      ],
+      "id": "cd9e068e-b9bb-4679-bb8b-3eb8e7d57dc4",
+      "name": "Output Cleaner"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following JSON extract from our sprint tracking system. \n\nIdentify the core project context automatically based on the discussions, and generate the structured operational report according to your system instructions.\n\nSprint Data:\n{{ JSON.stringify($json.sprint_data) }}",
+        "options": {
+          "systemMessage": "You are an elite Executive Operations AI. Your objective is to analyze a compiled JSON dataset containing task details and team discussions across multiple active company sprints. \n\nYou must synthesize this raw data into a single, high-level Executive Status Report tailored for executive leadership and key stakeholders. They do not need granular task lists; they need to understand overall momentum, ownership, and risk.\n\nCRITICAL INSTRUCTIONS:\n1. Tone: Professional, authoritative, and ruthlessly concise. \n2. Accuracy: Ground all statements strictly in the provided JSON data. Do not invent context.\n3. Formatting: Use the exact markdown structure below. Use Markdown bolding (**Text**) for Task Owners, platforms/tools, and metrics.\n\nREQUIRED OUTPUT STRUCTURE:\n\n## Executive Summary\n* Provide a 2-3 sentence overarching synthesis of company-wide momentum across all active sprints. Are we generally on track, bottlenecked, or accelerating?\n\n---\n## Key Progress & Milestones\n*Group the wins strictly by major project, functional area, or department.*\n* **[Project/Area Name]**: [1-2 sentences explaining the concrete progress made, highlighting the specific Task Owner responsible.]\n* **[Project/Area Name]**: [1-2 sentences...]\n\n---\n## Active Blockers & Operational Risks\n*Do not list minor delays. Only list issues that represent significant stalled momentum, data discrepancies, or require executive visibility.*\n* **[Short Blocker Title]**: [Explain the bottleneck, the operational impact, and who is currently navigating it.]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2336,
+        112
+      ],
+      "id": "3b17ffab-83a8-45bd-b6e2-291d355690ec",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        2416,
+        336
+      ],
+      "id": "76512563-1841-4924-a287-52999fd4edbb",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/list/{{ $json.id }}/task",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "archived",
+              "value": "false"
+            },
+            {
+              "name": "include_closed",
+              "value": "true"
+            },
+            {
+              "name": "subtasks",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        576,
+        112
+      ],
+      "id": "8cec79cb-5aef-4072-bfe0-4d9c645c07f1",
+      "name": "Get Tasks from List"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Fetch the global metrics directly from the Output Cleaner node\nconst metricsItem = $items(\"Output Cleaner\")[0];\nconst metrics = metricsItem ? metricsItem.json.dashboard_metrics : {};\n\nconst totalTasks = metrics.total_tasks || 0;\nconst completionRate = metrics.completion_rate || 0;\nconst overdueTasks = metrics.overdue_tasks || 0;\nconst ownerCounts = metrics.tasks_by_owner || {};\nconst statusCounts = metrics.tasks_by_status || {};\n\n// 2. Generate the QuickChart.io Pie Chart URL for Global Status\nconst chartLabels = Object.keys(statusCounts);\nconst chartData = Object.values(statusCounts);\n\nconst chartConfig = {\n  type: 'outlabeledPie',\n  data: {\n    labels: chartLabels,\n    datasets: [{\n        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'],\n        data: chartData\n    }]\n  },\n  options: {\n    plugins: {\n      legend: { display: false },\n      outlabels: { text: '%l: %v', color: 'white', stretch: 35, font: { minSize: 12 } }\n    }\n  }\n};\nconst encodedChartUrl = `https://quickchart.io/chart?w=500&h=250&c=${encodeURIComponent(JSON.stringify(chartConfig))}`;\n\n// 3. Build the \"Global Workload\" HTML List\nlet ownerHtmlList = '<ul style=\"list-style-type: none; padding: 0; margin: 0;\">';\n// Sort owners by task count (highest first)\nconst sortedOwners = Object.entries(ownerCounts).sort((a, b) => b[1] - a[1]);\nfor (const [owner, count] of sortedOwners) {\n    ownerHtmlList += `<li style=\"padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #475569; font-size: 15px;\">\n        <strong>${owner}</strong>: ${count} task(s)\n    </li>`;\n}\nownerHtmlList += '</ul>';\n\n// 4. Build the Top Executive Stat Cards\nconst statCards = `\n  <div style=\"margin-bottom: 30px; width: 100%;\">\n    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n      <tr>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #f8fafc; padding: 15px 10px; border-radius: 8px; border: 1px solid #e2e8f0;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #0f172a;\">${totalTasks}</div>\n             <div style=\"font-size: 11px; color: #64748b; text-transform: uppercase; margin-top: 5px;\">Total Active Tasks</div>\n          </div>\n        </td>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #f0fdf4; padding: 15px 10px; border-radius: 8px; border: 1px solid #bbf7d0;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #166534;\">${completionRate}%</div>\n             <div style=\"font-size: 11px; color: #15803d; text-transform: uppercase; margin-top: 5px;\">Global Completion</div>\n          </div>\n        </td>\n        <td align=\"center\" width=\"33%\" style=\"padding: 0 5px;\">\n          <div style=\"background: #fef2f2; padding: 15px 10px; border-radius: 8px; border: 1px solid #fecaca;\">\n             <div style=\"font-size: 24px; font-weight: bold; color: #991b1b;\">${overdueTasks}</div>\n             <div style=\"font-size: 11px; color: #b91c1c; text-transform: uppercase; margin-top: 5px;\">Tasks Overdue</div>\n          </div>\n        </td>\n      </tr>\n    </table>\n  </div>\n`;\n\n// 5. Construct the Visual Dashboard Section\nconst dashboardSection = `\n    ${statCards}\n    <div style=\"margin-bottom: 40px;\">\n        <h2 style=\"color: #1e293b; font-size: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px;\">Global Sprint Distribution</h2>\n        <div style=\"text-align: center; margin-bottom: 25px;\">\n            <img src=\"${encodedChartUrl}\" alt=\"Task Status Pie Chart\" style=\"max-width: 100%; height: auto;\" />\n        </div>\n        <h2 style=\"color: #1e293b; font-size: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px;\">Team Workload</h2>\n        ${ownerHtmlList}\n    </div>\n    <hr style=\"border: 0; height: 2px; background: #e2e8f0; margin: 30px 0;\" />\n`;\n\n// 6. Process the AI Report Text (from this node's input)\nlet html = $input.first().json.output || \"\";\n\n// Format the Markdown AI text into clean HTML\nhtml = html.replace(/^(\\*\\*.*?\\*\\*)$/gm, '<h3 style=\"color: #334155; font-size: 18px; margin-top: 25px; margin-bottom: 10px;\">$1</h3>');\nhtml = html.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\nhtml = html.replace(/`(.*?)`/g, '<code style=\"background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px; color: #e11d48; font-size: 14px;\">$1</code>');\nhtml = html.replace(/^---$/gm, '<hr style=\"border: 0; height: 2px; background: #e2e8f0; margin: 30px 0;\" />');\nhtml = html.replace(/^##\\s+(.*)/gm, '<h2 style=\"color: #1e293b; font-size: 22px; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;\">$1</h2>');\nhtml = html.replace(/^\\*\\s+(.*)/gm, '<li style=\"margin-bottom: 10px;\">$1</li>');\nhtml = html.replace(/(<li.*?>.*?<\\/li>\\n?)+/g, match => `\\n<ul style=\"margin-bottom: 20px; padding-left: 20px;\">\\n${match}</ul>\\n`);\n\n// Catch any unformatted paragraphs (like the Executive Summary) and wrap them\nhtml = html.replace(/^(?!<)(.+)$/gm, '<p style=\"margin-bottom: 15px;\">$1</p>');\n\n// Combine Dashboard + AI Report with global font styling\nconst finalHtml = `\n  <div style=\"font-family: Arial, sans-serif; color: #475569; font-size: 15px; line-height: 1.6; max-width: 750px; margin: 0 auto; padding: 30px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;\">\n    <h1 style=\"text-align: center; color: #0f172a; font-size: 28px; line-height: 1.2; margin-bottom: 30px;\">Executive Operations Report</h1>\n    ${dashboardSection}\n    ${html}\n  </div>\n`;\n\nreturn [{\n  json: {\n    html_report: finalHtml\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        112
+      ],
+      "id": "02af00d5-489f-46ee-b5f6-becc0c4cd39e",
+      "name": "Email Builder"
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com, aja@scalevirtually.com, janssen@scalevirtually.com, jianna@scalevirtually.com, jenn@scalevirtually.com",
+        "subject": "=EOW Sprint Report",
+        "message": "={{ $json.html_report }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        208
+      ],
+      "id": "72b29d07-c223-421b-9b20-6995a2d4f28b",
+      "name": "Send Sprint Report",
+      "webhookId": "80d1a8a3-20fa-4a26-94fb-fe0612610143",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.clickup.com/api/v2/space/90144428276/folder",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "archived",
+              "value": "false"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -736,
+        112
+      ],
+      "id": "38897d86-5d49-4eff-b482-6ce4a233b674",
+      "name": "Fetch Folders from the Space"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "folders",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        112
+      ],
+      "id": "d0b32367-0b57-4ae7-a266-ed2e850911c8",
+      "name": "Split Out Folders"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/folder/{{ $json.id }}/list",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "archived",
+              "value": "false"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -288,
+        112
+      ],
+      "id": "2fe4080c-a25b-4e0c-b057-f4d649b116a4",
+      "name": "Fetch Lists (Sprints) per Folder"
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com",
+        "subject": "=EOW Sprint Report",
+        "message": "={{ $json.html_report }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        16
+      ],
+      "id": "3ad8d518-848f-4a9b-84d3-9ba1293a492e",
+      "name": "Send Sprint for Test",
+      "webhookId": "839c42ae-c8ac-4310-a4c8-0704d3ebb467",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "lists",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        112
+      ],
+      "id": "3abea370-b204-45d1-b8c3-697b60f5311c",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c9be7159-d612-47b7-9c38-4596c7547470",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "Bugs",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        112
+      ],
+      "id": "c7552dbc-d5e8-44a3-baba-e93f2903d633",
+      "name": "Get Bugs Folders"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Paste your ClickUp API token here\nconst CLICKUP_API_TOKEN = 'pk_95098109_CKRN4NLD5ZHQSPTELI13QRJE4M63000I';\n\nconst openBugs = [];\nconst tasks = $input.all().map(item => item.json);\n\nasync function getOpenBugActivities() {\n    for (const task of tasks) {\n        \n        // 1. CHECK STATUS: If it's closed/complete/done, completely ignore it.\n        const status = task.status?.status?.toLowerCase() || \"\";\n        if (['closed', 'complete', 'done'].includes(status)) {\n            continue; \n        }\n\n        // 2. FETCH COMMENTS: Grab the activities for this specific open bug\n        let thread = \"No activities yet.\";\n        \n        try {\n            const response = await this.helpers.httpRequest({\n                method: 'GET',\n                url: `https://api.clickup.com/api/v2/task/${task.id}/comment`,\n                headers: {\n                    'Authorization': CLICKUP_API_TOKEN,\n                    'Content-Type': 'application/json'\n                },\n                json: true\n            });\n\n            if (response.comments && response.comments.length > 0) {\n                thread = response.comments.map(c => {\n                    const author = c.user?.username || \"Unknown\";\n                    const dateStr = new Date(parseInt(c.date, 10)).toLocaleString('en-US', { timeZone: 'Asia/Manila' });\n                    const cleanText = (c.comment_text || \"\").replace(/\\n{2,}/g, '\\n').trim();\n                    return `[${dateStr}] ${author}: ${cleanText}`;\n                }).join('\\n\\n');\n            }\n        } catch (error) {\n            thread = \"Error fetching activities.\";\n        }\n\n        // 3. OUTPUT: Push exactly what you want to the final list\n        openBugs.push({\n            json: {\n                task_id: task.id,\n                task_name: task.name,\n                status: task.status?.status,\n                activities: thread\n            }\n        });\n    }\n\n    // Return the clean list of Open Bugs and their activities\n    return openBugs;\n}\n\nreturn await getOpenBugActivities();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        112
+      ],
+      "id": "83c12afe-2e79-42f8-8b04-83d511b83830",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Fetch Folders from the Space",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Comments": {
+      "main": [
+        []
+      ]
+    },
+    "Output Cleaner": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Tasks from List": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Email Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Builder": {
+      "main": [
+        [
+          {
+            "node": "Send Sprint for Test",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Sprint Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Sprint Report": {
+      "main": [
+        []
+      ]
+    },
+    "Fetch Folders from the Space": {
+      "main": [
+        [
+          {
+            "node": "Split Out Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Folders": {
+      "main": [
+        [
+          {
+            "node": "Fetch Lists (Sprints) per Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Lists (Sprints) per Folder": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Get Bugs Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Bugs Folders": {
+      "main": [
+        [
+          {
+            "node": "Get Tasks from List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Output Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "AI Agent": [
+      {
+        "json": {
+          "output": "## Executive Summary\nThe company is executing a complex, multi-workstream transformation across CRM infrastructure (**HubSpot**), talent acquisition systems (**Workable**), and sales operations automation. **Jenneiline Marie Manuel** and **Patrick Jansen Villanueva** are the dominant operational drivers, with **Aja Mojica** providing strategic oversight. Momentum is strong in sales automation (AI transcript evaluation via **Claude**, **Zoom/Fathom** integrations) and TA pipeline redesign, but several critical blockers around undefined stage-gating rules and manual SOP dependencies threaten timeline adherence.\n\n---\n## Key Progress & Milestones\n\n* **Sales Operations \u2013 AI Call Evaluation System**: The team has successfully built an end-to-end **n8n** workflow integrating **Zoom** and **Fathom** transcripts with **Claude AI** for automated discovery call scoring. **Patrick Jansen Villanueva** deployed OAuth token management in **Airtable**, while **Jenneiline Marie Manuel** finalized the rubric engine and webhook triggers. **Jianna Louise Caritativo** completed Slack reporting blocks routing evaluations to #sales-calls. This positions the company to scale sales QA without manual review overhead.\n\n* **CRM Infrastructure \u2013 HubSpot Lead & Deal Pipeline Enforcement**: **Jenneiline Marie Manuel** has completed all custom property configurations, required field logic, and stage-gating dependencies for both Lead and Deal pipelines in **HubSpot**. Critical validations (BANT criteria, discovery notes, disqualification reasons) are now enforced at pipeline transitions. However, final testing and live enforcement remain incomplete, leaving data quality vulnerable until go-live.\n\n* **Talent Acquisition \u2013 Workable Pipeline Overhaul**: **Patrick Jansen Villanueva** and **Jianna Louise Caritativo** redesigned the STP pipeline, created the \"Unified Talent Pool\" for warm candidates, and implemented custom fields (STP Code, Job Category) for better segmentation. The team also delivered aging analysis and stage conversion reports, providing leadership with baseline Time-to-Hire metrics. Automated candidate disqualification workflows via **n8n** are live in first iteration, reducing manual pipeline hygiene burden.\n\n* **Marketing Automation \u2013 Kixie + LinkedIn Outreach**: **Jenneiline Marie Manuel** completed **Kixie** audit, automated email outreach for leads with LinkedIn profiles, and integrated call dispositions into **HubSpot**. Delay enforcement and powerlist import automation are in progress, with testing validation underway by **Aja Mojica**.\n\n* **Event Operations \u2013 Roundtable Scheduler Migration**: The team successfully migrated all roundtable automation (Ember, Valley, Snov) from legacy systems to **Zapier**. **Patrick Jansen Villanueva** configured webhook triggers, while **Jianna Louise Caritativo** handled calendar invites. Attendee reporting automation is in progress, with stakeholder visibility dashboards pending.\n\n---\n## Active Blockers & Operational Risks\n\n* **HubSpot Stage-Gating: Enforcement Undefined**: While all required field logic is configured, **Jenneiline Marie Manuel** has not yet enabled live stage-gating enforcement across Lead and Deal pipelines. This means sales reps can still bypass data quality controls, undermining the entire CRM redesign. **Aja Mojica** owns the decision to activate enforcement, but no timeline is set. Risk: Data integrity failures at scale if enforcement is delayed beyond current sprint close.\n\n* **Sales Call Automation: Manual SOP Dependency**: The AI transcript evaluation system is technically complete, but **Jianna Louise Caritativo** and **Jenneiline Marie Manuel** are still finalizing the SOP for required **Zoom/Fathom** recording settings across all closers and setters. Without standardized recording behavior (user-level vs admin-level control), the automation may miss critical sales calls. Additionally, **Sean's scheduler** is manually managed by **Paul** outside DevOps workflows, creating a gap in system coverage.\n\n* **Workable Job Intake: No Checklist or Form**: Despite the pipeline redesign being complete, **Aja Mojica** has not yet defined a standardized job intake checklist or **Airtable** form for TA to validate requisitions before posting. This leaves the TA team operating without a gatekeeper process, risking inconsistent job specs and misaligned hiring workflows.\n\n* **Zoom Webhook Authorization: Scalability Constraint**: **Jenneiline Marie Manuel** discovered that **Zoom's** webhook app operates at the account level only, requiring manual OAuth setup for each closer's individual Zoom account. While the OAuth workflow is now built, the team must manually onboard each user (**Den, Joren, Tyler** completed; **Sean** pending). This creates operational friction and delays full sales call coverage."
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "e9449be4-e638-4e2e-b8a5-c8e949a18127",
+  "activeVersionId": null,
+  "versionCounter": 37,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-11T12:37:32.579Z",
+      "createdAt": "2026-03-11T12:37:32.579Z",
+      "role": "workflow:owner",
+      "workflowId": "42H1PdqqfLcun0q8",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

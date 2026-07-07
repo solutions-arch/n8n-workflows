@@ -1,0 +1,2200 @@
+{
+  "updatedAt": "2026-07-04T13:03:49.879Z",
+  "createdAt": "2026-02-20T21:54:40.362Z",
+  "id": "Fp3Ijrb86Yfwwat7",
+  "name": "Snov Positive Replies",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        320,
+        -192
+      ],
+      "id": "2ca7f160-f6bd-4bb2-a352-188783871ea1",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1c14bda8-f17d-43d6-a725-c7f63699a675",
+              "leftValue": "={{ $json.data.campaign.campaign_name }}",
+              "rightValue": "Roundtable AB Test 1M+ Rev - Sean",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cd23fd2b-2e95-4d87-b665-a4e54261d48b",
+              "leftValue": "={{ $json.data.campaign.campaign_name }}",
+              "rightValue": "Roundtable March 18 - Sean",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        256,
+        80
+      ],
+      "id": "ea1cf543-5636-4ab7-9f1e-6c5b95aaaba0",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Prospect Name",
+              "lookupValue": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}"
+            },
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        80
+      ],
+      "id": "6f9e64e9-f60a-4e5c-bbda-7a6958fe5c35",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "af4b9cae-6a0e-4ed5-8c5b-e2c8b4c39d85",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        80
+      ],
+      "id": "29ff4266-6e56-4491-ad9b-4990f4182210",
+      "name": "Filter1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.body }}",
+        "options": {
+          "systemMessage": "Your Role\nYou are an expert email reply classifier specializing in identifying genuinely positive responses to roundtable event invitations. Your goal is to accurately distinguish between interested leads and false positives, including sarcastic or negative responses disguised as agreement.\nClassification Task\nAnalyze the email reply and classify it into ONE of the following categories:\n1. POSITIVE - Information Request\nReplies where the prospect wants more details before committing.\nIndicators:\n\nExplicitly asks for more information (\"send more info\", \"I'd like to learn more\", \"share more information\")\nAsks clarifying questions about the event (audience, size, timing, format, topic)\nShows curiosity (\"I'm curious\", \"tell me more\", \"what's this about\")\nRequests details to make a decision (\"send additional info\", \"provide more details\")\n\nExamples:\n\n\"Hi Sean, Thanks for reaching out. I'd like to learn more.\"\n\"Please share more information. Thanks\"\n\"Who's your target audience and what's its size?\"\n\"Can you send more info please\"\n\"I'd like to know more, please.\"\n\"Could you please provide additional details regarding the program you referenced?\"\n\n2. POSITIVE - Confirmed Interest\nReplies where the prospect immediately accepts or confirms attendance without requesting additional information first.\nIndicators:\n\nDirect affirmative responses (\"Yes\", \"Sure\", \"Yes please\", \"Ok\")\nExplicit confirmation of attendance (\"I would be interested in attending\", \"I will attend\")\nEnthusiastic agreement (\"Sounds interesting\", \"I'm interested\", \"Happy to learn more\")\nAcceptance with mild caveats that don't negate interest (\"Sure, send it\", \"Yes, please send\")\n\nExamples:\n\n\"Yes\"\n\"Yes please\"\n\"Sure\"\n\"Ok\"\n\"I'm interested. Thank you.\"\n\"I would be interested in attending. Thanks for the invite.\"\n\"Sounds interesting. What's a good time to connect?\"\n\"Sure I am curious\"\n\"Happy to learn more\"\n\n3. FALSE POSITIVE\nReplies that appear positive on surface but are actually sarcastic, disinterested, or negative.\nIndicators:\n\nSarcasm markers:\n\nExaggerated enthusiasm (\"Oh WOW, I've been WAITING for this!\", \"This is EXACTLY what I need!\")\nDismissive language with faux politeness (\"Thanks but no thanks\", \"How generous of you\")\nObvious mockery or ridicule\n\n\nConditional disinterest:\n\nAcceptance with strong negative qualifier (\"Sure, but there's no chance I will show up\")\nPassive aggressive acceptance (\"I guess\", \"If I must\", \"Whatever\")\nClearly stated disinterest despite accepting info (\"you can send it, but I won't read it\")\n\nConfusion/Misdirected:\n\nPerson thinks they're being invited to speak/present rather than attend\nComplete misunderstanding of the invitation purpose\nReply meant for someone else\n\nExamples:\n\n\"Sure, you can send it, but there's likely no chance I will show up to these. I prefer to stay under the radar\"\n\"Is this a joke?\"\n\"Wow, ANOTHER roundtable invitation. Lucky me!\"\nReply asking about speaking fees (when invited as attendee)\n\nCan't be classified: \nYou're not exactly sure what is the classification as you're not entirely sure of the sentiment of their reply\nYou are confused as to what the user has replied and why they say so\nYou don't know the classification\n\nIf they can't be classified consider them as false positive so we can manually review\n\n4. NEGATIVE\nOutright rejection:\n\nDirect \"No\" or \"Not interested\"\nUnsubscribe requests\nComplaints about receiving the email\nRequests to stop contacting them\n\nExample:\n\"No thanks\"\n\"Please remove me from your list\"\n\"out of office\"\n\"STOP\"\n\"Stop Unsubscribe\"\n\nParsing Instructions\n\nExtract the actual reply: Identify and extract ONLY what the prospect wrote in their immediate response to your invitation\nStrip email metadata: Remove email signatures, forwarded message headers, unsubscribe links, \"Sent from my iPhone\" type footers, previous email thread history, and email chain conversations\nIdentify the reply boundary: The actual reply is typically: The first block of text before any quoted/forwarded content (usually marked by \"On [date] at [time] [sender] wrote:\")\nBefore email signatures (lines with phone numbers, addresses, company info)\nBefore any \">\" quoted reply markers\nBefore lines like \"On Mon, Feb 9, 2026...\" or \"-----Original Message-----\"\nAfter lines like wrote:\\r\\n\n\nFocus on the response content: Look only at what the prospect wrote in direct response to your invitation\nConsider tone and context: Evaluate the overall tone - is it genuine or mocking?\nLook for red flags:\nExcessive punctuation (!!!, ???)\nALL CAPS (unless person's writing style)\nContradiction between yes and qualifiers\nPassive aggressive language\n\nOutput Formats\nRespond with this exact format, output as different fields:\n\n  classification: \n- POSITIVE - Information Request \n- POSITIVE - Confirmed Interest\n- FALSE POSITIVE\n- NEGATIVE\n\n\n  actual reply: \nThe extracted actual reply from the prospect, excluding email metadata, signatures, forwarded messages, and email thread history\n\n  reasoning: \nBrief explanation of why you classified it this way, highlighting key phrases or indicators\n\n  red_flags: \nany concerning elements that might indicate false positive\n\nConfidence Scoring Guidelines\n\nHIGH: Clear, unambiguous language that obviously fits one category\nMEDIUM: Mostly clear but has some ambiguous elements (e.g., very brief responses like \"Ok\" or \"Sure\" without context)\nLOW: Ambiguous, could be interpreted multiple ways, or contains mixed signals\n\nEdge Cases to Watch For\n\nVery Brief Responses (\"Ok\", \"Sure\", \"Yes\")\n\nUsually POSITIVE if there's no negative context\nMark as MEDIUM confidence\nFlag if reply seems unusually terse given the context\n\n\nQualified Interest (\"Sure, but I'm very busy\")\n\nStill POSITIVE if the qualification doesn't negate interest\nThe key is whether they're saying \"yes with caveats\" vs \"no disguised as yes\"\n\n\nQuestions About Format (\"Is this virtual or in-person?\")\n\nPOSITIVE - Information Request\nThey're trying to decide, which shows genuine consideration\n\n\nDelayed Responses (\"Sorry for late reply, yes please send info\")\n\nStill POSITIVE\nApology indicates genuine interest in engaging\n\n\nCorporate/Formal Tone\n\nDon't confuse professionalism with disinterest\nLook at actual content, not formality level\n\n\nCommon False Positive Patterns to Avoid\n \"Thanks for thinking of me, but I'm going to pass\"\n \"Sure, send it over [but I won't attend/read it/am not interested]\"\n \"I appreciate the invite, however [rejection]\"\n \"This sounds great for someone else, but not for me\"\n \"lol sure why not\" (sarcastic tone)\n Confused responses about being a speaker vs attendee (unless they clarify interest in attending)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        928,
+        80
+      ],
+      "id": "986d60bb-a692-4eb5-aeeb-39fac12885c2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        304
+      ],
+      "id": "85817bc1-d031-464a-a503-cbcfd0c341c1",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 1. Capture the input\nlet rawResponse = item.json.output || item.json.chatgptResponse || item.json.rawResponse || '';\n\nfunction parseData(text) {\n  let data = {\n    classification: '',\n    confidence: '',\n    actual_reply: '',\n    reasoning: '',\n    key_phrases: '',\n    red_flags: ''\n  };\n  \n  // Try JSON parsing first (in case ChatGPT behaves perfectly)\n  if (text.trim().startsWith('{')) {\n    try {\n      const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n      if (jsonMatch) {\n        const json = JSON.parse(jsonMatch[0]);\n        data.classification = json.classification || '';\n        data.confidence = json.confidence || '';\n        data.actual_reply = json.actual_reply || '';\n        data.reasoning = json.reasoning || '';\n        data.key_phrases = Array.isArray(json.key_phrases) ? json.key_phrases.join(', ') : (json.key_phrases || '');\n        data.red_flags = Array.isArray(json.red_flags) ? json.red_flags.join(', ') : (json.red_flags || '');\n        return data;\n      }\n    } catch (e) {\n      // Fall through to text parsing\n    }\n  }\n  \n  // Clean up all Markdown formatting (backticks and asterisks)\n  let cleanText = text.replace(/```[a-z]*\\n?/gi, '').replace(/```/g, '').replace(/\\*\\*/g, '').trim();\n\n  // Define our keys to look for\n  const keysPattern = 'classification|confidence|actual_reply|reasoning|key_phrases|red_flags';\n  \n  // Lookahead ensures we capture everything up to the next key or the end of the text\n  const lookahead = `(?=(?:${keysPattern.replace(/_/g, '[\\\\s_]*')})\\\\s*:|$)`;\n\n  // Helper function to extract text blocks safely\n  const extract = (key) => {\n    // Allows \"actual_reply:\" or \"actual reply:\"\n    const regexPattern = `${key.replace('_', '[\\\\s_]*')}\\\\s*:([\\\\s\\\\S]*?)${lookahead}`;\n    const regex = new RegExp(regexPattern, 'i');\n    const match = cleanText.match(regex);\n    return match && match[1] ? match[1].trim() : '';\n  };\n\n  // Extract the blocks\n  data.classification = extract('classification');\n  data.confidence = extract('confidence');\n  data.actual_reply = extract('actual_reply');\n  data.reasoning = extract('reasoning');\n  data.key_phrases = extract('key_phrases');\n  data.red_flags = extract('red_flags');\n\n  return data;\n}\n\n// 3. Execute the parsing logic\nconst parsed = parseData(rawResponse);\n\n// 4. Clean up any leftover string quotes\nconst cleanClassification = parsed.classification.replace(/[\"']/g, '').trim();\nconst cleanConfidence = parsed.confidence.replace(/[\"']/g, '').trim();\nconst cleanActualReply = parsed.actual_reply.replace(/^[\"']|[\"']$/g, '').trim();\nconst cleanReasoning = parsed.reasoning.replace(/^[\"']|[\"']$/g, '').trim();\nconst cleanKeyPhrases = parsed.key_phrases.replace(/[\\[\\]\"']/g, '').trim();\nconst cleanRedFlags = parsed.red_flags.replace(/[\\[\\]\"']/g, '').replace(/none/i, '').trim();\n\n// 5. Logic-friendly lowercasing for boolean flags\nconst lowClass = cleanClassification.toLowerCase();\n\n// 6. Return the finalized object to n8n\nreturn {\n  classification: cleanClassification,\n  confidence: cleanConfidence,\n  actual_reply: cleanActualReply,\n  reasoning: cleanReasoning,\n  key_phrases: cleanKeyPhrases,\n  red_flags: cleanRedFlags,\n  is_positive: lowClass.includes('positive'),\n  is_info_request: lowClass.includes('information request'),\n  is_confirmed: lowClass.includes('confirmed interest'),\n  is_negative: lowClass.includes('negative') || lowClass.includes('false positive'),\n  parse_success: true\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        80
+      ],
+      "id": "81590d4e-e2fc-472c-8147-e7f28425dfcf",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "NEGATIVE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "76c511b3-374d-44fe-9ef2-354068f272e8"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Negative"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2e86169c-3db3-427e-a3f0-a06355f1af4f",
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "POSITIVE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "186f90a0-89a5-49aa-9fd8-42e495e13276",
+                    "leftValue": "={{ $json.classification }}",
+                    "rightValue": "FALSE POSITIVE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "False Positive"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1504,
+        64
+      ],
+      "id": "a1361983-aadc-4c8f-b4c0-f2ca2317ca12",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}",
+            "Tool": "Snov",
+            "Status": "Manual Review",
+            "LinkedIn Contact/ Email Sender": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.email_account.email }}",
+            "Date": "={{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+            "Email": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}",
+            "Replies": "={{ $('Code in JavaScript').item.json.actual_reply }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        -112
+      ],
+      "id": "d8c698eb-3abc-48d8-9975-6bd603df3f44",
+      "name": "Negative",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}",
+            "Tool": "Snov",
+            "Status": "Manual Review",
+            "LinkedIn Contact/ Email Sender": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.email_account.email }}",
+            "Date": "={{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+            "Email": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}",
+            "Replies": "={{ $('Code in JavaScript').item.json.actual_reply }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        272
+      ],
+      "id": "63257f79-d47a-463c-8a0f-2ecef13f7d54",
+      "name": "False Positive",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}",
+            "Tool": "Snov",
+            "Status": "Interested (Warm)",
+            "LinkedIn Contact/ Email Sender": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.email_account.email }}",
+            "Date": "={{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+            "Email": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}",
+            "Replies": "={{ $('Code in JavaScript').item.json.actual_reply }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1728,
+        80
+      ],
+      "id": "111148dc-42e5-4e74-8836-d502f296e35f",
+      "name": "Positive",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ADVRXNH2R",
+          "mode": "id"
+        },
+        "text": "=*New Positive Lead* \n*Source:* Snov\n*Name:* {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}\n*Message:* {{ $('Code in JavaScript').item.json.actual_reply }}\n*Reasoning:* {{ $('Code in JavaScript').item.json.reasoning }}\n*Date:* {{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1952,
+        80
+      ],
+      "id": "22fbcab6-f7f7-488a-980a-da02a45e5d89",
+      "name": "Send a message",
+      "webhookId": "ecc79148-5d0d-4870-8e84-ab15edf0128b",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.snov.io/v1/oauth/access_token",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "name": "client_id",
+              "value": "9febfaefcd7a7f5e9b17fa2cd7c1b9de"
+            },
+            {
+              "name": "client_secret",
+              "value": "5813e88aca666e705ca77b511986541e"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        32,
+        80
+      ],
+      "id": "70b25e16-a743-424b-b877-2415451afb4d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ac7f712b-089e-4537-9c08-1bcbd9ff3556",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        80
+      ],
+      "id": "2a5e00e2-2123-4c54-8d98-eb925a6f1184",
+      "name": "Webhook",
+      "webhookId": "ac7f712b-089e-4537-9c08-1bcbd9ff3556"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        []
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Negative",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Positive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "False Positive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positive": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "IJnW8xKq7kcp2hBR",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "When clicking \u2018Execute workflow\u2019": [
+      {
+        "json": {
+          "uid": "b5463a1bb5e9a8875ff705c4e34ccfe7",
+          "event": "campaign_reply.first_received",
+          "time": 1714467915,
+          "retry_count": 0,
+          "data": {
+            "subject": "Re: test",
+            "body": "reply On Mon, Apr 29, 2024 at 12:10 Test User <test@snov.io> wrote:\\r\\n test",
+            "first_reply": true,
+            "email_account": {
+              "email": "test@snov.com",
+              "username": "Test User"
+            },
+            "prospect": {
+              "prospect_id": "776ba306f9e738af3a14cc59b9d72867a663faf31e15357affaa195c2d44a9003492fd0c",
+              "prospect_first_name": "David Massaro",
+              "prospect_last_name": ""
+            },
+            "recipient": {
+              "prospect_email": "reply@snov.io",
+              "recipient_status": "replied"
+            },
+            "list": {
+              "list_id": 1,
+              "list_name": "Roundtable AB Test 1M+ Rev - Sean"
+            },
+            "campaign": {
+              "campaign_id": 2,
+              "campaign_name": "Roundtable AB Test 1M+ Rev - Sean",
+              "campaign_step_type": "email",
+              "campaign_step_id": 1714381699353,
+              "campaign_ab_test": false
+            },
+            "meta": {
+              "meta_webhook_id": 3,
+              "meta_object": "campaign_reply",
+              "meta_action": "first_received",
+              "meta_endpoint_url": "https://hooks.zapier.com/hooks/standard/4777534/191acde8b24c4911afeba68c659884a1/",
+              "meta_user_id": 4,
+              "meta_event_time": 1714467903
+            }
+          }
+        }
+      }
+    ],
+    "AI Agent": [
+      {
+        "json": {
+          "output": "**classification:** \nNEGATIVE\n\n**actual_reply:** \ntest\n\n**reasoning:** \nThis is a one-word reply \"test\" which appears to be either:\n1. An accidental send/test message\n2. A placeholder response with no actual engagement\n3. A dismissive non-answer\n\nThis does not constitute a genuine response to an invitation. There is no indication of interest, no request for information, and no acceptance. It's essentially a non-response that should be treated as negative/no engagement.\n\n**red_flags:** \n- Single word \"test\" with no context\n- Could be accidental send\n- No acknowledgment of the invitation whatsoever\n- No indication of any interest or intent to engage\n- Appears to be testing email functionality rather than responding to content\n\n**confidence:** \nHIGH - This is clearly not a meaningful response to an invitation and should not be considered a positive lead."
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Code in JavaScript": [
+      {
+        "json": {
+          "classification": "NEGATIVE",
+          "confidence": "HIGH - This is clearly not a meaningful response to an invitation and should not be considered a positive lead.",
+          "actual_reply": "test",
+          "reasoning": "This is a one-word reply \"test\" which appears to be either:\n1. An accidental send/test message\n2. A placeholder response with no actual engagement\n3. A dismissive non-answer\n\nThis does not constitute a genuine response to an invitation. There is no indication of interest, no request for information, and no acceptance. It's essentially a non-response that should be treated as negative/no engagement.",
+          "key_phrases": "",
+          "red_flags": "- Single word test with no context\n- Could be accidental send\n- No acknowledgment of the invitation whatsoever\n- No indication of any interest or intent to engage\n- Appears to be testing email functionality rather than responding to content",
+          "is_positive": false,
+          "is_info_request": false,
+          "is_confirmed": false,
+          "is_negative": true,
+          "parse_success": true
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Filter": [
+      {
+        "json": {
+          "uid": "b5463a1bb5e9a8875ff705c4e34ccfe7",
+          "event": "campaign_reply.first_received",
+          "time": 1714467915,
+          "retry_count": 0,
+          "data": {
+            "subject": "Re: test",
+            "body": "reply On Mon, Apr 29, 2024 at 12:10 Test User <test@snov.io> wrote:\\r\\n test",
+            "first_reply": true,
+            "email_account": {
+              "email": "test@snov.com",
+              "username": "Test User"
+            },
+            "prospect": {
+              "prospect_id": "776ba306f9e738af3a14cc59b9d72867a663faf31e15357affaa195c2d44a9003492fd0c",
+              "prospect_first_name": "David Massaro",
+              "prospect_last_name": ""
+            },
+            "recipient": {
+              "prospect_email": "reply@snov.io",
+              "recipient_status": "replied"
+            },
+            "list": {
+              "list_id": 1,
+              "list_name": "Roundtable AB Test 1M+ Rev - Sean"
+            },
+            "campaign": {
+              "campaign_id": 2,
+              "campaign_name": "Roundtable AB Test 1M+ Rev - Sean",
+              "campaign_step_type": "email",
+              "campaign_step_id": 1714381699353,
+              "campaign_ab_test": false
+            },
+            "meta": {
+              "meta_webhook_id": 3,
+              "meta_object": "campaign_reply",
+              "meta_action": "first_received",
+              "meta_endpoint_url": "https://hooks.zapier.com/hooks/standard/4777534/191acde8b24c4911afeba68c659884a1/",
+              "meta_user_id": 4,
+              "meta_event_time": 1714467903
+            }
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "HTTP Request": [
+      {
+        "json": {
+          "success": true,
+          "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiI0NDQzYTk4ZmMyNWM0Mjc2OTZmNTczMjAzMTk0NzkzOCIsImp0aSI6IjYzNTNkMTUzY2FmZWEyODFmZTNmYzAxNjU2MmMyOTk4NGU0NmFjNjU3Y2ViYzVjYjBhODE3NzZiNWE0MmYxNzc2ZTk2NzIxNjliNTcxOGIwIiwiaWF0IjoxNzcxODg1OTYzLjU0MjQ1OSwibmJmIjoxNzcxODg1OTYzLjU0MjQ2MiwiZXhwIjoxNzcxODg5NTYzLjUzODkzOSwic3ViIjoiMTgxOTM4NCIsInNjb3BlcyI6WyIqIl19.mEACDWYEae_qX9hYYFWypoF7GdqPld8HxFO_fHQ23IAeuHcsL0pjPV6Xxy2gV-5vRUB6nXyMYMIj-2V20AkfbQnZYyafGCRzSLhi4SjxMYsupIipNwmTcalXSpGRrcy_BxW6UWKkoAh46Ibhb-32IwTOa4oCgRjucAYD9rQZF1oGh6aGuWffh6llxZZ1fdVX8j9CPi6T4INLV82BTG43eurI6zdti9isMh4ydLSsd5oqrGXwdsq_P329cxBiJh7y5VvR8sgDx5Pxye3Bwb_Uaki4qpOzG1TZycke-5HgUVNk1hX6t1ROnLbhThN-IEwdbbSF0fzoWPJAF2vQJbjxIVxIbPBzsqQmvUYbe-Gcp9AyEZ2xZ69pqWxj0Z2uPEDMK3ctE1EmBY3oe_g8Gc_PNcimZ7gZmREI0f-8EDfgzX05eIAwwMNT9x6I8yxwswE1VFpyKlBMG73YkcRpRK9cDCHpacBeMJTSDPmSTRX1sMTz8RzMOjqnZMCCHCfgBgrzV04VH5MBkoBNN25SwwTMyvdn7ThWmZj88Ehj3RVQoRu-AJvRh-gTTGATLF5LWMEKaa8P9An-G7GjGkS3zTC4W5XULlIOM2yjYJC0mlQrVkl3FxclvVfQ_eYp9eNRLm7_Zky7e1DHFAxy7vgXPX8o0DzfsCqT0gC5f10NMqksB8w",
+          "token_type": "Bearer",
+          "expires_in": 3600
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "72058b6c-adde-4281-8d95-c8277507fed8",
+  "activeVersionId": "72058b6c-adde-4281-8d95-c8277507fed8",
+  "versionCounter": 162,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-20T21:54:40.367Z",
+      "createdAt": "2026-02-20T21:54:40.367Z",
+      "role": "workflow:owner",
+      "workflowId": "Fp3Ijrb86Yfwwat7",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:03:49.880Z",
+    "createdAt": "2026-07-04T13:03:49.880Z",
+    "versionId": "72058b6c-adde-4281-8d95-c8277507fed8",
+    "workflowId": "Fp3Ijrb86Yfwwat7",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          320,
+          -192
+        ],
+        "id": "2ca7f160-f6bd-4bb2-a352-188783871ea1",
+        "name": "When clicking \u2018Execute workflow\u2019"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "1c14bda8-f17d-43d6-a725-c7f63699a675",
+                "leftValue": "={{ $json.data.campaign.campaign_name }}",
+                "rightValue": "Roundtable AB Test 1M+ Rev - Sean",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "cd23fd2b-2e95-4d87-b665-a4e54261d48b",
+                "leftValue": "={{ $json.data.campaign.campaign_name }}",
+                "rightValue": "Roundtable March 18 - Sean",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          256,
+          80
+        ],
+        "id": "ea1cf543-5636-4ab7-9f1e-6c5b95aaaba0",
+        "name": "Filter"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "Prospect Name",
+                "lookupValue": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}"
+              },
+              {
+                "lookupColumn": "Email",
+                "lookupValue": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          480,
+          80
+        ],
+        "id": "6f9e64e9-f60a-4e5c-bbda-7a6958fe5c35",
+        "name": "Get row(s) in sheet",
+        "alwaysOutputData": true,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "af4b9cae-6a0e-4ed5-8c5b-e2c8b4c39d85",
+                "leftValue": "={{ $json.id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          704,
+          80
+        ],
+        "id": "29ff4266-6e56-4491-ad9b-4990f4182210",
+        "name": "Filter1"
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.body }}",
+          "options": {
+            "systemMessage": "Your Role\nYou are an expert email reply classifier specializing in identifying genuinely positive responses to roundtable event invitations. Your goal is to accurately distinguish between interested leads and false positives, including sarcastic or negative responses disguised as agreement.\nClassification Task\nAnalyze the email reply and classify it into ONE of the following categories:\n1. POSITIVE - Information Request\nReplies where the prospect wants more details before committing.\nIndicators:\n\nExplicitly asks for more information (\"send more info\", \"I'd like to learn more\", \"share more information\")\nAsks clarifying questions about the event (audience, size, timing, format, topic)\nShows curiosity (\"I'm curious\", \"tell me more\", \"what's this about\")\nRequests details to make a decision (\"send additional info\", \"provide more details\")\n\nExamples:\n\n\"Hi Sean, Thanks for reaching out. I'd like to learn more.\"\n\"Please share more information. Thanks\"\n\"Who's your target audience and what's its size?\"\n\"Can you send more info please\"\n\"I'd like to know more, please.\"\n\"Could you please provide additional details regarding the program you referenced?\"\n\n2. POSITIVE - Confirmed Interest\nReplies where the prospect immediately accepts or confirms attendance without requesting additional information first.\nIndicators:\n\nDirect affirmative responses (\"Yes\", \"Sure\", \"Yes please\", \"Ok\")\nExplicit confirmation of attendance (\"I would be interested in attending\", \"I will attend\")\nEnthusiastic agreement (\"Sounds interesting\", \"I'm interested\", \"Happy to learn more\")\nAcceptance with mild caveats that don't negate interest (\"Sure, send it\", \"Yes, please send\")\n\nExamples:\n\n\"Yes\"\n\"Yes please\"\n\"Sure\"\n\"Ok\"\n\"I'm interested. Thank you.\"\n\"I would be interested in attending. Thanks for the invite.\"\n\"Sounds interesting. What's a good time to connect?\"\n\"Sure I am curious\"\n\"Happy to learn more\"\n\n3. FALSE POSITIVE\nReplies that appear positive on surface but are actually sarcastic, disinterested, or negative.\nIndicators:\n\nSarcasm markers:\n\nExaggerated enthusiasm (\"Oh WOW, I've been WAITING for this!\", \"This is EXACTLY what I need!\")\nDismissive language with faux politeness (\"Thanks but no thanks\", \"How generous of you\")\nObvious mockery or ridicule\n\n\nConditional disinterest:\n\nAcceptance with strong negative qualifier (\"Sure, but there's no chance I will show up\")\nPassive aggressive acceptance (\"I guess\", \"If I must\", \"Whatever\")\nClearly stated disinterest despite accepting info (\"you can send it, but I won't read it\")\n\nConfusion/Misdirected:\n\nPerson thinks they're being invited to speak/present rather than attend\nComplete misunderstanding of the invitation purpose\nReply meant for someone else\n\nExamples:\n\n\"Sure, you can send it, but there's likely no chance I will show up to these. I prefer to stay under the radar\"\n\"Is this a joke?\"\n\"Wow, ANOTHER roundtable invitation. Lucky me!\"\nReply asking about speaking fees (when invited as attendee)\n\nCan't be classified: \nYou're not exactly sure what is the classification as you're not entirely sure of the sentiment of their reply\nYou are confused as to what the user has replied and why they say so\nYou don't know the classification\n\nIf they can't be classified consider them as false positive so we can manually review\n\n4. NEGATIVE\nOutright rejection:\n\nDirect \"No\" or \"Not interested\"\nUnsubscribe requests\nComplaints about receiving the email\nRequests to stop contacting them\n\nExample:\n\"No thanks\"\n\"Please remove me from your list\"\n\"out of office\"\n\"STOP\"\n\"Stop Unsubscribe\"\n\nParsing Instructions\n\nExtract the actual reply: Identify and extract ONLY what the prospect wrote in their immediate response to your invitation\nStrip email metadata: Remove email signatures, forwarded message headers, unsubscribe links, \"Sent from my iPhone\" type footers, previous email thread history, and email chain conversations\nIdentify the reply boundary: The actual reply is typically: The first block of text before any quoted/forwarded content (usually marked by \"On [date] at [time] [sender] wrote:\")\nBefore email signatures (lines with phone numbers, addresses, company info)\nBefore any \">\" quoted reply markers\nBefore lines like \"On Mon, Feb 9, 2026...\" or \"-----Original Message-----\"\nAfter lines like wrote:\\r\\n\n\nFocus on the response content: Look only at what the prospect wrote in direct response to your invitation\nConsider tone and context: Evaluate the overall tone - is it genuine or mocking?\nLook for red flags:\nExcessive punctuation (!!!, ???)\nALL CAPS (unless person's writing style)\nContradiction between yes and qualifiers\nPassive aggressive language\n\nOutput Formats\nRespond with this exact format, output as different fields:\n\n  classification: \n- POSITIVE - Information Request \n- POSITIVE - Confirmed Interest\n- FALSE POSITIVE\n- NEGATIVE\n\n\n  actual reply: \nThe extracted actual reply from the prospect, excluding email metadata, signatures, forwarded messages, and email thread history\n\n  reasoning: \nBrief explanation of why you classified it this way, highlighting key phrases or indicators\n\n  red_flags: \nany concerning elements that might indicate false positive\n\nConfidence Scoring Guidelines\n\nHIGH: Clear, unambiguous language that obviously fits one category\nMEDIUM: Mostly clear but has some ambiguous elements (e.g., very brief responses like \"Ok\" or \"Sure\" without context)\nLOW: Ambiguous, could be interpreted multiple ways, or contains mixed signals\n\nEdge Cases to Watch For\n\nVery Brief Responses (\"Ok\", \"Sure\", \"Yes\")\n\nUsually POSITIVE if there's no negative context\nMark as MEDIUM confidence\nFlag if reply seems unusually terse given the context\n\n\nQualified Interest (\"Sure, but I'm very busy\")\n\nStill POSITIVE if the qualification doesn't negate interest\nThe key is whether they're saying \"yes with caveats\" vs \"no disguised as yes\"\n\n\nQuestions About Format (\"Is this virtual or in-person?\")\n\nPOSITIVE - Information Request\nThey're trying to decide, which shows genuine consideration\n\n\nDelayed Responses (\"Sorry for late reply, yes please send info\")\n\nStill POSITIVE\nApology indicates genuine interest in engaging\n\n\nCorporate/Formal Tone\n\nDon't confuse professionalism with disinterest\nLook at actual content, not formality level\n\n\nCommon False Positive Patterns to Avoid\n \"Thanks for thinking of me, but I'm going to pass\"\n \"Sure, send it over [but I won't attend/read it/am not interested]\"\n \"I appreciate the invite, however [rejection]\"\n \"This sounds great for someone else, but not for me\"\n \"lol sure why not\" (sarcastic tone)\n Confused responses about being a speaker vs attendee (unless they clarify interest in attending)"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          928,
+          80
+        ],
+        "id": "986d60bb-a692-4eb5-aeeb-39fac12885c2",
+        "name": "AI Agent"
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "claude-sonnet-4-5-20250929",
+            "cachedResultName": "Claude Sonnet 4.5"
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+        "typeVersion": 1.3,
+        "position": [
+          1008,
+          304
+        ],
+        "id": "85817bc1-d031-464a-a503-cbcfd0c341c1",
+        "name": "Anthropic Chat Model",
+        "credentials": {
+          "anthropicApi": {
+            "id": "eQfzvn3izR7ec2J1",
+            "name": "Solutions Anthropic"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "// 1. Capture the input\nlet rawResponse = item.json.output || item.json.chatgptResponse || item.json.rawResponse || '';\n\nfunction parseData(text) {\n  let data = {\n    classification: '',\n    confidence: '',\n    actual_reply: '',\n    reasoning: '',\n    key_phrases: '',\n    red_flags: ''\n  };\n  \n  // Try JSON parsing first (in case ChatGPT behaves perfectly)\n  if (text.trim().startsWith('{')) {\n    try {\n      const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n      if (jsonMatch) {\n        const json = JSON.parse(jsonMatch[0]);\n        data.classification = json.classification || '';\n        data.confidence = json.confidence || '';\n        data.actual_reply = json.actual_reply || '';\n        data.reasoning = json.reasoning || '';\n        data.key_phrases = Array.isArray(json.key_phrases) ? json.key_phrases.join(', ') : (json.key_phrases || '');\n        data.red_flags = Array.isArray(json.red_flags) ? json.red_flags.join(', ') : (json.red_flags || '');\n        return data;\n      }\n    } catch (e) {\n      // Fall through to text parsing\n    }\n  }\n  \n  // Clean up all Markdown formatting (backticks and asterisks)\n  let cleanText = text.replace(/```[a-z]*\\n?/gi, '').replace(/```/g, '').replace(/\\*\\*/g, '').trim();\n\n  // Define our keys to look for\n  const keysPattern = 'classification|confidence|actual_reply|reasoning|key_phrases|red_flags';\n  \n  // Lookahead ensures we capture everything up to the next key or the end of the text\n  const lookahead = `(?=(?:${keysPattern.replace(/_/g, '[\\\\s_]*')})\\\\s*:|$)`;\n\n  // Helper function to extract text blocks safely\n  const extract = (key) => {\n    // Allows \"actual_reply:\" or \"actual reply:\"\n    const regexPattern = `${key.replace('_', '[\\\\s_]*')}\\\\s*:([\\\\s\\\\S]*?)${lookahead}`;\n    const regex = new RegExp(regexPattern, 'i');\n    const match = cleanText.match(regex);\n    return match && match[1] ? match[1].trim() : '';\n  };\n\n  // Extract the blocks\n  data.classification = extract('classification');\n  data.confidence = extract('confidence');\n  data.actual_reply = extract('actual_reply');\n  data.reasoning = extract('reasoning');\n  data.key_phrases = extract('key_phrases');\n  data.red_flags = extract('red_flags');\n\n  return data;\n}\n\n// 3. Execute the parsing logic\nconst parsed = parseData(rawResponse);\n\n// 4. Clean up any leftover string quotes\nconst cleanClassification = parsed.classification.replace(/[\"']/g, '').trim();\nconst cleanConfidence = parsed.confidence.replace(/[\"']/g, '').trim();\nconst cleanActualReply = parsed.actual_reply.replace(/^[\"']|[\"']$/g, '').trim();\nconst cleanReasoning = parsed.reasoning.replace(/^[\"']|[\"']$/g, '').trim();\nconst cleanKeyPhrases = parsed.key_phrases.replace(/[\\[\\]\"']/g, '').trim();\nconst cleanRedFlags = parsed.red_flags.replace(/[\\[\\]\"']/g, '').replace(/none/i, '').trim();\n\n// 5. Logic-friendly lowercasing for boolean flags\nconst lowClass = cleanClassification.toLowerCase();\n\n// 6. Return the finalized object to n8n\nreturn {\n  classification: cleanClassification,\n  confidence: cleanConfidence,\n  actual_reply: cleanActualReply,\n  reasoning: cleanReasoning,\n  key_phrases: cleanKeyPhrases,\n  red_flags: cleanRedFlags,\n  is_positive: lowClass.includes('positive'),\n  is_info_request: lowClass.includes('information request'),\n  is_confirmed: lowClass.includes('confirmed interest'),\n  is_negative: lowClass.includes('negative') || lowClass.includes('false positive'),\n  parse_success: true\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1280,
+          80
+        ],
+        "id": "81590d4e-e2fc-472c-8147-e7f28425dfcf",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.classification }}",
+                      "rightValue": "NEGATIVE",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "id": "76c511b3-374d-44fe-9ef2-354068f272e8"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Negative"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "2e86169c-3db3-427e-a3f0-a06355f1af4f",
+                      "leftValue": "={{ $json.classification }}",
+                      "rightValue": "POSITIVE",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Positive"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "186f90a0-89a5-49aa-9fd8-42e495e13276",
+                      "leftValue": "={{ $json.classification }}",
+                      "rightValue": "FALSE POSITIVE",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "False Positive"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          1504,
+          64
+        ],
+        "id": "a1361983-aadc-4c8f-b4c0-f2ca2317ca12",
+        "name": "Switch"
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}",
+              "Tool": "Snov",
+              "Status": "Manual Review",
+              "LinkedIn Contact/ Email Sender": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.email_account.email }}",
+              "Date": "={{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+              "Email": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}",
+              "Replies": "={{ $('Code in JavaScript').item.json.actual_reply }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1728,
+          -112
+        ],
+        "id": "d8c698eb-3abc-48d8-9975-6bd603df3f44",
+        "name": "Negative",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}",
+              "Tool": "Snov",
+              "Status": "Manual Review",
+              "LinkedIn Contact/ Email Sender": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.email_account.email }}",
+              "Date": "={{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+              "Email": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}",
+              "Replies": "={{ $('Code in JavaScript').item.json.actual_reply }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1728,
+          272
+        ],
+        "id": "63257f79-d47a-463c-8a0f-2ecef13f7d54",
+        "name": "False Positive",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}",
+              "Tool": "Snov",
+              "Status": "Interested (Warm)",
+              "LinkedIn Contact/ Email Sender": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.email_account.email }}",
+              "Date": "={{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+              "Email": "={{ $('When clicking \u2018Execute workflow\u2019').item.json.data.recipient.prospect_email }}",
+              "Replies": "={{ $('Code in JavaScript').item.json.actual_reply }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1728,
+          80
+        ],
+        "id": "111148dc-42e5-4e74-8836-d502f296e35f",
+        "name": "Positive",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0ADVRXNH2R",
+            "mode": "id"
+          },
+          "text": "=*New Positive Lead* \n*Source:* Snov\n*Name:* {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_first_name }} {{ $('When clicking \u2018Execute workflow\u2019').item.json.data.prospect.prospect_last_name }}\n*Message:* {{ $('Code in JavaScript').item.json.actual_reply }}\n*Reasoning:* {{ $('Code in JavaScript').item.json.reasoning }}\n*Date:* {{ $now.setZone('America/Chicago').toFormat('MM dd yyyy hh:mm a') }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1952,
+          80
+        ],
+        "id": "22fbcab6-f7f7-488a-980a-da02a45e5d89",
+        "name": "Send a message",
+        "webhookId": "ecc79148-5d0d-4870-8e84-ab15edf0128b",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.snov.io/v1/oauth/access_token",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "grant_type",
+                "value": "client_credentials"
+              },
+              {
+                "name": "client_id",
+                "value": "9febfaefcd7a7f5e9b17fa2cd7c1b9de"
+              },
+              {
+                "name": "client_secret",
+                "value": "5813e88aca666e705ca77b511986541e"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          32,
+          80
+        ],
+        "id": "70b25e16-a743-424b-b877-2415451afb4d",
+        "name": "HTTP Request"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "ac7f712b-089e-4537-9c08-1bcbd9ff3556",
+          "options": {
+            "responseHeaders": {
+              "entries": [
+                {}
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -240,
+          80
+        ],
+        "id": "2a5e00e2-2123-4c54-8d98-eb925a6f1184",
+        "name": "Webhook",
+        "webhookId": "ac7f712b-089e-4537-9c08-1bcbd9ff3556"
+      }
+    ],
+    "connections": {
+      "When clicking \u2018Execute workflow\u2019": {
+        "main": [
+          []
+        ]
+      },
+      "Filter": {
+        "main": [
+          [
+            {
+              "node": "Get row(s) in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get row(s) in sheet": {
+        "main": [
+          [
+            {
+              "node": "Filter1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter1": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Anthropic Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "Negative",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Positive",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "False Positive",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Positive": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send a message": {
+        "main": [
+          []
+        ]
+      },
+      "HTTP Request": {
+        "main": [
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,4054 @@
+{
+  "updatedAt": "2026-05-01T15:19:59.634Z",
+  "createdAt": "2026-02-04T19:03:43.612Z",
+  "id": "KVQenkYPwbDvfFdy",
+  "name": "ClickUp Folder Creator",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d4042e18-8099-4406-829c-20c150dee974",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -176
+      ],
+      "id": "5abfbac1-6bbe-4240-afc0-7334b26e1383",
+      "name": "Webhook",
+      "webhookId": "d4042e18-8099-4406-829c-20c150dee974"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "getAll",
+        "team": "9014746495",
+        "space": "90144235756",
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -176
+      ],
+      "id": "6720ea71-b827-405f-81d4-fee2496a6a9f",
+      "name": "Get many folders",
+      "credentials": {
+        "clickUpApi": {
+          "id": "JvP6QCeXp6uqS2w6",
+          "name": "ClickUp Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the data from your Webhook\nconst inputData = $('Webhook').first().json.body; \n\n// 2. Determine the Name based on Project ID or Company\nconst projectsArray = inputData[\"Projects\"];\nlet finalClientName = \"\";\n\nif (Array.isArray(projectsArray) && projectsArray.length > 0) {\n    finalClientName = projectsArray[0].name;\n} else {\n    finalClientName = inputData[\"record_name\"] || \"Unknown Project\";\n}\n\n// ---------------------------------------------------------\n// 3. The Folder Checking Logic & ID Extraction\n// ---------------------------------------------------------\n\n// Find the folder object where the name matches our finalClientName\n// 'items' represents the list of folders coming from your ClickUp node\nconst matchedFolder = items.find(item => item.json.name === finalClientName);\n\n// If matchedFolder exists, folderExists is true, and we grab the id\nconst folderExists = !!matchedFolder;\nconst folderId = folderExists ? matchedFolder.json.id : null;\n\nreturn [\n  {\n    json: {\n      exists: folderExists,\n      clientName: finalClientName,\n      id: folderId, // This will contain the ClickUp Folder ID (e.g., \"90147605023\")\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -176
+      ],
+      "id": "cd10713d-a32e-4814-bb49-b7830c091745",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "71ea5d7d-c698-4cdd-9c45-7322f7e66cde",
+              "leftValue": "={{ $json.exists }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -176
+      ],
+      "id": "d0df0adb-7606-4185-8b32-aa0e76d5a762",
+      "name": "Existing Folder?"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "team": "9014746495",
+        "space": "90144235756",
+        "name": "={{ $('Webhook').first().json.body.Projects[0].name }}"
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -64
+      ],
+      "id": "2665a6fc-9162-43e1-ab25-d519f4435e36",
+      "name": "Create a folder",
+      "credentials": {
+        "clickUpApi": {
+          "id": "JvP6QCeXp6uqS2w6",
+          "name": "ClickUp Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.airtable_id }}",
+            "ClickUp List ID": "={{ $json.id.toString() }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "PDEV Requirement",
+              "displayName": "PDEV Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Process Engineer",
+              "displayName": "Process Engineer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "RFP RECEIVE DATE",
+              "displayName": "RFP RECEIVE DATE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "INITIAL PEC",
+              "displayName": "INITIAL PEC",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Completed - PDEV",
+              "displayName": "Completed - PDEV",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV - EWS",
+              "displayName": "PDEV - EWS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "GREEN",
+                  "value": "GREEN"
+                },
+                {
+                  "name": "AMBER",
+                  "value": "AMBER"
+                },
+                {
+                  "name": "RED",
+                  "value": "RED"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "REQ TYPE",
+              "displayName": "REQ TYPE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "PROCESS ONLY",
+                  "value": "PROCESS ONLY"
+                },
+                {
+                  "name": "PROCESS w/ MVA",
+                  "value": "PROCESS w/ MVA"
+                },
+                {
+                  "name": "MVA ONLY",
+                  "value": "MVA ONLY"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV STAGE",
+              "displayName": "PDEV STAGE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New Requirement",
+                  "value": "New Requirement"
+                },
+                {
+                  "name": "Ongoing PEC",
+                  "value": "Ongoing PEC"
+                },
+                {
+                  "name": "Completed",
+                  "value": "Completed"
+                },
+                {
+                  "name": "Kickback to Sales",
+                  "value": "Kickback to Sales"
+                },
+                {
+                  "name": "Parked",
+                  "value": "Parked"
+                },
+                {
+                  "name": "Non-Responsive",
+                  "value": "Non-Responsive"
+                },
+                {
+                  "name": "Failed Sale",
+                  "value": "Failed Sale"
+                },
+                {
+                  "name": "Outliers",
+                  "value": "Outliers"
+                },
+                {
+                  "name": "PDEV - New Requirement",
+                  "value": "PDEV - New Requirement"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Availability (Per Week) (from Project Owner)",
+              "displayName": "Availability (Per Week) (from Project Owner)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POTENTIAL MVA",
+              "displayName": "POTENTIAL MVA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "RFP",
+              "displayName": "RFP",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CSA",
+              "displayName": "CSA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "SOW",
+              "displayName": "SOW",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidate Request Date",
+              "displayName": "Candidate Request Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS STATUS",
+              "displayName": "PLACEMENTS STATUS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C",
+              "displayName": "JD + C",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Playbook",
+              "displayName": "Playbook",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Page Count",
+              "displayName": "Page Count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Solution ID",
+              "displayName": "Solution ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Allocation (3 Hours/Day/Client)",
+              "displayName": "Allocation (3 Hours/Day/Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Estimated TTC",
+              "displayName": "Estimated TTC",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "\ud83d\udcd7Optimistic [Production Hours]",
+              "displayName": "\ud83d\udcd7Optimistic [Production Hours]",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "\ud83d\udcd8Most Likely [Productive Hours]",
+              "displayName": "\ud83d\udcd8Most Likely [Productive Hours]",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "\ud83d\udcd5Pessimistic [Productive Hours}",
+              "displayName": "\ud83d\udcd5Pessimistic [Productive Hours}",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Projected TTC (If 3 Hours/Day/Client Worked)",
+              "displayName": "Projected TTC (If 3 Hours/Day/Client Worked)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Cycle Time",
+              "displayName": "Cycle Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Days Lapsed [PDEV]",
+              "displayName": "Days Lapsed [PDEV]",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Industries",
+              "displayName": "Industries",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Businesses",
+              "displayName": "Businesses",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Departments",
+              "displayName": "Departments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Roles",
+              "displayName": "Roles",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Rate",
+              "displayName": "Client Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Proposed PEC date:",
+              "displayName": "Proposed PEC date:",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Prepared By:",
+              "displayName": "Prepared By:",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Modified Time",
+              "displayName": "Last Modified Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CSAT CALLER",
+              "displayName": "CSAT CALLER",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "TOTAL REALIZED MVA",
+              "displayName": "TOTAL REALIZED MVA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Count Start",
+              "displayName": "Client Count Start",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "RFP Month",
+              "displayName": "RFP Month",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "RFP Year",
+              "displayName": "RFP Year",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Churn Summary Link",
+              "displayName": "Churn Summary Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Link Key",
+              "displayName": "Link Key",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Unavailability",
+              "displayName": "Unavailability",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Process Engineer 2",
+              "displayName": "Process Engineer 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Total Active Clients",
+              "displayName": "Total Active Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Total Placements",
+              "displayName": "Total Placements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Last Modified by user",
+              "displayName": "Last Modified by user",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Last Modified By",
+              "displayName": "Last Modified By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CSAT Comments",
+              "displayName": "CSAT Comments",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created Time",
+              "displayName": "Created Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SOURCE",
+              "displayName": "SOURCE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Cold Calling",
+                  "value": "Cold Calling"
+                },
+                {
+                  "name": "Referral",
+                  "value": "Referral"
+                },
+                {
+                  "name": "Collective Genius",
+                  "value": "Collective Genius"
+                },
+                {
+                  "name": "Investor Fuel",
+                  "value": "Investor Fuel"
+                },
+                {
+                  "name": "The Boardroom Mastermind",
+                  "value": "The Boardroom Mastermind"
+                },
+                {
+                  "name": "Jake and Gino Mastermind",
+                  "value": "Jake and Gino Mastermind"
+                },
+                {
+                  "name": "IMN SFR",
+                  "value": "IMN SFR"
+                },
+                {
+                  "name": "CEO Roundtable",
+                  "value": "CEO Roundtable"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Sales Closer",
+              "displayName": "Sales Closer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Referrer",
+              "displayName": "Referrer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Outlier Flag",
+              "displayName": "Outlier Flag",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Client Delays: PDOC Approval",
+                  "value": "Client Delays: PDOC Approval"
+                },
+                {
+                  "name": "Client Delays: Pause Initiated by Client",
+                  "value": "Client Delays: Pause Initiated by Client"
+                },
+                {
+                  "name": "Client Delays: Playbook Approval",
+                  "value": "Client Delays: Playbook Approval"
+                },
+                {
+                  "name": "Multiple Roles",
+                  "value": "Multiple Roles"
+                },
+                {
+                  "name": "Complex Requirement",
+                  "value": "Complex Requirement"
+                },
+                {
+                  "name": "Client Delays + Complex Requirement",
+                  "value": "Client Delays + Complex Requirement"
+                },
+                {
+                  "name": "PDEV Delay: Playbook Sending",
+                  "value": "PDEV Delay: Playbook Sending"
+                },
+                {
+                  "name": "Client Delay + PDEV Delay",
+                  "value": "Client Delay + PDEV Delay"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Scope Type",
+              "displayName": "Scope Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Single Role",
+                  "value": "Single Role"
+                },
+                {
+                  "name": "Multi Role",
+                  "value": "Multi Role"
+                },
+                {
+                  "name": "Departmental",
+                  "value": "Departmental"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Address (from Company)",
+              "displayName": "Company Address (from Company)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Playbook Link",
+              "displayName": "Playbook Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Photo (from CLIENTS)",
+              "displayName": "Photo (from CLIENTS)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PE Rate",
+              "displayName": "PE Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billable Activities",
+              "displayName": "Billable Activities",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Billable Hours PDEV",
+              "displayName": "Billable Hours PDEV",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billable Hours PL",
+              "displayName": "Billable Hours PL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Amount Billable",
+              "displayName": "Amount Billable",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Gross Profit (SUF - Amount Billable)",
+              "displayName": "Gross Profit (SUF - Amount Billable)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Profit Margins %(SUF vs AB)",
+              "displayName": "Profit Margins %(SUF vs AB)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billable Hours (hrs)",
+              "displayName": "Billable Hours (hrs)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "For Scrubbing?",
+              "displayName": "For Scrubbing?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fields with Missing Data",
+              "displayName": "Fields with Missing Data",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Scrubbed At",
+              "displayName": "Last Scrubbed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placement MVA",
+              "displayName": "Placement MVA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Placement Type",
+              "displayName": "Placement Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Add-on Date",
+              "displayName": "PDEV Add-on Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL Status (from PLACEMENTS Requirements)",
+              "displayName": "PL Status (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Record ID",
+              "displayName": "Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PEC Transcript",
+              "displayName": "PEC Transcript",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics Needed (from PLACEMENTS Requirements)",
+              "displayName": "Logistics Needed (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Tools",
+              "displayName": "Tools",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Title",
+              "displayName": "VA Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Project Extraction",
+              "displayName": "Project Extraction",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Email (from Company) (from Client)",
+              "displayName": "Company Email (from Company) (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing City (from Company) (from Client)",
+              "displayName": "Billing City (from Company) (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing State (from Company) (from Client)",
+              "displayName": "Billing State (from Company) (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing Zip Code (from Company) (from Client)",
+              "displayName": "Billing Zip Code (from Company) (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Phone (from Company) (from Client)",
+              "displayName": "Company Phone (from Company) (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Job Title (from Client)",
+              "displayName": "Job Title (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Time Zone (from Client)",
+              "displayName": "Time Zone (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Email (from Client)",
+              "displayName": "Email (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Address (from Client)",
+              "displayName": "Company Address (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Phone Number (from Client)",
+              "displayName": "Phone Number (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Job Title (from Client) 2",
+              "displayName": "Job Title (from Client) 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Email (from Company)",
+              "displayName": "Company Email (from Company)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Phone (from Company)",
+              "displayName": "Company Phone (from Company)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing City (from Company)",
+              "displayName": "Billing City (from Company)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing State (from Company)",
+              "displayName": "Billing State (from Company)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing Zip Code (from Company)",
+              "displayName": "Billing Zip Code (from Company)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Projects",
+              "displayName": "Projects",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Address (from Company) 2",
+              "displayName": "Company Address (from Company) 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC",
+              "displayName": "POC",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Role",
+              "displayName": "Client Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Extracted Owner",
+              "displayName": "Extracted Owner",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Photo (from Client)",
+              "displayName": "Photo (from Client)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "RFP (from Projects)",
+              "displayName": "RFP (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PE Record ID",
+              "displayName": "PE Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Deliverables",
+              "displayName": "Deliverables",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PEC Meeting Summary",
+              "displayName": "PEC Meeting Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PEC Meeting Title",
+              "displayName": "PEC Meeting Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Solution Text",
+              "displayName": "Solution Text",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PEC Meeting Link",
+              "displayName": "PEC Meeting Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Job Description (from Projects)",
+              "displayName": "Job Description (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Primary Contact Number (from POC Link) (from Projects)",
+              "displayName": "POC Primary Contact Number (from POC Link) (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Primary Email (from POC Link) (from Projects)",
+              "displayName": "POC Primary Email (from POC Link) (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Name",
+              "displayName": "POC Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Other Teammate Job Title (from Projects)",
+              "displayName": "Other Teammate Job Title (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "DC Recording and Summary (from Projects)",
+              "displayName": "DC Recording and Summary (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Other Notes (from Projects)",
+              "displayName": "Other Notes (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Other Teammates to Join PEC (from Projects)",
+              "displayName": "Other Teammates to Join PEC (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Proposed Solutions (from Projects)",
+              "displayName": "Proposed Solutions (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Pain Points (from Projects)",
+              "displayName": "Pain Points (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Tasks (from Projects)",
+              "displayName": "Tasks (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Title (from Projects)",
+              "displayName": "VA Title (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Type of Client (from Projects)",
+              "displayName": "Type of Client (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Lead Source (from Projects)",
+              "displayName": "Lead Source (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Finance Notes (from Projects)",
+              "displayName": "Finance Notes (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Rate (from Projects)",
+              "displayName": "Client Rate (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF Scope (from Projects)",
+              "displayName": "SUF Scope (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Prepared by (Email) (from Projects)",
+              "displayName": "Prepared by (Email) (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Prepared By (from Projects)",
+              "displayName": "Prepared By (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Sales Closer (from Projects)",
+              "displayName": "Sales Closer (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF Paid On (from Projects)",
+              "displayName": "SUF Paid On (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CSA Signed On Date",
+              "displayName": "CSA Signed On Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "RFP Received Date (from Projects)",
+              "displayName": "RFP Received Date (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SOW (from Projects)",
+              "displayName": "SOW (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CSA (from Projects)",
+              "displayName": "CSA (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF Paid Amount (from Projects)",
+              "displayName": "SUF Paid Amount (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Project ID (from Projects)",
+              "displayName": "Project ID (from Projects)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF paid on:",
+              "displayName": "SUF paid on:",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CSA Signed On",
+              "displayName": "CSA Signed On",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Bubble Unique ID",
+              "displayName": "Bubble Unique ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Process Engineer Names",
+              "displayName": "Process Engineer Names",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Title Watcher",
+              "displayName": "VA Title Watcher",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Initial PEC (text)",
+              "displayName": "Initial PEC (text)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "RFP Received Date (Text)",
+              "displayName": "RFP Received Date (Text)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Notes",
+              "displayName": "PDEV Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Rate (from Projects) 2",
+              "displayName": "Client Rate (from Projects) 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Initial PEC Month",
+              "displayName": "Initial PEC Month",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Initial PEC Year",
+              "displayName": "Initial PEC Year",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Completed PDEV Month",
+              "displayName": "Completed PDEV Month",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Completed PDEV Year",
+              "displayName": "Completed PDEV Year",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PE Insights",
+              "displayName": "PE Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ClickUp List ID",
+              "displayName": "ClickUp List ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1568,
+        -144
+      ],
+      "id": "de05e1a6-14b7-47ee-a32e-767a63b47f6f",
+      "name": "Update List ID",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblVbdgSsDp25hgxi",
+          "mode": "list",
+          "cachedResultName": "Projects",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblVbdgSsDp25hgxi"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.Projects[0].id }}",
+            "ClickUp Folder ID": "={{ $json.id.toString() }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Project ID",
+              "displayName": "Project ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements",
+              "displayName": "PDEV Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "SUF Paid Amount",
+              "displayName": "SUF Paid Amount",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "RFP",
+              "displayName": "RFP",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CSA",
+              "displayName": "CSA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "SOW",
+              "displayName": "SOW",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "RFP Received Date",
+              "displayName": "RFP Received Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CSA Signed On",
+              "displayName": "CSA Signed On",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "SUF Paid On",
+              "displayName": "SUF Paid On",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Phone Number",
+              "displayName": "Client Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Email",
+              "displayName": "Client Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Email",
+              "displayName": "Company Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Phone Number",
+              "displayName": "Company Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Billing Address",
+              "displayName": "Billing Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "State",
+              "displayName": "State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Zip code",
+              "displayName": "Zip code",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Timezone",
+              "displayName": "Timezone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "CST",
+                  "value": "CST"
+                },
+                {
+                  "name": "PST",
+                  "value": "PST"
+                },
+                {
+                  "name": "MST",
+                  "value": "MST"
+                },
+                {
+                  "name": "EST",
+                  "value": "EST"
+                },
+                {
+                  "name": "AST",
+                  "value": "AST"
+                },
+                {
+                  "name": "DST",
+                  "value": "DST"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Sales Closer",
+              "displayName": "Sales Closer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Prepared By",
+              "displayName": "Prepared By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Prepared by (Email)",
+              "displayName": "Prepared by (Email)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF Scope",
+              "displayName": "SUF Scope",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Single Role",
+                  "value": "Single Role"
+                },
+                {
+                  "name": "Multi Role",
+                  "value": "Multi Role"
+                },
+                {
+                  "name": "Departmental",
+                  "value": "Departmental"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Requirement Type",
+              "displayName": "Requirement Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "PROCESS w/ MVA",
+                  "value": "PROCESS w/ MVA"
+                },
+                {
+                  "name": "PROCESS ONLY",
+                  "value": "PROCESS ONLY"
+                },
+                {
+                  "name": "MVA ONLY",
+                  "value": "MVA ONLY"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Rate",
+              "displayName": "Client Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Finance Notes",
+              "displayName": "Finance Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Lead Source",
+              "displayName": "Lead Source",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Type of Client",
+              "displayName": "Type of Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Title",
+              "displayName": "VA Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Tasks",
+              "displayName": "Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Pain Points",
+              "displayName": "Pain Points",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Proposed Solutions",
+              "displayName": "Proposed Solutions",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Other Teammates to Join PEC",
+              "displayName": "Other Teammates to Join PEC",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Other Notes",
+              "displayName": "Other Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "DC Recording and Summary",
+              "displayName": "DC Recording and Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Other Teammate Job Title",
+              "displayName": "Other Teammate Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Email",
+              "displayName": "POC Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Phone Number",
+              "displayName": "POC Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Website",
+              "displayName": "Company Website",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Link",
+              "displayName": "Company Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company Name (from Company Link)",
+              "displayName": "Company Name (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Address (from Company Link)",
+              "displayName": "Company Address (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing City (from Company Link)",
+              "displayName": "Billing City (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing State (from Company Link)",
+              "displayName": "Billing State (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing Zip Code (from Company Link)",
+              "displayName": "Billing Zip Code (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Website (from Company Link)",
+              "displayName": "Company Website (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Email (from Company Link)",
+              "displayName": "Company Email (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Phone (from Company Link)",
+              "displayName": "Company Phone (from Company Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Clients Link",
+              "displayName": "Clients Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Name (from Clients Link)",
+              "displayName": "Client Name (from Clients Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Phone Number (from Clients Link)",
+              "displayName": "Phone Number (from Clients Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Email (from Clients Link)",
+              "displayName": "Email (from Clients Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Time Zone (from Clients Link)",
+              "displayName": "Time Zone (from Clients Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Job Title (from Clients Link)",
+              "displayName": "Job Title (from Clients Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Link",
+              "displayName": "POC Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Name (from POC Link)",
+              "displayName": "POC Name (from POC Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Job Title (from POC Link)",
+              "displayName": "Job Title (from POC Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Primary Email (from POC Link)",
+              "displayName": "POC Primary Email (from POC Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Primary Contact Number (from POC Link)",
+              "displayName": "POC Primary Contact Number (from POC Link)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Job Description",
+              "displayName": "Job Description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "New Client?",
+              "displayName": "New Client?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Number",
+              "displayName": "Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Assigned To",
+              "displayName": "Assigned To",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Bubble Unique ID",
+              "displayName": "Bubble Unique ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Number of Role(s)",
+              "displayName": "Number of Role(s)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ClickUp Folder ID",
+              "displayName": "ClickUp Folder ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "This is a Retainer Project?",
+              "displayName": "This is a Retainer Project?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Upfront Payment Fee (One-time)",
+              "displayName": "Upfront Payment Fee (One-time)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Monthly Retainer Fee",
+              "displayName": "Monthly Retainer Fee",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Retainer Duration Type",
+              "displayName": "Retainer Duration Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Fixed Duration",
+                  "value": "Fixed Duration"
+                },
+                {
+                  "name": "Open-ended / Ongoing",
+                  "value": "Open-ended / Ongoing"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Extra Fees (Outside CSA Scope)",
+              "displayName": "Extra Fees (Outside CSA Scope)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Number 2",
+              "displayName": "Number 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV STAGE (from PDEV Requirements)",
+              "displayName": "PDEV STAGE (from PDEV Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Record ID",
+              "displayName": "Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Growth Profile",
+              "displayName": "Client Growth Profile",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "VIP \u2013 Influencer",
+                  "value": "VIP \u2013 Influencer"
+                },
+                {
+                  "name": "VIP \u2013 Company",
+                  "value": "VIP \u2013 Company"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "For Scrubbing?",
+              "displayName": "For Scrubbing?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fields with Missing Data",
+              "displayName": "Fields with Missing Data",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Scrubbed At",
+              "displayName": "Last Scrubbed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CSA Addendum",
+              "displayName": "CSA Addendum",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        -16
+      ],
+      "id": "94fe3048-6d3b-4e33-8615-a5ffa0944074",
+      "name": "Update Folder ID",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "list",
+        "operation": "get",
+        "team": "9014746495",
+        "space": "90144235756",
+        "folder": "={{ $json.clientName }}",
+        "list": "={{ $('Webhook').first().json.body[\"ClickUp List ID\"] }}"
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -368
+      ],
+      "id": "26f26467-8306-4736-943f-171fa4dfd643",
+      "name": "Get a list",
+      "alwaysOutputData": true,
+      "credentials": {
+        "clickUpApi": {
+          "id": "JvP6QCeXp6uqS2w6",
+          "name": "ClickUp Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c02d5ea6-498e-4e71-b7c3-0de3f73b280e",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -368
+      ],
+      "id": "654b6c82-6e64-4327-9703-842fb9f94bed",
+      "name": "If",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.clickup.com/api/v2/folder/{{ $('Get a list').item.json.folder.id }}/list_template/t-901414256326",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $('Webhook').first().json.body[\"VA Title\"] }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        -208
+      ],
+      "id": "88cb3b03-4dba-466d-a6fc-610021834ca2",
+      "name": "Create a list",
+      "credentials": {
+        "clickUpApi": {
+          "id": "JvP6QCeXp6uqS2w6",
+          "name": "ClickUp Auth"
+        },
+        "clickUpOAuth2Api": {
+          "id": "pov43Hd26gF6W6Cp",
+          "name": "ClickUp OAuth2 Sol"
+        },
+        "httpHeaderAuth": {
+          "id": "mezAP2T3CVQaSqiv",
+          "name": "ClickUp Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.clickup.com/api/v2/list/{{ $json.id }}/task?subtasks=true",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        -368
+      ],
+      "id": "6d365e77-2af3-4574-ab3b-0172bf223548",
+      "name": "Get created list",
+      "credentials": {
+        "clickUpApi": {
+          "id": "JvP6QCeXp6uqS2w6",
+          "name": "ClickUp Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "tasks",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        -368
+      ],
+      "id": "6913e643-eeee-4de4-ad70-059ec77b23d2",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.clickup.com/api/v2/task/{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assignees\": {\n    \"add\": [ {{ parseInt($('Webhook').first().json.body[\"ClickUp Member ID\"]) }} ]\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2016,
+        -368
+      ],
+      "id": "e2950663-50c5-4239-8909-ad83420657d3",
+      "name": "Assign a task",
+      "credentials": {
+        "clickUpApi": {
+          "id": "JvP6QCeXp6uqS2w6",
+          "name": "ClickUp Auth"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get many folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many folders": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Existing Folder?": {
+      "main": [
+        [
+          {
+            "node": "Get a list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a folder": {
+      "main": [
+        [
+          {
+            "node": "Update Folder ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Existing Folder?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a list": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create a list",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get created list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a list": {
+      "main": [
+        [
+          {
+            "node": "Update List ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get created list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get created list": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Assign a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
+            "content-length": "18393",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "44.201.114.13",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9ccf5112a12c1763-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-airtable-source": "apptuAm73VyH7pcHA/wflBbUsc28zWEl9Sq",
+            "x-forwarded-for": "44.201.114.13, 172.71.191.118",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-bd6m6",
+            "x-is-trusted": "yes",
+            "x-real-ip": "44.201.114.13"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "airtable_id": "recX4raRstsPliDyu",
+            "record_name": "Zac Webster - Project Coordinator",
+            "REQ TYPE": {
+              "id": "selRERxuypeb4zKvs",
+              "name": "PROCESS w/ MVA",
+              "color": "blueLight1"
+            },
+            "PDEV Requirement": "Zac Webster - Project Coordinator",
+            "Client": [
+              {
+                "id": "recyrIfAwLV241pgG",
+                "name": "Zac Webster"
+              }
+            ],
+            "POTENTIAL MVA": 2,
+            "RFP RECEIVE DATE": "2025-12-15",
+            "INITIAL PEC": "2026-01-12T06:42:00.000Z",
+            "PDEV STAGE": {
+              "id": "selvYbFNGiAq3cZqH",
+              "name": "Ongoing PEC",
+              "color": "cyanBright"
+            },
+            "Candidate Request Date": [
+              "2025-12-18"
+            ],
+            "PLACEMENTS STATUS": [
+              "PL - Failed Sale"
+            ],
+            "Created By": {
+              "id": "usrtej8AuOw9fF8KL",
+              "email": "jianna@scalevirtually.com",
+              "permissionLevel": "create",
+              "name": "Jianna Louise Caritativo",
+              "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_4.png"
+            },
+            "JD + C": [
+              {
+                "id": "attOlUV7qzq8nFDRO",
+                "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/ebAweYeDKNMChm1zkr25hw/uRYAvUOfwyWeNWzPXlcL56AK4gvRbPGt391U7BVHe9H4GvGUI4I_3ZlPt4VuohRG8AECUqlsAo4wGDs0pGgFUUl2AsJof4Y5m6pcLW-AJFnZDAutwj_lfzM6SDIYD3GUYf7KF_cXP2n2dvNVtU23Lb3FhrO1ibpOHf8t7MRcKxt62gdeiZlUDRXNvLhoqOw8cCmrx13sMQw_Iq_CIVTIyA/8rzauiI-oaCgzdTzSAWnTsokszgaoH6Nt4jLqKgB3IE",
+                "filename": "JD + C - Construction Project Coordinator.docx.pdf",
+                "size": 612638,
+                "type": "application/pdf",
+                "thumbnails": {
+                  "small": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/JuKmx87YtXHmRqdsVRu0ew/nTr--qXJczz50U__qIsNUXW4xLioybwBk-7tZbjtUoZOE3An3pDig_HNMCL2YInLfDNwD5Ug6RKHnhvi32QL5euMrh436xIHnaTaep9beS0lKXe-ppwvyPWJj7-7jc5r8UAzrmJGrmrPOec5dEzSjA/FkOYhm8nhpOn5YCpTtFfA5o-3H1j04fPd_nzeBywmvw",
+                    "width": 28,
+                    "height": 36
+                  },
+                  "large": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/8SbKxEvk7MGXeeaS4f4duw/dskyyvs8sM35HWXfLw-MEsq-IPe0Jg8vfRF_OKwtRglo3n_PkoNrHAsR1SAKUaG7--ACUvyWofZcdIZnnreHde51ld8Qawfq1ByfyGdq6HYffpX4CIPhpSqVPKNrveqw5uWUEoiaNlPmOYD5P_toSw/67-IXH37kdQv0URMa6J5Z7XYtsPy4FwSyc_FnEIoVgs",
+                    "width": 512,
+                    "height": 663
+                  }
+                }
+              }
+            ],
+            "Cycle Time": "24",
+            "Days Lapsed [PDEV]": "Ongoing - 24 days",
+            "Industries": [
+              {
+                "id": "recvOtQAh6q6uU7i7",
+                "name": "Real Estate"
+              }
+            ],
+            "Businesses": [
+              {
+                "id": "rec6dkwJSFx1Rt8dT",
+                "name": "Real Estate Development"
+              }
+            ],
+            "Departments": [
+              {
+                "id": "recKWI7UDoJeb2F11",
+                "name": "Construction Management"
+              }
+            ],
+            "Roles": [
+              {
+                "id": "recDA73UI6rls8aq3",
+                "name": "Construction Project Coordinator"
+              }
+            ],
+            "Created Time": "2025-12-16T18:34:26.000Z",
+            "Last Modified By": {
+              "id": "usrjo028Wx73RpZuw",
+              "email": "pj@scalevirtually.com",
+              "permissionLevel": "create",
+              "name": "Patrick Jansen Villanueva",
+              "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_7.png"
+            },
+            "Process Engineer": [
+              {
+                "id": "recA5YmOytHMzaneM",
+                "name": "Aja Mojica"
+              }
+            ],
+            "Solution ID": [
+              {
+                "id": "rec5gekxzrdEBfc0S",
+                "name": "Current State (AS-IS)"
+              }
+            ],
+            "\ud83d\udcd7Optimistic [Production Hours]": 0,
+            "\ud83d\udcd8Most Likely [Productive Hours]": 0,
+            "\ud83d\udcd5Pessimistic [Productive Hours}": 0,
+            "Projected TTC (If 3 Hours/Day/Client Worked)": 0,
+            "Company": [
+              {
+                "id": "recU5cUJIZjEWYlRW",
+                "name": "M.E.C General Contractors"
+              }
+            ],
+            "Last Modified Time": "2026-02-12T14:20:27.000Z",
+            "Last Modified by user": {
+              "id": "usrjo028Wx73RpZuw",
+              "email": "pj@scalevirtually.com",
+              "permissionLevel": "create",
+              "name": "Patrick Jansen Villanueva",
+              "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_7.png"
+            },
+            "PLACEMENTS Requirements": [
+              {
+                "id": "recAPlD1hQTWyPa9A",
+                "name": "Zac Webster \u2013 Project Coordinator \u2013 First - 1"
+              }
+            ],
+            "Availability (Per Week) (from Project Owner)": [
+              "40"
+            ],
+            "TOTAL REALIZED MVA": 0,
+            "Client Count Start": 0,
+            "RFP Month": "December",
+            "RFP Year": 2025,
+            "Link Key": "December 2025",
+            "Unavailability": [
+              "2025-01-01",
+              "2025-04-18",
+              "2025-05-26",
+              "2025-07-04",
+              "2025-09-01",
+              "2025-11-27",
+              "2025-12-25",
+              "2025-03-11",
+              "2025-03-12",
+              "2025-03-13",
+              "2025-03-14"
+            ],
+            "Total Active Clients": "Active",
+            "Total Placements": 2,
+            "Scope Type": {
+              "id": "sel5JDXKrb96J4Jhx",
+              "name": "Single Role",
+              "color": "grayLight2"
+            },
+            "Photo (from CLIENTS)": [
+              {
+                "id": "attLV6oNX4HwPLYwP",
+                "width": 400,
+                "height": 400,
+                "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/qlCqhZo7NqsK3nyPTcjVTg/sOVYrghTcoePomL78w5KiutcfAS6fKtO6vf8RDPc13cqNcNyHDQ5IPL-2d7XX6c3b2NfVsmDP14zrNGJftn96cT4TaodEDYTHcl85wVvc7eL3mcnWf8FkCGY-96mpgdTLLsQyKGPyWKndvRp6fJrlDiUziS5PXlFJo1ZwpdQiIyI-3j3ulbVOKjbLsZ3RARF/tGewjWopIbnMKX7t0SzIXg7oeolknPArvkexaG-ZSkk",
+                "filename": "9a8ce0f2-f9d2-4340-8e98-c6a15abdb015.png",
+                "size": 424514,
+                "type": "image/png",
+                "thumbnails": {
+                  "small": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/keloHAwy5PYVbQknHsemcA/O5DwL1IObVuiNGi4zEGFX9603dnwgMY-eMTMIOCKwPoLDLQjj_GDoZc0WANzSuLN-qoLnpoSym-JpMp4OVGh89E5Zp2RD4tZN1FvpAzOSaTwt1x1LOKcf6SnWmOGX4anO8BjrsjFj5kL3XcMkK72EA/ZQrRka58ozc6oTnnLvO7Ps5iqS-82sk6Umv71z9B-0M",
+                    "width": 36,
+                    "height": 36
+                  },
+                  "large": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/_2NTiglo2-dpcVVKSEBu7w/VM2ClP0PZPTZlMCsKTJLCz7keCpqaj4ZY_I-mqwIbTCKU6m0yT5FygYUUllHiKLexFDvIKBmfN4s3cjlmm5kgMb-UMTT9_OffukCQOeVs5U1kuAPBFO1_yCZJDY47JtFwFF3hhaUg52F1W-H_JV4rw/d8g_Zvh-LXXFOR2k0b03PBWpkWhdDR-KwAWgpmuprpw",
+                    "width": 400,
+                    "height": 400
+                  },
+                  "full": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/_aoIMC-_Am6i_7MGvg5o-Q/5_El_0xpsGgr8bLrfQSmYAxAOeflrhai_bRSu7XHzXBwouKkwlrt9eMoIuyUftcMxVRuqVwUjokhDrvVMvMAf6heSPNhR-UKNFEeLxu3RioVp4m_zSRTzWAjPDwKWyGrVvkorKWgW-b3p_wKk1x3Aw/62M9qlGxV3N0U34lK2ctp1s4oxYck7tQjaT_4ijJOz8",
+                    "width": 400,
+                    "height": 400
+                  }
+                }
+              }
+            ],
+            "PE Rate": [
+              11
+            ],
+            "Billable Activities": [
+              {
+                "id": "recEhh4elmK5VKFPg",
+                "name": "Candidate Shortlisting on 2025-12-18 - Zac Webster - Project Coordinator"
+              },
+              {
+                "id": "recY3r26sUF2XNRVI",
+                "name": "Documentation/Coordination on 2026-01-21 - Zac Webster - Project Coordinator"
+              },
+              {
+                "id": "recrNr54cL1EPLjOo",
+                "name": "PEC on 2026-01-28 - Zac Webster - Project Coordinator"
+              },
+              {
+                "id": "recUtDup87LSfyir5",
+                "name": "PEC on 2026-01-28 - Zac Webster - Project Coordinator"
+              },
+              {
+                "id": "recYOxRd2q3uC0I7z",
+                "name": "Candidate Shortlisting on 2026-02-03 - Zac Webster - Project Coordinator"
+              },
+              {
+                "id": "recI8WK9QphClW1Ji",
+                "name": "Candidate Shortlisting on 2026-02-03 - Zac Webster - Project Coordinator"
+              }
+            ],
+            "Billable Hours PDEV": 22867,
+            "Billable Hours PL": 3215,
+            "Amount Billable": 70.4,
+            "Gross Profit (SUF - Amount Billable)": 1429.6,
+            "Profit Margins %(SUF vs AB)": 0.9530666666666666,
+            "Billable Hours (hrs)": 7.3,
+            "Fields with Missing Data": "\n",
+            "Last Scrubbed At": "2026-02-12T14:20:16.280Z",
+            "Placement MVA": 0,
+            "Placement Type": [
+              "First"
+            ],
+            "Requirement ID": "recX4raRstsPliDyu",
+            "VA Title": "Project Coordinator",
+            "Project Extraction": {
+              "state": "error",
+              "errorType": "emptyDependency",
+              "value": null,
+              "isStale": false
+            },
+            "Company Phone (from Company) (from Client)": [
+              "(321) 723-5661"
+            ],
+            "Time Zone (from Client)": [
+              "EST"
+            ],
+            "Email (from Client)": [
+              "zwebster@mec-gc.com"
+            ],
+            "Company Address (from Client)": [
+              "Melbourne Office\n445 Pineda Court\nMelbourne, FL 32940 USA\n\nOrlando Office\n5025 S. Orange Avenue\nOrlando, FL 32809"
+            ],
+            "Phone Number (from Client)": [
+              "(321) 794-1803"
+            ],
+            "Company Phone (from Company)": [
+              "(321) 723-5661"
+            ],
+            "Projects": [
+              {
+                "id": "recJoFhZvCRAetpfZ",
+                "name": "ZW-121525-1500"
+              }
+            ],
+            "Company Address (from Company) 2": [
+              "Melbourne Office\n445 Pineda Court\nMelbourne, FL 32940 USA\n\nOrlando Office\n5025 S. Orange Avenue\nOrlando, FL 32809"
+            ],
+            "POC": [
+              {
+                "id": "recvH2SPLtMFutW6F",
+                "name": "Julie Costello"
+              }
+            ],
+            "Client Role": [
+              "OWNER"
+            ],
+            "Extracted Owner": "Zac Webster",
+            "Photo (from Client)": [
+              {
+                "id": "attLV6oNX4HwPLYwP",
+                "width": 400,
+                "height": 400,
+                "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/qlCqhZo7NqsK3nyPTcjVTg/sOVYrghTcoePomL78w5KiutcfAS6fKtO6vf8RDPc13cqNcNyHDQ5IPL-2d7XX6c3b2NfVsmDP14zrNGJftn96cT4TaodEDYTHcl85wVvc7eL3mcnWf8FkCGY-96mpgdTLLsQyKGPyWKndvRp6fJrlDiUziS5PXlFJo1ZwpdQiIyI-3j3ulbVOKjbLsZ3RARF/tGewjWopIbnMKX7t0SzIXg7oeolknPArvkexaG-ZSkk",
+                "filename": "9a8ce0f2-f9d2-4340-8e98-c6a15abdb015.png",
+                "size": 424514,
+                "type": "image/png",
+                "thumbnails": {
+                  "small": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/keloHAwy5PYVbQknHsemcA/O5DwL1IObVuiNGi4zEGFX9603dnwgMY-eMTMIOCKwPoLDLQjj_GDoZc0WANzSuLN-qoLnpoSym-JpMp4OVGh89E5Zp2RD4tZN1FvpAzOSaTwt1x1LOKcf6SnWmOGX4anO8BjrsjFj5kL3XcMkK72EA/ZQrRka58ozc6oTnnLvO7Ps5iqS-82sk6Umv71z9B-0M",
+                    "width": 36,
+                    "height": 36
+                  },
+                  "large": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/_2NTiglo2-dpcVVKSEBu7w/VM2ClP0PZPTZlMCsKTJLCz7keCpqaj4ZY_I-mqwIbTCKU6m0yT5FygYUUllHiKLexFDvIKBmfN4s3cjlmm5kgMb-UMTT9_OffukCQOeVs5U1kuAPBFO1_yCZJDY47JtFwFF3hhaUg52F1W-H_JV4rw/d8g_Zvh-LXXFOR2k0b03PBWpkWhdDR-KwAWgpmuprpw",
+                    "width": 400,
+                    "height": 400
+                  },
+                  "full": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/_aoIMC-_Am6i_7MGvg5o-Q/5_El_0xpsGgr8bLrfQSmYAxAOeflrhai_bRSu7XHzXBwouKkwlrt9eMoIuyUftcMxVRuqVwUjokhDrvVMvMAf6heSPNhR-UKNFEeLxu3RioVp4m_zSRTzWAjPDwKWyGrVvkorKWgW-b3p_wKk1x3Aw/62M9qlGxV3N0U34lK2ctp1s4oxYck7tQjaT_4ijJOz8",
+                    "width": 400,
+                    "height": 400
+                  }
+                }
+              }
+            ],
+            "RFP (from Projects)": [
+              {
+                "id": "attAuJPITnxJKWUSI",
+                "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/4nnKCA1ByYXGNPl3c2_htg/5HC3iCXTzgbMfNsldalQbDSHHmvMRHgeQCH0d7vVc21fLrQ_o1b8SNna4pIEuQ-iuOx7tu8ipbm99nPI-x0FHYBPbf6LZPPgpjlfQOpghxKPoaWpTMx-zByDEHNjpH7BJSjIArwADXtMYiGt0MIh1SPyV_y4IchG5-ZvyiZ4xv0AlXcDABSzPIr99FZW9juCIphwo5jC3rymP7P0p6UL_A/HkcdY_bOv-xrbqObjVAV6OuFN6ExfBZG5U8S6guTXMo",
+                "filename": "Scale Virtually Mail - RFP \u2014 MEC General Contractors \u2014 Zac Webstar.pdf",
+                "size": 308580,
+                "type": "application/pdf",
+                "thumbnails": {
+                  "small": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/baaTPrD2wd2pjoZnetYfvQ/oHaEna32bOKzevGZFWye7Z1cADMfC-_EIjbqsH6TrshHpJKdgzQim6iCSZw9mmqGT4jouh2hw7MLv8EV4pfgG97JZ4t3o6H-gx9k6Cz3CoOs7_nvCjroTvq9DzeQjR-t-SEk902aOfN5-vgi_Ti9xw/MMTgAvxuUT36vfzkqUBteSGDFzQoOz8OSlPql39wyFE",
+                    "width": 28,
+                    "height": 36
+                  },
+                  "large": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/BPm8aWBmK5cnjTcTZFQ7Qw/Th9tWci5kDLqpeFSYEp1HdTVHTg9fEK-hy9DzLfqQDQogKpIclWOP4UOwZdV-OaS2jUvmPZA1IizRQLaB-SEeerODaHuPzw0adYIy7onrH1ic0_fi_NWLXPPHB8HftXSAz9kuBjgWCzaP2ODdRuEZQ/2BQh_Rob3FwecX3HvVJ6Q4PiUTmRLlwuqV7kNLL6wgw",
+                    "width": 512,
+                    "height": 663
+                  }
+                }
+              }
+            ],
+            "PE Record ID": [
+              "recA5YmOytHMzaneM"
+            ],
+            "Solution Text": [
+              "Current State (AS-IS)"
+            ],
+            "Company Name": [
+              "M.E.C General Contractors"
+            ],
+            "Job Description (from Projects)": [
+              {
+                "id": "attSPZu7w8MG0vvJ0",
+                "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/-IHiDo9lg7JDd-mjY0WyGA/dQqtwcPMZ3l9XV8zwVMy-OFqNQz-fDQdz6S-MK_OIvUiPALrkZM11w3kjDxpNPgbufiM4vzcativpM_yT5aSBTg_A-F0XfSfcXd_9lpQz3roTiQIlUU1zCg6nd9K6Q6Eso5Qp94Ub7EB2edQM_OuVhTqb-NBIajR02TwPO8m2r1O87z34ChVEuhA6AizG3ysza-m5VWjj3_JI3QRuqmpmg/R1h5mjvF4-HcWBlgOSUdAgYWaac2o6jrnziOipH28rs",
+                "filename": "MEC Procore Standard Operating Procedures v1.2.pdf",
+                "size": 423622,
+                "type": "application/pdf",
+                "thumbnails": {
+                  "small": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/xqo-4QMArxPeoUPp_p00SQ/lJTYhaJfx2XjC7oZgvJqWxPUBKf7BOg3crHJqDwaN3GbBoPu9NNDyL66sWiPS-7ZqOue--UkqU6XbRkloJI8U30wIR4XNSlreEVsE5yDwToUEnyFLBxFOG4_gHzfIN-PoiUo6jZqpKXVudZQALpu1A/CBxCRWXeDGCST4Z-fShfzUOh2PkAYTeenMXDql3cD14",
+                    "width": 28,
+                    "height": 36
+                  },
+                  "large": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/_FoIRDlsUwTBDi5ZnDbP9g/ACyraCeVrTVRzcarYO0Aba9P8blAgICvctsIq8Ea_vIKabjpcLN9ruMZbvAZCinQ2VLIMuTrBWgpKL_FgI75GN8fu3vhlrRD_nqmR2G1_GQfOWLccy0EVlZ-WTiXAMhWUVKWwehEhN1F1Z6_8Bphng/gcJm6tIb4k9N423AB1-4N7hfSydzXIi2g35IevR0tzk",
+                    "width": 512,
+                    "height": 663
+                  }
+                }
+              }
+            ],
+            "POC Primary Contact Number (from POC Link) (from Projects)": [
+              "(571) 264-7371"
+            ],
+            "POC Name": [
+              "Julie Costello"
+            ],
+            "Other Teammate Job Title (from Projects)": [
+              "Associate Project Manager"
+            ],
+            "DC Recording and Summary (from Projects)": [
+              "Zac Webster - Additional Proj Coordinator - December 03\n\nVIEW RECORDING - 18 mins (No highlights)\nMeeting Purpose\nDefine the scope and process for hiring two new Project Coordinators (PCs).\nKey Takeaways\n- Hiring two full-time PCs at $11/hr to handle contracts, compliance, and invoicing.\n- Creating a new, chronological SOP for the PC role to replace the current, non-linear document, enabling faster onboarding.\n- Approved a $1,500 setup fee, a $1,000 discount off the standard $2,500, reflecting the existing SOP foundation.\n- Adopting a team-based model where each PC owns all tasks for their assigned projects, simplifying communication for PMs.\nTopics\nNew Hire Requirements\n- Need: Two full-time Project Coordinators (PCs).\n- Goal: Replicate the success of current PC, JC.\n    - Core Responsibilities:Draft and manage contracts\n    - Handle compliance paperwork\n    - Process invoicing (data entry, contact verification, invite to bill)\nNew SOP Development\n- Problem: The current SOP is non-linear and sectionalized, making it inefficient for training new hires.\n- Solution: Create a dedicated, chronological SOP for the PC role.\n- Process: Julie will provide a high-level workflow email \u2192 Scale Virtually will draft the SOP \u2192 A process engineering call will finalize it.\n- Rationale: The current SOP links to Procore's generic help docs, not MEC's specific workflows, making a custom document essential.\nPricing & Logistics\n    - Setup Fee: $1,500 (a $1,000 discount from the standard $2,500).Rationale: The existing SOP provides a strong foundation, reducing Scale Virtually's development work.\n- Hourly Rate: $11/hr per PC.\n- Training: Scale Virtually will train the new PCs. MEC can also include existing VAs in the training.\nPC Team Structure\n- Decision: Adopt a team-based model where each PC owns all tasks for their assigned projects.\n- Rationale: Simplifies communication for MEC's Project Managers (PMs), who will have one dedicated PC per project.\n- Future State: This structure will free up Max to take on a role similar to JC's, expanding the team's capacity.\nNext Steps\n- Julie: Email a high-level, chronological workflow for the PC role to Scale Virtually by tomorrow morning.\n- Deness: Send the addendum to MEC to confirm the two new PC roles and the $1,500 setup fee.\n    - Scale Virtually:Book a process engineering call with MEC upon receiving the workflow email and signed addendum.\n    - Begin sourcing candidates for the two PC roles.\nAction Items\n- Email Denesse PC role bullets (award\u2192invoicing) by Dec 4; then Scale Virtually draft PC SOP\u00a0-\u00a0WATCH (5 secs)\n- Email addendum to Julie/Zac re: 2 PCs; request signature; then Scale Virtually schedule process engineering call\u00a0-\u00a0WATCH (5 secs)\n"
+            ],
+            "Other Notes (from Projects)": [
+              "\u2022 Tools to be referenced only as mentioned: \n\u00a0\u00a0\u2022 Procore \n\u00a0\u00a0\u2022 Sage Intacct \n\u00a0\u00a0\u2022 ERP (as referenced in commitments workflow) "
+            ],
+            "Other Teammates to Join PEC (from Projects)": [
+              "Julie Costello"
+            ],
+            "Proposed Solutions (from Projects)": [
+              "\u2022 Clean and standardized Procore project setup across all assigned projects \n\u2022 Consistent document structure and completeness at project start \n\u2022 Smooth coordination between Project Coordinators, Precon, Accounting, and subcontractors \n\u2022 Reduced administrative burden on internal Project Coordinators"
+            ],
+            "Pain Points (from Projects)": [
+              "\u2022 Project Coordinators handling repetitive administrative setup tasks \n\u2022 Risk of inconsistency in Procore project setup and file structure \n\u2022 Time-intensive coordination across Procore, ERP, and accounting teams \n\u2022 Need to ensure projects are fully and correctly set up before financial and billing workflows begin"
+            ],
+            "Tasks (from Projects)": [
+              "- Project setup in Procore once project is assigned\n- Set up project team and initial directory in Procore\n- Upload and organize required documents in Procore, including:\n    - \u00a0Permit (if issued)\n    - \u00a0Notice of Commencement (NOC), if received\n    - \u00a0Plans\n    - \u00a0Correct file structure\n- Notify Preconstruction Admin / Manager when project is ready for budget and SOV syncing from Intacct\n- Notify Project Accountant (PA) that project has been created\n- Create commitments and SOVs\n- Send commitments to subcontractors and vendors and push to ERP\n- Create billing periods in Procore\n- Invite subcontractors to submit billing\n- \n- **For detailed work flow, please refer to the attached file.\n"
+            ],
+            "VA Title (from Projects)": [
+              "\u2022 VA Title: Project Coordinator VA (2 roles)"
+            ],
+            "Type of Client (from Projects)": [
+              "Website: https://mec-gc.com/\nIndustry: General Contractor\n- MEC delivers efficient, well-planned construction solutions. With over 50 years of expertise in General Contracting and Pre-Construction Services, we ensure quality projects completed on time and within budget.\n- Specializes in general contracting and pre-construction services, ensuring efficient, well-planned construction solutions."
+            ],
+            "Finance Notes (from Projects)": [
+              "None"
+            ],
+            "Client Rate (from Projects)": [
+              "$11 FT"
+            ],
+            "SUF Scope (from Projects)": [
+              "Single Role"
+            ],
+            "Prepared by (Email) (from Projects)": [
+              "denesse@scalevirtually.com"
+            ],
+            "Prepared By (from Projects)": [
+              "recOod73WJerM1ERa"
+            ],
+            "Sales Closer (from Projects)": [
+              "rec0FHTbH0rKOwQGc"
+            ],
+            "SUF Paid On (from Projects)": [
+              "2025-12-15"
+            ],
+            "CSA Signed On Date": [
+              "2025-12-04"
+            ],
+            "RFP Received Date (from Projects)": [
+              "2025-12-15"
+            ],
+            "CSA (from Projects)": [
+              {
+                "id": "attANn5lBj6TKHbsy",
+                "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/XSAK8px1hRVMOXt9vkUdSQ/rjZXgM6xvjTIt-8eW6x4nEvetXaxxCh8A6E1zrNjnIrYpFHrbKKf0q5_V8ja7WW5wNDlPy0XdiQHpDEtbRDpFc7vdb6IkNE-2fVhw7LVMyKJLgO0ecbCa5w-eaVbiig3Jis-d8kFhmJGozkQVEY9MbmpkRlvdK_rqcVSko6RgJ-6H6BICdSTniSVryW9dDJ-/l4AVQubPvBKUldB3BIOfyOttjI4fsiXhkQpBooflfUg",
+                "filename": "SV Additional Virtual Assistant Addendum (2).pdf",
+                "size": 242085,
+                "type": "application/pdf",
+                "thumbnails": {
+                  "small": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/s67rqczQykdhmrggkOYkJA/RRaMAkwuoqyjebuMIv1eXoWHgFkNH2MbSRKtszal4VERa7E92cczyDEk4jH-G5Dhln5CBdNLlCVR508LFnUQ_q-_t08yoV9C8rLXMLJDbTb6ncDV9Nh0mlQJocyabUCbr8TQbql3MySAx7S1AWZ4uA/jP9WnbE1fA4dyK3cVstKDRT7YJnueNCWJNXCPVELZ1I",
+                    "width": 28,
+                    "height": 36
+                  },
+                  "large": {
+                    "url": "https://v5.airtableusercontent.com/v3/u/50/50/1770940800000/KqzDQEryXP_NUEvxeYbmSg/ngzALmkc_XE2fJCOM_DRivXEsEovUKU7B7Gc-wvQ8qo7MPekM8O0MUHDoo3TeCE2qluTwdJr3SAfnHk_fBJ0y4zFROaNQ4aJ3XiVbcWb3X3NfPOUjwsAMzy4MUeHZCNSmsfXaVvPV9Uvm__hQlSkSg/X_5pay178gPmPND9a0s8jodNbhajAPB_C3dSw3WCOZU",
+                    "width": 512,
+                    "height": 663
+                  }
+                }
+              }
+            ],
+            "SUF Paid Amount (from Projects)": [
+              1500
+            ],
+            "Project ID (from Projects)": [
+              "ZW-121525-1500"
+            ],
+            "CSA Signed On": "2025-12-19",
+            "Client Name": [
+              "Zac Webster"
+            ],
+            "Bubble Unique ID": "1769088640982x750641427929474900",
+            "Process Engineer Names": [
+              "Aja Mojica"
+            ],
+            "VA Title Watcher": "2025-12-18T18:00:01.000Z",
+            "Initial PEC (text)": "Jan 12, 2026 6:42 AM",
+            "RFP Received Date (Text)": "Dec 15, 2025",
+            "Client Rate (from Projects) 2": [
+              "$11 FT"
+            ],
+            "Initial PEC Month": "January",
+            "Initial PEC Year": 2026,
+            "ClickUp List ID": "901414201453",
+            "POC Primary Email": [
+              "JCostello@mec-gc.com"
+            ],
+            "ClickUp Member ID": [
+              "61676104"
+            ]
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/d4042e18-8099-4406-829c-20c150dee974",
+          "executionMode": "production"
+        }
+      }
+    ],
+    "Create a folder": [
+      {
+        "json": {
+          "id": "90147645551",
+          "name": "DL-020526-1500",
+          "orderindex": 45,
+          "override_statuses": false,
+          "hidden": false,
+          "space": {
+            "id": "90144235756",
+            "name": "PROCESS ENGINEERING",
+            "access": true
+          },
+          "task_count": "0",
+          "archived": false,
+          "statuses": [],
+          "deleted": false,
+          "lists": [],
+          "permission_level": "create"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Create a list": [
+      {
+        "json": {
+          "id": "901414258478",
+          "list": {
+            "id": "901414258478",
+            "name": "Project Coordinator",
+            "deleted": true,
+            "orderindex": 1,
+            "priority": null,
+            "assignee": null,
+            "task_count": 0,
+            "due_date": null,
+            "start_date": null,
+            "folder": {
+              "id": "90147605079",
+              "name": "ZW-121525-1500",
+              "hidden": false,
+              "access": true
+            },
+            "space": {
+              "id": "90144235756",
+              "name": "PROCESS ENGINEERING",
+              "access": true
+            },
+            "inbound_address": "a.t.901414258478.u-95098109.86025a18-a6d8-4256-95e0-1f768f009299@tasks.clickup.com",
+            "archived": false,
+            "override_statuses": false,
+            "statuses": [
+              {
+                "id": "p90144235756_Jpwaa30F",
+                "status": "not started",
+                "orderindex": 0,
+                "color": "#87909e",
+                "type": "open",
+                "status_group": "proj_90144235756"
+              },
+              {
+                "id": "p90144235756_XYuV28CW",
+                "status": "in progress",
+                "orderindex": 1,
+                "color": "#1090e0",
+                "type": "custom",
+                "status_group": "proj_90144235756"
+              },
+              {
+                "id": "p90144235756_Utwcxo9e",
+                "status": "for review",
+                "orderindex": 2,
+                "color": "#5f55ee",
+                "type": "custom",
+                "status_group": "proj_90144235756"
+              },
+              {
+                "id": "p90144235756_OZw0PR9B",
+                "status": "completed",
+                "orderindex": 3,
+                "color": "#3db88b",
+                "type": "done",
+                "status_group": "proj_90144235756"
+              },
+              {
+                "id": "p90144235756_gxfjgDTZ",
+                "status": "Closed",
+                "orderindex": 4,
+                "color": "#008844",
+                "type": "closed",
+                "status_group": "proj_90144235756"
+              }
+            ],
+            "permission_level": "create"
+          }
+        }
+      }
+    ]
+  },
+  "versionId": "f6cff0cf-6545-457c-bbce-b764803006dc",
+  "activeVersionId": null,
+  "versionCounter": 104,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-04T19:03:43.616Z",
+      "createdAt": "2026-02-04T19:03:43.616Z",
+      "role": "workflow:owner",
+      "workflowId": "KVQenkYPwbDvfFdy",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

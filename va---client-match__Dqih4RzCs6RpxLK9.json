@@ -1,0 +1,480 @@
+{
+  "updatedAt": "2026-04-14T13:08:19.000Z",
+  "createdAt": "2025-11-07T21:31:57.526Z",
+  "id": "Dqih4RzCs6RpxLK9",
+  "name": "VA - Client Match",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        -16
+      ],
+      "id": "25c0e329-64f3-4254-ac06-e13f36c753d3",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl5uteWre548NeMZ",
+          "mode": "list",
+          "cachedResultName": "Virtual Assistants",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl5uteWre548NeMZ"
+        },
+        "filterByFormula": "OR({VA Status} = 'Bench', {VA Status} = 'Limbo')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        -16
+      ],
+      "id": "20b11d2c-898c-443b-97f6-60e899475588",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.geminiRequestBody.contents[0].parts[0].text }}\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        -16
+      ],
+      "id": "7e461a67-90f3-4797-abfd-e2e2e01f0ed8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2416,
+        208
+      ],
+      "id": "9dd1ca57-414d-4f3f-badf-68a47fe1da38",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7BN2R0TQRbTnikkq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// DATA PREPARATION FOR GEMINI AI MATCHING\n// ============================================\n\nconst allItems = $input.all();\nconsole.log('Total items received:', allItems.length);\n\n// ============================================\n// SEPARATE VA RECORDS (with PDFs) FROM JOB DESCRIPTION\n// ============================================\nlet vaRecordsWithPDFs = [];\nlet jobDescriptionRaw = null;\n\nallItems.forEach((item, index) => {\n  const data = item.json;\n  \n  // Check if this item is from Google Docs (Job Description)\n  if (data.documentId && data.content) {\n    console.log(`\u2713 Job Description found (documentId: ${data.documentId.substring(0, 20)}...)`);\n    jobDescriptionRaw = data;\n    return;\n  }\n  \n  // Check if this item has PDF binary data (VA Resume)\n  if (item.binary && item.binary.data) {\n    console.log(`\u2713 VA Resume PDF #${vaRecordsWithPDFs.length + 1}:`, data.candidate_name || data.resume_filename || 'Unknown');\n    \n    // Store both JSON data and binary PDF\n    vaRecordsWithPDFs.push({\n      json: data,\n      binary: item.binary.data.data, // The actual PDF binary\n      fileName: data.resume_filename || data.candidate_name || `Resume_${vaRecordsWithPDFs.length + 1}.pdf`,\n      candidateName: data.candidate_name || 'Unknown Candidate'\n    });\n  }\n});\n\nconsole.log('===========================================');\nconsole.log('VA Resumes (PDFs) found:', vaRecordsWithPDFs.length);\nconsole.log('Job Description found:', jobDescriptionRaw ? 'Yes' : 'No');\nconsole.log('===========================================');\n\n// Validation\nif (vaRecordsWithPDFs.length === 0) {\n  throw new Error('No VA resume PDFs found. Make sure HTTP Request node is downloading PDFs correctly.');\n}\n\nif (!jobDescriptionRaw) {\n  throw new Error('No Job Description found. Make sure Google Docs node is included in the merge.');\n}\n\n// ============================================\n// EXTRACT JOB DESCRIPTION TEXT\n// ============================================\nlet jobDescriptionText = jobDescriptionRaw.content || \n                         jobDescriptionRaw.text || \n                         jobDescriptionRaw.fullText || \n                         'No job description content available';\n\nconsole.log('Job Description length:', jobDescriptionText.length, 'characters');\n\n// Clean up job description (remove excessive whitespace)\njobDescriptionText = jobDescriptionText\n  .replace(/\\n{3,}/g, '\\n\\n')\n  .replace(/\\s{2,}/g, ' ')\n  .trim();\n\n// ============================================\n// PREPARE PDFs FOR GEMINI (Base64 Encoding)\n// ============================================\nconst candidatesWithBase64 = vaRecordsWithPDFs.map((va, index) => {\n  // Convert binary to base64\n  const base64PDF = va.binary.toString('base64');\n  \n  return {\n    candidateNumber: index + 1,\n    name: va.candidateName,\n    fileName: va.fileName,\n    base64PDF: base64PDF,\n    fileSize: va.binary.length,\n    fileSizeKB: Math.round(va.binary.length / 1024),\n    // Include any additional metadata from validation\n    status: va.json.extraction_status || 'unknown',\n    validationPassed: va.json.validation_passed || false\n  };\n});\n\n// ============================================\n// CREATE GEMINI AI PROMPT\n// ============================================\nconst geminiPrompt = `You are an expert Virtual Assistant Recruiter for Scale Virtually.\n\nYour task: Analyze ${candidatesWithBase64.length} candidate resumes (provided as PDFs) and match them against the client's job requirements.\n\n---\n\n## CLIENT JOB REQUIREMENTS:\n\n${jobDescriptionText}\n\n---\n\n## YOUR ANALYSIS INSTRUCTIONS:\n\nYou will receive ${candidatesWithBase64.length} PDF resumes. For EACH candidate, you must:\n\n1. **Extract Resume Content**: Read and parse the entire PDF to extract:\n   - Full name and contact information\n   - Years of experience\n   - Skills (technical and soft skills)\n   - Work history (companies, roles, durations)\n   - Education and certifications\n   - Tools/software proficiency\n   - Industries worked in\n   - Notable achievements\n\n2. **Evaluate Match Against Job Requirements**:\n   - Calculate a Match Score (0-100%)\n   - Identify Key Strengths (what makes them suitable)\n   - Identify Concerns/Gaps (what they're missing)\n   - Provide clear Ranking Rationale\n\n3. **Rank All Candidates**: Order them from best match (#1) to least suitable (#${candidatesWithBase64.length})\n\n---\n\n## OUTPUT FORMAT (Required - JSON Array):\n\nReturn a JSON array with this exact structure:\n\n[\n  {\n    \"rank\": 1,\n    \"candidateNumber\": 1,\n    \"name\": \"Full Name from Resume\",\n    \"matchScore\": 85,\n    \"keyStrengths\": [\n      \"Specific strength 1\",\n      \"Specific strength 2\",\n      \"Specific strength 3\"\n    ],\n    \"concernsGaps\": [\n      \"Specific concern 1\",\n      \"Specific concern 2\"\n    ],\n    \"rankingRationale\": \"Clear explanation of why this ranking\",\n    \"yearsExperience\": 5,\n    \"topSkills\": [\"Skill 1\", \"Skill 2\", \"Skill 3\"],\n    \"relevantTools\": [\"Tool 1\", \"Tool 2\"],\n    \"contactInfo\": {\n      \"email\": \"email@example.com\",\n      \"phone\": \"+1234567890\"\n    }\n  }\n  // ... repeat for all ${candidatesWithBase64.length} candidates\n]\n\n---\n\n## EVALUATION PRIORITIES:\n\n1. **Skills Match**: How well their skills align with job requirements (40%)\n2. **Experience Level**: Relevance and depth of experience (30%)\n3. **Tools Proficiency**: Familiarity with required software (15%)\n4. **Communication Skills**: Evidence in resume quality and clarity (10%)\n5. **Cultural/Industry Fit**: Experience in relevant industries (5%)\n\n---\n\nBegin analysis now. Return ONLY the JSON array, no markdown formatting, no explanations outside the JSON.`;\n\n// ============================================\n// PREPARE GEMINI API REQUEST PAYLOAD\n// ============================================\n// Gemini supports multiple documents in one request\n// We'll structure the content parts for Gemini's multimodal API\n\nconst geminiContentParts = [\n  {\n    text: geminiPrompt\n  }\n];\n\n// Add each PDF as a document part\ncandidatesWithBase64.forEach(candidate => {\n  geminiContentParts.push({\n    inline_data: {\n      mime_type: \"application/pdf\",\n      data: candidate.base64PDF\n    }\n  });\n  \n  // Add a text part to identify this candidate\n  geminiContentParts.push({\n    text: `[CANDIDATE #${candidate.candidateNumber}: ${candidate.name} - ${candidate.fileName}]`\n  });\n});\n\n// ============================================\n// CREATE GEMINI API REQUEST BODY\n// ============================================\nconst geminiRequestBody = {\n  contents: [\n    {\n      parts: geminiContentParts\n    }\n  ],\n  generationConfig: {\n    temperature: 0.2, // Lower temperature for more consistent analysis\n    topK: 40,\n    topP: 0.95,\n    maxOutputTokens: 8192,\n    responseMimeType: \"application/json\" // Request JSON response\n  },\n  safetySettings: [\n    {\n      category: \"HARM_CATEGORY_HARASSMENT\",\n      threshold: \"BLOCK_NONE\"\n    },\n    {\n      category: \"HARM_CATEGORY_HATE_SPEECH\",\n      threshold: \"BLOCK_NONE\"\n    },\n    {\n      category: \"HARM_CATEGORY_SEXUALLY_EXPLICIT\",\n      threshold: \"BLOCK_NONE\"\n    },\n    {\n      category: \"HARM_CATEGORY_DANGEROUS_CONTENT\",\n      threshold: \"BLOCK_NONE\"\n    }\n  ]\n};\n\n// ============================================\n// RETURN PREPARED DATA FOR GEMINI API NODE\n// ============================================\nreturn {\n  json: {\n    geminiRequestBody: geminiRequestBody,\n    metadata: {\n      totalCandidates: candidatesWithBase64.length,\n      jobDescriptionLength: jobDescriptionText.length,\n      candidates: candidatesWithBase64.map(c => ({\n        number: c.candidateNumber,\n        name: c.name,\n        fileName: c.fileName,\n        fileSizeKB: c.fileSizeKB\n      })),\n      processedAt: new Date().toISOString(),\n      geminiModel: \"gemini-1.5-pro\" // or \"gemini-1.5-flash\" for faster processing\n    },\n    // Store JD separately for reference\n    jobDescription: jobDescriptionText\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        -240
+      ],
+      "id": "aeb0ae61-60ac-42c5-bbb5-2d22ebad0b6a",
+      "name": "Data Preparation"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// AI RECOMMENDATIONS FORMATTER - CLAUDE AI OUTPUT\n// ============================================\n// Purpose: Parse Claude's JSON responses and format into Email (HTML) and Slack\n\nconst allItems = $input.all();\n\nconsole.log('Total items received from Claude:', allItems.length);\n\n// ============================================\n// PARSE CLAUDE AI RESPONSES\n// ============================================\nconst recommendations = [];\n\nallItems.forEach((item, index) => {\n  try {\n    const data = item.json;\n    \n    // Claude returns the response in content array\n    let claudeResponse = null;\n    \n    // Extract Claude's response from the API response structure\n    if (data.content && Array.isArray(data.content)) {\n      // Find the text content\n      const textContent = data.content.find(c => c.type === 'text');\n      if (textContent && textContent.text) {\n        claudeResponse = textContent.text;\n      }\n    } else if (data.output) {\n      claudeResponse = data.output;\n    } else if (typeof data === 'string') {\n      claudeResponse = data;\n    }\n    \n    if (!claudeResponse) {\n      console.log(`\u26a0 No response found for item ${index + 1}`);\n      return;\n    }\n    \n    console.log(`Processing candidate ${index + 1}, response length: ${claudeResponse.length}`);\n    \n    // Parse JSON from Claude's response\n    // Claude might wrap JSON in markdown code blocks, so strip them\n    let jsonText = claudeResponse.trim();\n    \n    // Remove markdown code blocks if present\n    jsonText = jsonText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '');\n    \n    // Parse the JSON\n    const parsed = JSON.parse(jsonText);\n    \n    // Extract data from Claude's JSON structure\n    recommendations.push({\n      candidateNumber: index + 1,\n      name: parsed.candidateName || `Candidate ${index + 1}`,\n      matchScore: parsed.matchScore || 0,\n      overallRecommendation: parsed.overallRecommendation || 'Not Assessed',\n      keyStrengths: Array.isArray(parsed.keyStrengths) \n        ? parsed.keyStrengths.join(' \u2022 ') \n        : parsed.keyStrengths || 'N/A',\n      concerns: Array.isArray(parsed.concernsGaps) \n        ? parsed.concernsGaps.join(' \u2022 ') \n        : parsed.concernsGaps || 'None identified',\n      reasoning: parsed.rankingRationale || parsed.detailedNotes || 'N/A',\n      \n      // Additional details\n      relevantExperience: parsed.relevantExperience || null,\n      skillsAnalysis: parsed.skillsAnalysis || null,\n      communicationAssessment: parsed.communicationAssessment || 'N/A',\n      \n      // Original metadata if available\n      contractorId: item.json.metadata?.originalData?.contractorId || 'N/A',\n      status: item.json.metadata?.originalData?.status || 'Unknown',\n      availability: item.json.metadata?.originalData?.availability || 'N/A'\n    });\n    \n    console.log(`\u2713 Parsed candidate: ${parsed.candidateName} - ${parsed.matchScore}%`);\n    \n  } catch (error) {\n    console.error(`Error parsing item ${index + 1}:`, error.message);\n    \n    // Add placeholder for failed parsing\n    recommendations.push({\n      candidateNumber: index + 1,\n      name: `Candidate ${index + 1} (Parse Error)`,\n      matchScore: 0,\n      overallRecommendation: 'Error',\n      keyStrengths: 'Error parsing response',\n      concerns: 'Could not parse AI response',\n      reasoning: `Parse error: ${error.message}`\n    });\n  }\n});\n\n// Sort by match score (highest first)\nrecommendations.sort((a, b) => b.matchScore - a.matchScore);\n\nconsole.log('===========================================');\nconsole.log('Total recommendations parsed:', recommendations.length);\nconsole.log('Top candidate:', recommendations[0]?.name);\nconsole.log('Top score:', recommendations[0]?.matchScore);\nconsole.log('===========================================');\n\n// ============================================\n// HELPER: GET RAG COLOR BASED ON MATCH SCORE\n// ============================================\nconst getScoreColor = (score) => {\n  if (score >= 80) return '#28a745'; // Green\n  if (score >= 60) return '#ffc107'; // Amber/Yellow\n  if (score >= 40) return '#fd7e14'; // Orange\n  return '#dc3545'; // Red\n};\n\nconst getScoreLabel = (score) => {\n  if (score >= 80) return 'Excellent Match';\n  if (score >= 60) return 'Good Match';\n  if (score >= 40) return 'Fair Match';\n  return 'Poor Match';\n};\n\n// ============================================\n// EXTRACT CLIENT INFO (from first item's metadata or set defaults)\n// ============================================\nconst clientName = 'Jesse Herfel';\nconst jobTitle = 'Executive Virtual Assistant';\nconst companyName = 'Scale Virtually';\n\n// ============================================\n// CREATE HTML EMAIL FORMAT - ALL CANDIDATES\n// ============================================\nconst htmlEmailTable = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body {\n      font-family: Arial, sans-serif;\n      color: #333;\n      line-height: 1.6;\n      max-width: 1400px;\n      margin: 0 auto;\n      padding: 20px;\n      background-color: #f5f5f5;\n    }\n    .header {\n      background: linear-gradient(135deg, #FF6B35 0%, #ff8c42 100%);\n      color: white;\n      padding: 25px;\n      border-radius: 8px 8px 0 0;\n      margin-bottom: 0;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n    }\n    .header h1 {\n      margin: 0;\n      font-size: 28px;\n      font-weight: 700;\n    }\n    .header p {\n      margin: 8px 0 0 0;\n      font-size: 15px;\n      opacity: 0.95;\n    }\n    .summary {\n      background-color: #fff;\n      padding: 20px 25px;\n      border-left: 5px solid #FF6B35;\n      margin: 0 0 25px 0;\n      border-radius: 0 0 8px 8px;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n    }\n    .summary strong {\n      color: #FF6B35;\n    }\n    .stats {\n      display: grid;\n      grid-template-columns: repeat(4, 1fr);\n      gap: 15px;\n      margin: 20px 0;\n    }\n    .stat-card {\n      background: white;\n      padding: 15px;\n      border-radius: 8px;\n      text-align: center;\n      box-shadow: 0 2px 4px rgba(0,0,0,0.08);\n    }\n    .stat-number {\n      font-size: 32px;\n      font-weight: bold;\n      color: #FF6B35;\n      display: block;\n    }\n    .stat-label {\n      font-size: 13px;\n      color: #6c757d;\n      margin-top: 5px;\n    }\n    table {\n      width: 100%;\n      border-collapse: separate;\n      border-spacing: 0;\n      margin: 20px 0;\n      background-color: white;\n      box-shadow: 0 2px 8px rgba(0,0,0,0.1);\n      border-radius: 8px;\n      overflow: hidden;\n    }\n    thead {\n      background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%);\n      color: white;\n    }\n    th {\n      padding: 16px 14px;\n      text-align: left;\n      font-weight: 600;\n      font-size: 14px;\n      text-transform: uppercase;\n      letter-spacing: 0.5px;\n    }\n    td {\n      padding: 16px 14px;\n      border-bottom: 1px solid #e9ecef;\n      vertical-align: top;\n      font-size: 13px;\n    }\n    tr:last-child td {\n      border-bottom: none;\n    }\n    tbody tr {\n      transition: background-color 0.2s;\n    }\n    tbody tr:hover {\n      background-color: #f8f9fa;\n    }\n    tbody tr:nth-child(odd) {\n      background-color: #fafbfc;\n    }\n    .rank {\n      font-weight: bold;\n      font-size: 18px;\n      color: #2C3E50;\n      text-align: center;\n    }\n    .top-badge {\n      display: inline-block;\n      background: #ffc107;\n      color: #000;\n      padding: 3px 8px;\n      border-radius: 12px;\n      font-size: 10px;\n      font-weight: 700;\n      margin-top: 5px;\n    }\n    .match-score {\n      text-align: center;\n      font-weight: bold;\n    }\n    .score-badge {\n      display: inline-block;\n      padding: 8px 16px;\n      border-radius: 20px;\n      font-size: 16px;\n      font-weight: 700;\n      color: white;\n      min-width: 60px;\n    }\n    .score-label {\n      display: block;\n      font-size: 11px;\n      margin-top: 4px;\n      font-weight: normal;\n      opacity: 0.9;\n    }\n    .candidate-name {\n      font-weight: 600;\n      color: #2C3E50;\n      font-size: 15px;\n      margin-bottom: 4px;\n    }\n    .candidate-number {\n      color: #6c757d;\n      font-size: 12px;\n      font-style: italic;\n    }\n    .recommendation-badge {\n      display: inline-block;\n      padding: 4px 10px;\n      border-radius: 12px;\n      font-size: 11px;\n      font-weight: 600;\n      margin-top: 3px;\n    }\n    .section-title {\n      font-weight: 600;\n      color: #495057;\n      margin-bottom: 8px;\n      font-size: 13px;\n      text-transform: uppercase;\n      letter-spacing: 0.5px;\n    }\n    .strengths-text {\n      color: #1e7e34;\n      line-height: 1.7;\n      margin: 0;\n    }\n    .concerns-text {\n      color: #bd2130;\n      line-height: 1.7;\n      margin: 0 0 12px 0;\n    }\n    .reasoning-text {\n      color: #495057;\n      line-height: 1.7;\n      padding: 10px;\n      background-color: #f8f9fa;\n      border-radius: 6px;\n      font-size: 12px;\n      border-left: 3px solid #6c757d;\n      margin: 0;\n    }\n    .footer {\n      margin-top: 30px;\n      padding: 25px;\n      background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%);\n      border-radius: 8px;\n      text-align: center;\n      color: white;\n      font-size: 13px;\n      box-shadow: 0 2px 8px rgba(0,0,0,0.1);\n    }\n    .footer strong {\n      font-size: 16px;\n      display: block;\n      margin-bottom: 5px;\n    }\n    @media print {\n      body { background-color: white; }\n      .stat-card, table { box-shadow: none; }\n    }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>\ud83c\udfaf VA Matching Analysis - Claude AI Powered</h1>\n    <p><strong>Client:</strong> ${clientName} | <strong>Position:</strong> ${jobTitle}</p>\n  </div>\n  \n  <div class=\"summary\">\n    <strong>AI Analysis Complete:</strong> ${recommendations.length} candidates have been comprehensively analyzed using Claude AI. Each resume was reviewed and evaluated for skills match, relevant experience, cultural fit, and overall suitability for the Executive VA role.\n  </div>\n\n  <div class=\"stats\">\n    <div class=\"stat-card\">\n      <span class=\"stat-number\">${recommendations.length}</span>\n      <div class=\"stat-label\">Total Candidates</div>\n    </div>\n    <div class=\"stat-card\">\n      <span class=\"stat-number\">${recommendations.filter(r => r.matchScore >= 80).length}</span>\n      <div class=\"stat-label\">Excellent Matches (80%+)</div>\n    </div>\n    <div class=\"stat-card\">\n      <span class=\"stat-number\">${recommendations.filter(r => r.matchScore >= 60 && r.matchScore < 80).length}</span>\n      <div class=\"stat-label\">Good Matches (60-79%)</div>\n    </div>\n    <div class=\"stat-card\">\n      <span class=\"stat-number\">${recommendations.length > 0 ? Math.round(recommendations.reduce((sum, r) => sum + r.matchScore, 0) / recommendations.length) : 0}%</span>\n      <div class=\"stat-label\">Average Match Score</div>\n    </div>\n  </div>\n\n  <table>\n    <thead>\n      <tr>\n        <th style=\"width: 5%;\">Rank</th>\n        <th style=\"width: 20%;\">Candidate</th>\n        <th style=\"width: 10%;\">Match Score</th>\n        <th style=\"width: 65%;\">Claude AI Analysis</th>\n      </tr>\n    </thead>\n    <tbody>\n      ${recommendations.map((rec, index) => `\n        <tr>\n          <td class=\"rank\">\n            ${index + 1}\n            ${index < 5 ? `<div class=\"top-badge\">TOP ${index + 1}</div>` : ''}\n          </td>\n          <td>\n            <div class=\"candidate-name\">${rec.name}</div>\n            <div class=\"candidate-number\">Candidate #${rec.candidateNumber}</div>\n            <div class=\"recommendation-badge\" style=\"background-color: ${rec.overallRecommendation.includes('Strong') ? '#28a745' : rec.overallRecommendation.includes('Good') ? '#ffc107' : rec.overallRecommendation.includes('Moderate') ? '#fd7e14' : '#dc3545'}; color: white;\">\n              ${rec.overallRecommendation}\n            </div>\n          </td>\n          <td class=\"match-score\">\n            <span class=\"score-badge\" style=\"background-color: ${getScoreColor(rec.matchScore)};\">\n              ${rec.matchScore}%\n              <span class=\"score-label\">${getScoreLabel(rec.matchScore)}</span>\n            </span>\n          </td>\n          <td>\n            <div class=\"section-title\">\u2713 Key Strengths</div>\n            <p class=\"strengths-text\">${rec.keyStrengths}</p>\n            \n            <div class=\"section-title\" style=\"margin-top: 12px;\">\u26a0 Concerns / Gaps</div>\n            <p class=\"concerns-text\">${rec.concerns}</p>\n            \n            <div class=\"section-title\" style=\"margin-top: 12px;\"> Gemini's Assessment</div>\n            <p class=\"reasoning-text\">${rec.reasoning}</p>\n          </td>\n        </tr>\n      `).join('')}\n    </tbody>\n  </table>\n\n  <div class=\"footer\">\n    <strong>Scale Virtually</strong>\n    <p>AI-Powered VA Matching System (Claude AI)</p>\n    <p>Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>\n  </div>\n</body>\n</html>\n`;\n\n// ============================================\n// CREATE SLACK FORMAT - TOP 10 + SUMMARY\n// ============================================\nconst topCandidates = recommendations.slice(0, 10);\nconst slackMessage = `*\ud83c\udfaf VA MATCHING ANALYSIS - CLAUDE AI RESULTS*\n\n*Client:* ${clientName}\n*Position:* ${jobTitle}\n*Generated:* ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}\n\n*\ud83d\udcca Analysis Summary:*\n- Total Candidates: *${recommendations.length}*\n- Excellent Matches (80%+): *${recommendations.filter(r => r.matchScore >= 80).length}*\n- Good Matches (60-79%): *${recommendations.filter(r => r.matchScore >= 60 && r.matchScore < 80).length}*\n- Average Score: *${recommendations.length > 0 ? Math.round(recommendations.reduce((sum, r) => sum + r.matchScore, 0) / recommendations.length) : 0}%*\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n*TOP 10 CANDIDATES*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n${topCandidates.map((rec, index) => `\n*${index + 1}. ${rec.name}* ${index === 0 ? '\u2b50 #1 MATCH' : index < 3 ? '\ud83c\udf1f' : ''}\n   ${rec.overallRecommendation} | Score: *${rec.matchScore}%* ${rec.matchScore >= 80 ? '\ud83d\udfe2' : rec.matchScore >= 60 ? '\ud83d\udfe1' : rec.matchScore >= 40 ? '\ud83d\udfe0' : '\ud83d\udd34'}\n   \n   \u2705 *Strengths:* ${rec.keyStrengths.substring(0, 180)}${rec.keyStrengths.length > 180 ? '...' : ''}\n   \n   \u26a0\ufe0f *Gaps:* ${rec.concerns.substring(0, 150)}${rec.concerns.length > 150 ? '...' : ''}\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n`).join('\\n')}\n\n\ud83d\udce7 *Full analysis with all ${recommendations.length} candidates available in HTML email*\n\n_Powered by Claude AI - Scale Virtually_\n`;\n\n// ============================================\n// CATEGORIZE CANDIDATES BY SCORE\n// ============================================\nconst excellentMatches = recommendations.filter(r => r.matchScore >= 80);\nconst goodMatches = recommendations.filter(r => r.matchScore >= 60 && r.matchScore < 80);\nconst fairMatches = recommendations.filter(r => r.matchScore >= 40 && r.matchScore < 60);\nconst poorMatches = recommendations.filter(r => r.matchScore < 40);\n\n// ============================================\n// RETURN ALL FORMATS\n// ============================================\nreturn {\n  json: {\n    // Formatted outputs\n    htmlEmail: htmlEmailTable,\n    slackMessage: slackMessage,\n    \n    // All recommendations (sorted by score)\n    recommendations: recommendations,\n    \n    // Categorized\n    categorized: {\n      excellent: excellentMatches.map(r => ({ \n        name: r.name, \n        candidateNumber: r.candidateNumber, \n        score: r.matchScore,\n        recommendation: r.overallRecommendation\n      })),\n      good: goodMatches.map(r => ({ \n        name: r.name, \n        candidateNumber: r.candidateNumber, \n        score: r.matchScore,\n        recommendation: r.overallRecommendation\n      })),\n      fair: fairMatches.map(r => ({ \n        name: r.name, \n        candidateNumber: r.candidateNumber, \n        score: r.matchScore,\n        recommendation: r.overallRecommendation\n      })),\n      poor: poorMatches.map(r => ({ \n        name: r.name, \n        candidateNumber: r.candidateNumber, \n        score: r.matchScore,\n        recommendation: r.overallRecommendation\n      }))\n    },\n    \n    // Metadata\n    metadata: {\n      totalCandidates: recommendations.length,\n      excellentMatches: excellentMatches.length,\n      goodMatches: goodMatches.length,\n      fairMatches: fairMatches.length,\n      poorMatches: poorMatches.length,\n      averageScore: recommendations.length > 0 \n        ? Math.round(recommendations.reduce((sum, r) => sum + r.matchScore, 0) / recommendations.length)\n        : 0,\n      topCandidate: recommendations[0]?.name || 'N/A',\n      topScore: recommendations[0]?.matchScore || 0,\n      generatedAt: new Date().toISOString(),\n      clientInfo: {\n        name: clientName,\n        position: jobTitle,\n        company: companyName\n      }\n    }\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        -16
+      ],
+      "id": "ef200eef-ed43-47c6-bd75-4c77a08d3942",
+      "name": "Structure Data"
+    },
+    {
+      "parameters": {
+        "sendTo": "jenn@scalevirtually.com",
+        "subject": "Candidates",
+        "message": "={{ $json.htmlEmail }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3232,
+        -16
+      ],
+      "id": "7c5fc0f5-186b-45d4-bcc2-4bb9fd6e4dd9",
+      "name": "Send a message",
+      "webhookId": "ea6a4962-f52d-4b2a-8308-b20a6e08d339",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === N8N CODE NODE: Convert Resume Link to Direct Download ===\n// Specifically handles \"Resume [Link]\" field from Airtable\n\n// Helper function to extract FILE_ID from Google Drive URL\nfunction extractFileId(url) {\n  if (!url || typeof url !== 'string') return null;\n  \n  // Match pattern: /file/d/FILE_ID/view\n  const match = url.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/);\n  return match ? match[1] : null;\n}\n\n// Helper function to create direct download URL\nfunction createDirectDownloadUrl(fileId) {\n  return `https://drive.google.com/uc?export=download&id=${fileId}`;\n}\n\n// Process all items from Airtable\nconst processedItems = items.map(item => {\n  const data = { ...item.json };\n  \n  // === Process \"Resume [Link]\" field ===\n  if (data[\"Resume [Link]\"]) {\n    const fileId = extractFileId(data[\"Resume [Link]\"]);\n    \n    if (fileId) {\n      // Add new field with direct download URL\n      data[\"Resume Direct Download\"] = createDirectDownloadUrl(fileId);\n      \n      // Keep original URL for reference\n      data[\"Resume Original Link\"] = data[\"Resume [Link]\"];\n      \n      // Optional: Replace the original field with direct download\n      // Uncomment the line below if you want to replace the original Resume [Link] field\n      // data[\"Resume [Link]\"] = createDirectDownloadUrl(fileId);\n    }\n  }\n  \n  return { json: data };\n});\n\nreturn processedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -16
+      ],
+      "id": "cafaeba9-9d48-4f09-b9c6-724581f368be",
+      "name": "Transform URL"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === N8N CODE NODE: Convert Resume Link to Direct Download ===\n// Specifically handles \"Resume [Link]\" field from Airtable\n// TEST VERSION - Returns only first item\n\n// Helper function to extract FILE_ID from Google Drive URL\nfunction extractFileId(url) {\n  if (!url || typeof url !== 'string') return null;\n  \n  // Match pattern: /file/d/FILE_ID/view\n  const match = url.match(/\\/file\\/d\\/([a-zA-Z0-9_-]+)/);\n  return match ? match[1] : null;\n}\n\n// Helper function to create direct download URL\nfunction createDirectDownloadUrl(fileId) {\n  return `https://drive.google.com/uc?export=download&id=${fileId}`;\n}\n\n// Process ONLY the first item for testing\nconst firstItem = items[0];\nconst data = { ...firstItem.json };\n\n// === Process \"Resume [Link]\" field ===\nif (data[\"Resume [Link]\"]) {\n  const fileId = extractFileId(data[\"Resume [Link]\"]);\n  \n  if (fileId) {\n    // Add new field with direct download URL\n    data[\"Resume Direct Download\"] = createDirectDownloadUrl(fileId);\n    \n    // Keep original URL for reference\n    data[\"Resume Original Link\"] = data[\"Resume [Link]\"];\n    \n    // Optional: Replace the original field with direct download\n    // Uncomment the line below if you want to replace the original Resume [Link] field\n    // data[\"Resume [Link]\"] = createDirectDownloadUrl(fileId);\n  }\n}\n\n// Return only the first item\nreturn [{ json: data }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -304
+      ],
+      "id": "383eee2e-b45a-469d-bfab-8bc139a10364",
+      "name": "Transform URL 1 VA"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1FXlvpNpAgYCVgsE2tfiRAcqI0gTQTcPmhVFBNmWh6GQ/edit?tab=t.0#heading=h.jw1c2hspc5yq"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        816,
+        400
+      ],
+      "id": "37f639e9-3945-4fcb-8c7e-5830f8107b1a",
+      "name": "Get a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "rFOO1V6uOXqD0MSE",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "990140e3-f038-4222-aa60-69d5c9d234bb",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        864,
+        -16
+      ],
+      "id": "6c48c45b-8ef8-4906-9650-195cd16f4197",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// EXTRACT RESUME URL - Place RIGHT BEFORE HTTP Request Node\n// ============================================\n// This ensures the URL is available as a simple field for HTTP Request\n\nconst items = $input.all();\n\nconsole.log('Total input items:', items.length);\n\n// Process each item\nconst processedItems = items.map((item, index) => {\n  const data = item.json;\n  \n  // Try multiple field names to find the resume URL\n  let resumeUrl = \n    data['Resume Direct Download'] ||\n    data['resumeLink'] ||\n    data['Resume [Link]'] ||\n    data.resumeUrl ||\n    null;\n  \n  // Log what we found\n  console.log(`Item ${index + 1}: Resume URL =`, resumeUrl || 'NOT FOUND');\n  \n  // Validate URL\n  const isValid = resumeUrl && \n                  typeof resumeUrl === 'string' && \n                  resumeUrl !== 'N/A' &&\n                  resumeUrl.startsWith('http');\n  \n  if (!isValid) {\n    console.log(`\u26a0\ufe0f Item ${index + 1}: Invalid or missing URL, skipping`);\n    return null; // Return null to filter out later\n  }\n  \n  // Return clean data structure with URL at top level\n  return {\n    json: {\n      url: resumeUrl, // Simple field name for HTTP Request\n      resumeUrl: resumeUrl, // Backup field\n      name: data.name || data['Virtual Assistant'] || `Candidate_${index + 1}`,\n      contractorId: data.contractorId || data['Contractor ID'] || 'Unknown',\n      // Keep all original data\n      ...data\n    }\n  };\n}).filter(item => item !== null); // Remove invalid items\n\nconsole.log(`Valid resume URLs found: ${processedItems.length} out of ${items.length}`);\n\nif (processedItems.length === 0) {\n  throw new Error('No valid resume URLs found. Check the field names in your data.');\n}\n\nreturn processedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        -16
+      ],
+      "id": "48b41e6d-637a-4736-9275-c91ecd2996bb",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This converts binary PDF to base64 for sending to AI\nfor (const item of $input.all()) {\n  if (item.binary && item.binary.data) {\n    // Convert binary to base64\n    const base64Data = item.binary.data.data.toString('base64');\n    item.json.pdf_base64 = base64Data;\n    \n    // Extract filename\n    if (item.json.headers && item.json.headers['content-disposition']) {\n      const disposition = item.json.headers['content-disposition'];\n      const match = disposition.match(/filename=\"(.+?)\"/);\n      if (match) {\n        item.json.candidate_name = match[1].replace('.pdf', '');\n      }\n    }\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        -16
+      ],
+      "id": "7dac7540-38bd-4de6-800f-2153b9302200",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2112,
+        -16
+      ],
+      "id": "38f661fc-9ab5-4c19-a664-697dd08f7eaa",
+      "name": "Merge1"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Transform URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Preparation": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Structure Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure Data": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform URL": {
+      "main": [
+        [
+          {
+            "node": "Get a document",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transform URL 1 VA": {
+      "main": [
+        []
+      ]
+    },
+    "Get a document": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Data Preparation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "43367db3-df72-422a-b810-5c2e9086d3c9",
+  "activeVersionId": null,
+  "versionCounter": 6,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2025-11-07T21:31:57.530Z",
+      "createdAt": "2025-11-07T21:31:57.530Z",
+      "role": "workflow:owner",
+      "workflowId": "Dqih4RzCs6RpxLK9",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

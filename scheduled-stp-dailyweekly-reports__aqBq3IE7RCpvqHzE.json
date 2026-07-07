@@ -1,0 +1,1274 @@
+{
+  "updatedAt": "2026-07-04T13:18:12.836Z",
+  "createdAt": "2025-11-06T17:12:52.014Z",
+  "id": "aqBq3IE7RCpvqHzE",
+  "name": "[Scheduled] STP Daily/Weekly Reports",
+  "description": "Pulls STP request records from Airtable, categorizes them as ongoing or resolved, calculates request duration and endorsement counts, then generates a daily Slack report.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbltJ5qVMmfYA6xnS",
+          "mode": "list",
+          "cachedResultName": "PL - STP Requests",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbltJ5qVMmfYA6xnS"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        112
+      ],
+      "id": "3d839311-17fa-403e-9af2-750100ad1579",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "q8BmWZk7OfzNINR9",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 22
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -32,
+        -96
+      ],
+      "id": "680d70a7-cc0b-4c3c-b8b3-6075b5b7b5c6",
+      "name": "Daily"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ]
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -32,
+        240
+      ],
+      "id": "d04516b8-a24f-4740-9e4f-c138c5a2d665",
+      "name": "Weekly"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C05FPQSFU92",
+          "mode": "id"
+        },
+        "text": "={{ $('HTML Version').item.json.slackMessage }}\n\n*Link to full report:* <{{ $json.image_url }}|Click here to view>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        3136,
+        64
+      ],
+      "id": "cfb63a15-89e2-43ff-93dc-e625e4736aa9",
+      "name": "Send a message",
+      "webhookId": "f719ecb5-2533-4bc6-91a5-056e32b9acd5",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\n// Sort function: longest duration first\nconst sortByDuration = (a, b) => {\n  const durationA = a.durationDays || 0;\n  const durationB = b.durationDays || 0;\n  return durationB - durationA; // Descending order (longest first)\n};\n\n// Sort the requests by duration\nconst sortedOngoing = [...data.ongoing.requests].sort(sortByDuration);\nconst sortedResolved = [...data.resolved.requests].sort(sortByDuration);\n\n// Build Slack message with markdown formatting\nlet slackMessage = `*Daily STP Report - ${data.reportDate}*\\n\\n`;\n\n// Summary section\nslackMessage += `*SUMMARY*\\n`;\nslackMessage += `\u2022 Ongoing Requests: *${data.ongoing.count}*\\n`;\nslackMessage += `\u2022 Resolved Requests: *${data.resolved.count}*\\n`;\nslackMessage += `\u2022 Total Processed: *${data.totalProcessed}*\\n`;\nslackMessage += `\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\\n`;\n\n// Ongoing STP Requests (NOW FIRST!)\nslackMessage += ` *ONGOING STP REQUESTS: ${data.ongoing.count}*\\n`;\nslackMessage += `_(Sorted by duration: longest first)_\\n\\n`;\n\nif (data.ongoing.count > 0) {\n  sortedOngoing.forEach((req, index) => {\n    slackMessage += `*${index + 1}. ${req.stpCode}*\\n`;\n    slackMessage += `   \u2022 Status: ${req.status}\\n`;\n    slackMessage += `   \u2022 Duration: *${req.durationDays || 'N/A'} days* since request\\n`;\n    slackMessage += `   \u2022 Candidates Endorsed: *${req.endorsementCount}*\\n`;\n    \n    if (req.candidates.length > 0) {\n      slackMessage += `   \u2022 Endorsed Candidates:\\n`;\n      req.candidates.forEach((candidate, idx) => {\n        slackMessage += `      ${idx + 1}. \\`${candidate.vaId}\\` - Endorsed: ${candidate.endorsedDate}\\n`;\n      });\n    }\n    slackMessage += `\\n`;\n  });\n} else {\n  slackMessage += `_No ongoing requests_\\n\\n`;\n}\n\nslackMessage += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\\n`;\n\n// Resolved STP Requests (NOW SECOND!)\nslackMessage += ` *RESOLVED STP REQUESTS: ${data.resolved.count}*\\n`;\nslackMessage += `_(Sorted by duration: longest first)_\\n\\n`;\n\nif (data.resolved.count > 0) {\n  sortedResolved.forEach((req, index) => {\n    slackMessage += `*${index + 1}. ${req.stpCode}*\\n`;\n    slackMessage += `   \u2022 Status: ${req.status}\\n`;\n    slackMessage += `   \u2022 Duration: *${req.durationDays || 'N/A'} days*\\n`;\n    slackMessage += `   \u2022 Candidates Endorsed: *${req.endorsementCount}*\\n`;\n    \n    if (req.candidates.length > 0) {\n      slackMessage += `   \u2022 Endorsed Candidates:\\n`;\n      req.candidates.forEach((candidate, idx) => {\n        slackMessage += `      ${idx + 1}. \\`${candidate.vaId}\\` - Endorsed: ${candidate.endorsedDate}\\n`;\n      });\n    }\n    slackMessage += `\\n`;\n  });\n} else {\n  slackMessage += `_No resolved requests today_\\n\\n`;\n}\n\nslackMessage += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n`;\nslackMessage += `_Report Generated: ${data.reportTimestamp}_`;\n\n// Return formatted message\nreturn [\n  {\n    json: {\n      text: slackMessage\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -816
+      ],
+      "id": "445e1bd7-6110-4be8-bda5-d61fb3761a77",
+      "name": "Slack Message Formatter"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\n// Build HTML email\nlet emailHTML = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .header { background-color: #4A90E2; color: white; padding: 20px; text-align: center; }\n    .section { margin: 20px; padding: 15px; border-left: 4px solid #4A90E2; background-color: #f9f9f9; }\n    .metric { font-size: 24px; font-weight: bold; color: #4A90E2; }\n    table { width: 100%; border-collapse: collapse; margin-top: 10px; }\n    th { background-color: #4A90E2; color: white; padding: 12px; text-align: left; }\n    td { padding: 10px; border-bottom: 1px solid #ddd; }\n    tr:hover { background-color: #f5f5f5; }\n    .candidate-list { font-size: 0.9em; color: #666; margin-top: 5px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1> Weekly STP Report</h1>\n    <p>${data.reportDate}</p>\n  </div>\n  \n  <div class=\"section\">\n    <h3> Resolved STP Requests</h3>\n    <p class=\"metric\">${data.resolved.count} Requests Resolved</p>\n    <table>\n      <thead>\n        <tr>\n          <th>STP Code</th>\n          <th>Status</th>\n          <th>Duration (Days)</th>\n          <th>Candidates Endorsed</th>\n          <th>Candidate Details</th>\n        </tr>\n      </thead>\n      <tbody>\n`;\n\nif (data.resolved.count > 0) {\n  data.resolved.requests.forEach(req => {\n    const candidateDetails = req.candidates.map(c => \n      `${c.vaId} (${c.endorsedDate})`\n    ).join('<br>');\n    \n    emailHTML += `\n        <tr>\n          <td><strong>${req.stpCode}</strong></td>\n          <td>${req.status}</td>\n          <td>${req.durationDays}</td>\n          <td>${req.endorsementCount}</td>\n          <td class=\"candidate-list\">${candidateDetails || 'None'}</td>\n        </tr>\n    `;\n  });\n} else {\n  emailHTML += `\n        <tr>\n          <td colspan=\"5\" style=\"text-align: center; color: #999;\">No resolved requests this week</td>\n        </tr>\n  `;\n}\n\nemailHTML += `\n      </tbody>\n    </table>\n  </div>\n  \n  <div class=\"section\">\n    <h3> Ongoing STP Requests</h3>\n    <p class=\"metric\">${data.ongoing.count} Requests In Progress</p>\n    <table>\n      <thead>\n        <tr>\n          <th>STP Code</th>\n          <th>Status</th>\n          <th>Duration (Days)</th>\n          <th>Candidates Endorsed</th>\n          <th>Candidate Details</th>\n        </tr>\n      </thead>\n      <tbody>\n`;\n\nif (data.ongoing.count > 0) {\n  data.ongoing.requests.forEach(req => {\n    const candidateDetails = req.candidates.map(c => \n      `${c.vaId} (${c.endorsedDate})`\n    ).join('<br>');\n    \n    emailHTML += `\n        <tr>\n          <td><strong>${req.stpCode}</strong></td>\n          <td>${req.status}</td>\n          <td>${req.durationDays}</td>\n          <td>${req.endorsementCount}</td>\n          <td class=\"candidate-list\">${candidateDetails || 'None'}</td>\n        </tr>\n    `;\n  });\n} else {\n  emailHTML += `\n        <tr>\n          <td colspan=\"5\" style=\"text-align: center; color: #999;\">No ongoing requests</td>\n        </tr>\n  `;\n}\n\nemailHTML += `\n      </tbody>\n    </table>\n  </div>\n  \n  <div style=\"text-align: center; margin-top: 30px; color: #999; font-size: 0.9em;\">\n    <p>Total STP Records Processed: ${data.totalProcessed}</p>\n    <p>Report Generated: ${new Date().toLocaleString()}</p>\n  </div>\n</body>\n</html>\n`;\n\n// Plain text version for email clients that don't support HTML\nlet emailPlainText = `Weekly STP Report - ${data.reportDate}\\n\\n`;\nemailPlainText += `RESOLVED STP REQUESTS: ${data.resolved.count}\\n`;\nemailPlainText += `ONGOING STP REQUESTS: ${data.ongoing.count}\\n\\n`;\nemailPlainText += `Total Records Processed: ${data.totalProcessed}`;\n\nreturn [\n  {\n    json: {\n      emailHTML: emailHTML,\n      emailPlainText: emailPlainText,\n      subject: `Weekly STP Report - ${data.reportDate}`,\n      resolved: data.resolved,\n      ongoing: data.ongoing\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        688
+      ],
+      "id": "d9ea05fd-8e2a-41f3-810d-01187d5c774e",
+      "name": "Email Formatter"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.isDaily }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "c815ac29-93fb-4cb9-aa4a-188a48dd8954"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Daily"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7add16b4-2c12-4c20-b201-c3fa14c3d040",
+                    "leftValue": "={{ $json.isWeekly }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Weekly"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "a685c042-a69c-4055-a047-93917e5c68b8",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "jenn@scalevirtually.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.emailHTML }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2288,
+        688
+      ],
+      "id": "ae2ece1c-774c-4d0f-be67-fd08799ca16e",
+      "name": "Send Weekly Report",
+      "webhookId": "1529acd3-4ca7-4f7d-93ef-6328ab632049",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\n// Helper function to format dates to MMM-DD-YYYY\nconst formatDateToMMM_DD_YYYY = (dateString) => {\n  if (!dateString || dateString === 'N/A') return 'N/A';\n  \n  // Try to parse the date string\n  const date = new Date(dateString);\n  if (isNaN(date.getTime())) return dateString; // Return original if parsing fails\n  \n  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];\n  const month = months[date.getMonth()];\n  const day = String(date.getDate()).padStart(2, '0');\n  const year = date.getFullYear();\n  \n  return `${month}-${day}-${year}`;\n};\n\n// Sort helper\nconst sortByDuration = (a, b) => (b.durationDays || 0) - (a.durationDays || 0);\n\n// Ongoing only, sorted by duration\nconst ongoingRequests = (data.ongoing?.requests || []).sort(sortByDuration);\n\n// Helper function to determine RAG color\nconst getRAGColor = (days) => {\n  if (!days || days === 0) return '#6E86AD'; // Scale Virtually Grey\n  if (days > 30) return '#dc2626'; // Red\n  if (days > 14) return '#F17D19'; // Scale Virtually Orange (Amber)\n  return '#10b981'; // Green\n};\n\n// Helper function to get RAG emoji for Slack\nconst getRAGEmoji = (days) => {\n  if (!days || days === 0) return '\u26aa'; // White circle for N/A\n  if (days > 30) return '\ud83d\udd34'; // Red\n  if (days > 14) return '\ud83d\udfe0'; // Orange/Amber\n  return '\ud83d\udfe2'; // Green\n};\n\n// Use human-readable date from data and convert to MMM-DD-YYYY format\nconst formattedDate = formatDateToMMM_DD_YYYY(data.reportDateFormatted);\n\n// Get average durations\nconst avgOngoingDuration = data.averageDurations?.ongoing || 0;\nconst avgResolvedDuration = data.averageDurations?.resolved || 0;\n\n// === BUILD SLACK MESSAGE ===\nconst ongoingRAG = getRAGEmoji(avgOngoingDuration);\nconst resolvedRAG = getRAGEmoji(avgResolvedDuration);\n\nconst slackMessage = `Hi Team - Here's the STP report as of ${formattedDate}\n\n*Ongoing Requests:* ${data.ongoing?.count || 0} | *Avg Duration:* ${avgOngoingDuration} days ${ongoingRAG}\n*Completed Requests:* ${data.resolved?.count || 0} | *Avg Duration:* ${avgResolvedDuration} days ${resolvedRAG}`;\n\n// HTML build\nconst htmlContent = `\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\" />\n<meta name=\"viewport\" content=\"width=1600\" />\n<style>\n  body {\n    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;\n    background: #f5f5f5;\n    margin: 0;\n    padding: 0;\n    line-height: 1.6;\n  }\n  .container {\n    width: 1600px;\n    margin: 0 auto;\n    background: #FFFFFF;\n    box-shadow: 0 2px 8px rgba(0,0,0,0.1);\n  }\n  .header {\n    background: linear-gradient(135deg, #FFFFFF 0%, #FFF5F0 50%, #FFE8DC 100%);\n    color: #1f2937;\n    padding: 40px 20px;\n    text-align: center;\n    border-bottom: 3px solid #F17D19;\n  }\n  .logo-container {\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    margin-bottom: 20px;\n  }\n  .sv-logo {\n    width: 500px;\n    height: auto;\n  }\n  .header h1 {\n    font-size: 36px;\n    margin: 15px 0 8px 0;\n    font-weight: 700;\n    color: #1f2937;\n  }\n  .header .date {\n    font-size: 18px;\n    color: #6E86AD;\n    font-weight: 600;\n  }\n  .summary {\n    display: flex;\n    justify-content: space-around;\n    padding: 30px 0;\n    border-bottom: 2px solid #F17D19;\n    background: #FFFFFF;\n  }\n  .summary-item {\n    text-align: center;\n  }\n  .summary-item .label {\n    font-size: 13px;\n    color: #6E86AD;\n    text-transform: uppercase;\n    font-weight: 600;\n    letter-spacing: 0.5px;\n  }\n  .summary-item .value {\n    font-size: 40px;\n    font-weight: 700;\n    color: #1f2937;\n    margin-top: 5px;\n  }\n  .summary-item .sub-value {\n    font-size: 16px;\n    font-weight: 600;\n    margin-top: 5px;\n  }\n  .summary-item.ongoing .value { color: #F17D19; }\n  .summary-item.resolved .value { color: #10b981; }\n  .main {\n    padding: 40px 60px;\n    background: #f9fafb;\n  }\n  .section-header {\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n    margin-bottom: 25px;\n  }\n  .section-header h2 {\n    font-size: 26px;\n    font-weight: 700;\n    color: #1f2937;\n  }\n  .section-header .count {\n    background: #F17D19;\n    color: #FFFFFF;\n    font-weight: 700;\n    font-size: 16px;\n    padding: 8px 20px;\n    border-radius: 12px;\n  }\n  .section-note {\n    font-size: 13px;\n    color: #6E86AD;\n    margin-bottom: 25px;\n    font-weight: 500;\n  }\n  .grid {\n    display: grid;\n    grid-template-columns: repeat(3, 1fr);\n    gap: 24px;\n  }\n  .request-item {\n    background: #FFFFFF;\n    border: 2px solid #e5e7eb;\n    border-radius: 12px;\n    padding: 22px;\n    box-shadow: 0 2px 4px rgba(0,0,0,0.08);\n    transition: transform 0.2s, box-shadow 0.2s;\n  }\n  .request-item:hover {\n    transform: translateY(-2px);\n    box-shadow: 0 4px 12px rgba(241, 125, 25, 0.15);\n    border-color: #F17D19;\n  }\n  .request-header {\n    margin-bottom: 12px;\n    padding-bottom: 12px;\n    border-bottom: 2px solid #F17D19;\n  }\n  .req-title {\n    font-size: 17px;\n    font-weight: 700;\n    color: #1f2937;\n    text-transform: uppercase;\n    margin-bottom: 6px;\n    letter-spacing: 0.3px;\n  }\n  .req-subtitle {\n    font-size: 13px;\n    color: #6E86AD;\n    font-weight: 600;\n    margin-bottom: 8px;\n  }\n  .status-badge {\n    display: inline-block;\n    padding: 5px 12px;\n    border-radius: 8px;\n    font-size: 11px;\n    font-weight: 700;\n    text-transform: uppercase;\n    letter-spacing: 0.5px;\n  }\n  .status-badge.stp-ongoing {\n    background: #fef3c7;\n    color: #92400e;\n  }\n  .status-badge.stp-requested {\n    background: #fee2e2;\n    color: #991b1b;\n  }\n  .status-badge.stp-parked {\n    background: #e0e7ff;\n    color: #3730a3;\n  }\n  .info-row {\n    display: flex;\n    align-items: center;\n    margin-bottom: 10px;\n  }\n  .info-label {\n    color: #6E86AD;\n    text-transform: uppercase;\n    font-size: 11px;\n    font-weight: 700;\n    min-width: 120px;\n    letter-spacing: 0.5px;\n  }\n  .info-value {\n    font-size: 13px;\n    color: #374151;\n    font-weight: 600;\n  }\n  .duration-badge {\n    display: inline-block;\n    padding: 4px 12px;\n    border-radius: 6px;\n    font-weight: 700;\n    font-size: 14px;\n  }\n  .candidates {\n    background: #f9fafb;\n    border: 1px solid #e5e7eb;\n    border-radius: 8px;\n    padding: 12px 14px;\n    margin-top: 14px;\n  }\n  .candidates-title {\n    font-size: 12px;\n    color: #6E86AD;\n    font-weight: 700;\n    text-transform: uppercase;\n    margin-bottom: 10px;\n    letter-spacing: 0.5px;\n  }\n  .candidate-item {\n    display: flex;\n    justify-content: space-between;\n    font-size: 13px;\n    padding: 6px 0;\n    border-bottom: 1px solid #e5e7eb;\n  }\n  .candidate-item:last-child { border-bottom: none; }\n  .candidate-item .va-name {\n    color: #1f2937;\n    font-weight: 600;\n  }\n  .candidate-item .date {\n    color: #6E86AD;\n    font-size: 12px;\n  }\n  .footer {\n    padding: 25px;\n    background: #FFFFFF;\n    text-align: center;\n    font-size: 13px;\n    color: #6E86AD;\n    border-top: 2px solid #F17D19;\n    font-weight: 500;\n  }\n  .footer strong {\n    color: #1f2937;\n  }\n</style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <div class=\"logo-container\">\n        <svg class=\"sv-logo\" viewBox=\"0 0 700 150\" xmlns=\"http://www.w3.org/2000/svg\">\n          <!-- SCALE Text (Dark Grey) -->\n          <g fill=\"#3d3d3d\">\n            <text x=\"350\" y=\"70\" font-family=\"Arial, sans-serif\" font-size=\"75\" font-weight=\"700\" letter-spacing=\"-2\" text-anchor=\"middle\">SCALE</text>\n          </g>\n          \n          <!-- VIRTUALLY Text (Orange) -->\n          <g fill=\"#F17D19\">\n            <text x=\"350\" y=\"120\" font-family=\"Arial, sans-serif\" font-size=\"45\" font-weight=\"700\" letter-spacing=\"2\" text-anchor=\"middle\">VIRTUALLY</text>\n          </g>\n        </svg>\n      </div>\n      <h1>\ud83d\udcca Daily STP Report</h1>\n      <div class=\"date\">As of ${formattedDate}</div>\n    </div>\n\n    <div class=\"summary\">\n      <div class=\"summary-item ongoing\">\n        <div class=\"label\">Ongoing Requests</div>\n        <div class=\"value\">${data.ongoing?.count || 0}</div>\n        <div class=\"sub-value\" style=\"color: ${getRAGColor(avgOngoingDuration)};\">\n          Avg: ${avgOngoingDuration} days\n        </div>\n      </div>\n      <div class=\"summary-item resolved\">\n        <div class=\"label\">Resolved Requests</div>\n        <div class=\"value\">${data.resolved?.count || 0}</div>\n        <div class=\"sub-value\" style=\"color: ${getRAGColor(avgResolvedDuration)};\">\n          Avg: ${avgResolvedDuration} days\n        </div>\n      </div>\n      <div class=\"summary-item\">\n        <div class=\"label\">Total Processed</div>\n        <div class=\"value\">${data.totalProcessed || 0}</div>\n      </div>\n    </div>\n\n    <div class=\"main\">\n      <div class=\"section-header\">\n        <h2>\ud83d\udd04 Ongoing STP Requests</h2>\n        <div class=\"count\">${data.ongoing?.count || 0}</div>\n      </div>\n      <div class=\"section-note\">\ud83d\udccc Sorted by duration: longest first | \u2705 Only showing requests with endorsed candidates</div>\n      <div class=\"grid\">\n        ${ongoingRequests.map((req, i) => {\n          const d = req.durationDays || 0;\n          const durationColor = getRAGColor(d);\n          const statusClass = (req.status || '').toLowerCase().replace(/\\s+/g, '-').replace(/[^a-z0-9-]/g, '');\n          const placementReq = req.placementRequirement || 'N/A';\n          \n          return `\n            <div class=\"request-item\">\n              <div class=\"request-header\">\n                <div class=\"req-title\">${i + 1}. ${req.stpCode || 'N/A'}</div>\n                <div class=\"req-subtitle\">Placement Requirement: ${placementReq}</div>\n                <span class=\"status-badge ${statusClass}\">${req.status || 'N/A'}</span>\n              </div>\n              \n              <div class=\"info-row\">\n                <span class=\"info-label\">DURATION:</span>\n                <span class=\"duration-badge\" style=\"background-color: ${durationColor}20; color: ${durationColor}; border: 1px solid ${durationColor};\">\n                  ${d > 0 ? d + ' days' : 'N/A'}\n                </span>\n              </div>\n              \n              <div class=\"info-row\">\n                <span class=\"info-label\">REQUEST DATE:</span>\n                <span class=\"info-value\">${formatDateToMMM_DD_YYYY(req.requisitionDate)}</span>\n              </div>\n              \n              <div class=\"info-row\">\n                <span class=\"info-label\">CANDIDATES:</span>\n                <span class=\"info-value\">${req.endorsementCount || 0} endorsed</span>\n              </div>\n              \n              ${req.candidates?.length ? `\n                <div class=\"candidates\">\n                  <div class=\"candidates-title\">\u2713 Endorsed Candidates (${req.candidates.length})</div>\n                  ${req.candidates.map((c, idx) => `\n                    <div class=\"candidate-item\">\n                      <span class=\"va-name\">${idx + 1}. ${c.vaId || 'N/A'}</span>\n                      <span class=\"date\">\ud83d\udcc5 ${formatDateToMMM_DD_YYYY(c.endorsedDate)}</span>\n                    </div>\n                  `).join('')}\n                </div>\n              ` : ''}\n            </div>\n          `;\n        }).join('')}\n      </div>\n    </div>\n\n    <div class=\"footer\">\n      <strong>Report Generated:</strong> ${data.reportTimestamp || 'N/A'}\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn [\n  { \n    json: { \n      html: htmlContent,\n      slackMessage: slackMessage,\n      reportMetadata: {\n        date: formattedDate,\n        ongoingCount: data.ongoing?.count || 0,\n        ongoingAvgDuration: avgOngoingDuration,\n        ongoingRAG: ongoingRAG,\n        resolvedCount: data.resolved?.count || 0,\n        resolvedAvgDuration: avgResolvedDuration,\n        resolvedRAG: resolvedRAG,\n      }\n    } \n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        -64
+      ],
+      "id": "10aa7d59-98d4-46dd-b881-3cf3d836bb78",
+      "name": "HTML Version"
+    },
+    {
+      "parameters": {
+        "html_content": "={{ $json.html }}",
+        "viewPortWidth": 1920,
+        "viewPortHeight": "={{ 1080 }}"
+      },
+      "type": "n8n-nodes-htmlcsstoimage.htmlCssToImage",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        -64
+      ],
+      "id": "fdadd281-0944-44cd-bdb9-033c35f120f0",
+      "name": "HTML/CSS to Image",
+      "credentials": {
+        "htmlcsstoimgApi": {
+          "id": "RgVbijNCeobh79Gr",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === STEP 1: Get Airtable Data Safely ===\nlet stpRecords;\n// Handle different formats of Airtable responses\nif (Array.isArray(items)) {\n  if (Array.isArray(items[0].json)) {\n    stpRecords = items[0].json;\n  } else if (items[0].json.records && Array.isArray(items[0].json.records)) {\n    stpRecords = items[0].json.records.map(r => r.fields); // Airtable standard format\n  } else if (items[0].json.data && Array.isArray(items[0].json.data)) {\n    stpRecords = items[0].json.data;\n  } else if (items.length > 1) {\n    stpRecords = items.map(i => i.json);\n  } else {\n    stpRecords = [items[0].json];\n  }\n} else {\n  throw new Error(\"Unexpected data structure \u2014 check Airtable output.\");\n}\n\n// If still undefined, abort early\nif (!stpRecords || !stpRecords.length) {\n  throw new Error(\"No STP records found \u2014 Airtable may have returned empty data.\");\n}\n\n// === HELPER: Format date to human-readable format ===\nfunction formatDateHuman(dateString) {\n  if (!dateString) return \"N/A\";\n  \n  try {\n    const date = new Date(dateString);\n    if (isNaN(date)) return \"N/A\";\n    \n    // Format: November 10, 2025\n    const options = { year: 'numeric', month: 'long', day: 'numeric' };\n    return date.toLocaleDateString('en-US', options);\n  } catch (error) {\n    return \"N/A\";\n  }\n}\n\n// === STEP 2: Initialize Counters ===\nlet resolvedCount = 0;\nlet ongoingCount = 0;\nlet resolvedCandidates = [];\nlet ongoingCandidates = [];\n\n// === Track durations for averages ===\nlet ongoingDurations = [];\nlet resolvedDurations = [];\n\n// === STEP 3: Process Each Record ===\nfor (const record of stpRecords) {\n  if (!record) continue;\n  \n  const statusRaw = record[\"Requisition Status\"] || \"N/A\";\n  const status = String(statusRaw).trim();\n  const stpCode = record[\"STP Code\"] || record[\"STP Request ID\"] || \"N/A\";\n  const requisitionDate = record[\"Requisition Date\"] || null;\n  \n  // === Use TEXT fields instead of IDs ===\n  const endorsedVAsText = record[\"Endorsed VAs (text)\"] || [];\n  const placementReqsText = record[\"Placements Requirements (text)\"] || [];\n  const endorsedDates = Array.isArray(record[\"Endorsed to Placements\"]) ? record[\"Endorsed to Placements\"] : [];\n  \n  // === Check if the status is considered 'Ongoing' ===\n  const isOngoing = /ongoing|requested/i.test(status);\n\n  // === REVISED FILTER: Keep ALL Ongoing STPs. Skip others only if missing requirements ===\n  if (!isOngoing && (!Array.isArray(placementReqsText) || placementReqsText.length === 0)) {\n    continue; // Skip ONLY if it's a Resolved/Other status AND has no placement requirements\n  }\n  \n  // === Extract Placement Requirement (TEXT) ===\n  let placementRequirement = \"N/A\";\n  if (Array.isArray(placementReqsText) && placementReqsText.length > 0) {\n    placementRequirement = placementReqsText[0]; // Get first placement requirement text\n  }\n  \n  // === Calculate duration from STP request date to today ===\n  let durationDays = null;\n  if (requisitionDate) {\n    const reqDate = new Date(requisitionDate);\n    const today = new Date();\n    if (!isNaN(reqDate)) {\n      durationDays = Math.floor((today - reqDate) / (1000 * 60 * 60 * 24));\n    }\n  }\n  \n  // === Build Candidate List with TEXT names ===\n  const candidatesList = endorsedVAsText.map((vaName, index) => ({\n    vaId: vaName, // Now using the actual name instead of record ID\n    endorsedDate: endorsedDates[index] ? formatDateHuman(endorsedDates[index]) : \"N/A\",\n  }));\n  \n  // === Common Data Object ===\n  const baseData = {\n    stpCode,\n    status,\n    requisitionDate: formatDateHuman(requisitionDate), // Human-readable date\n    requisitionDateRaw: requisitionDate, // Keep raw for duration calculation\n    durationDays,\n    endorsementCount: endorsedVAsText.length,\n    candidates: candidatesList,\n    clientName: record[\"Client Name\"]?.[0] || \"N/A\",\n    role: record[\"Role\"]?.[0] || \"N/A\",\n    placementRequirement: placementRequirement, // Using text field\n  };\n  \n  // === Categorize Based on Keywords in Status ===\n  if (\n    /completed|filled|cancelled/i.test(status)\n  ) {\n    resolvedCount++;\n    resolvedCandidates.push(baseData);\n    // Track duration for resolved requests\n    if (durationDays !== null && durationDays > 0) {\n      resolvedDurations.push(durationDays);\n    }\n  } else if (isOngoing) {\n    ongoingCount++;\n    ongoingCandidates.push(baseData);\n    // Track duration for ongoing requests\n    if (durationDays !== null && durationDays > 0) {\n      ongoingDurations.push(durationDays);\n    }\n  }\n}\n\n// === STEP 4: Calculate Average Durations ===\nconst calculateAverage = (arr) => {\n  if (arr.length === 0) return 0;\n  const sum = arr.reduce((acc, val) => acc + val, 0);\n  return Math.round(sum / arr.length);\n};\n\nconst avgOngoingDuration = calculateAverage(ongoingDurations);\nconst avgResolvedDuration = calculateAverage(resolvedDurations);\n\n// === Format current date for report ===\nconst today = new Date();\nconst reportDateFormatted = formatDateHuman(today.toISOString().split('T')[0]);\n\n// === STEP 5: Return Summary JSON ===\nreturn [\n  {\n    json: {\n      reportDate: today.toISOString().split(\"T\")[0], // Keep ISO for IF logic\n      reportDateFormatted: reportDateFormatted, // Human-readable for display\n      reportTimestamp: today.toLocaleString('en-US', { \n        month: '2-digit', \n        day: '2-digit', \n        year: 'numeric',\n        hour: '2-digit',\n        minute: '2-digit'\n      }),\n      isDaily: true,\n      reportType: \"daily\",\n      resolved: {\n        count: resolvedCount,\n        requests: resolvedCandidates,\n        avgDuration: avgResolvedDuration,\n      },\n      ongoing: {\n        count: ongoingCount,\n        requests: ongoingCandidates,\n        avgDuration: avgOngoingDuration,\n      },\n      totalProcessed: stpRecords.length,\n      totalResolved: resolvedCount,\n      totalOngoing: ongoingCount,\n      averageDurations: {\n        ongoing: avgOngoingDuration,\n        resolved: avgResolvedDuration,\n      },\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        112
+      ],
+      "id": "81dbeaa2-fc5e-4bf7-a7a8-69d1b3f8daab",
+      "name": "Process STP Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Process Data Function Node (Test Version for 2025-11-05) ===\n\n// --- 1\ufe0f\u20e3 Load the static test data ---\nconst testData = [\n  {\n    \"reportDate\": \"2025-11-06\",\n    \"reportTimestamp\": \"11/6/2025, 7:05:56 PM\",\n    \"isDaily\": true,\n    \"isWeekly\": false,\n    \"reportType\": \"daily\",\n    \"resolved\": {\n      \"count\": 28,\n      \"requests\": [\n        {\n          \"stpCode\": \"TARA-ADMIN\",\n          \"status\": \"FILLED\",\n          \"requisitionDate\": \"2025-09-02\",\n          \"durationDays\": 65,\n          \"endorsementCount\": 2,\n          \"candidates\": [\n            { \"vaId\": \"recidAPAjz6mQUaZN\", \"endorsedDate\": \"2025-09-16\" },\n            { \"vaId\": \"recfEhXlBra1jr0WX\", \"endorsedDate\": \"2025-09-16\" }\n          ],\n          \"clientName\": \"recu9b4oH9zpHUAjn\",\n          \"role\": \"recCa2hbI66Q8KYJQ\"\n        },\n        {\n          \"stpCode\": \"PROJAD-MATT-FOS\",\n          \"status\": \"FILLED\",\n          \"requisitionDate\": \"2025-07-25\",\n          \"durationDays\": 104,\n          \"endorsementCount\": 0,\n          \"candidates\": [],\n          \"clientName\": \"recw0cpXhuTyaf6Bp\",\n          \"role\": \"recQFFcgC83nIeVJS\"\n        }\n        // ... You can include more if needed for testing\n      ]\n    },\n    \"ongoing\": {\n      \"count\": 2,\n      \"requests\": [\n        {\n          \"stpCode\": \"EDDIE-LAM-LEADMAN\",\n          \"status\": \"Ongoing\",\n          \"requisitionDate\": \"2025-08-20\",\n          \"durationDays\": 78,\n          \"endorsementCount\": 5,\n          \"candidates\": [\n            { \"vaId\": \"recWl0IP29LrPb4rq\", \"endorsedDate\": \"2025-09-03\" },\n            { \"vaId\": \"recB6EjpVFee8bbRQ\", \"endorsedDate\": \"2025-09-05\" },\n            { \"vaId\": \"recuCmPTmLCepyRDz\", \"endorsedDate\": \"2025-10-24\" }\n          ],\n          \"clientName\": \"recjbz9XSXrryzepe\",\n          \"role\": \"recWku8MCXVP2mqBM\"\n        },\n        {\n          \"stpCode\": \"BF-EVA-OPS-PROJECT\",\n          \"status\": \"Ongoing\",\n          \"requisitionDate\": \"2025-09-10\",\n          \"durationDays\": 57,\n          \"endorsementCount\": 1,\n          \"candidates\": [\n            { \"vaId\": \"rec4UnY1XlDhJyayv\", \"endorsedDate\": \"2025-09-03\" }\n          ],\n          \"clientName\": \"N/A\",\n          \"role\": \"N/A\"\n        }\n      ]\n    },\n    \"totalProcessed\": 30,\n    \"totalResolved\": 28,\n    \"totalOngoing\": 2\n  }\n];\n\n// --- 2\ufe0f\u20e3 Simulate the same output format as live process ---\nconst report = testData[0];\n\n// Ensure structure matches what the HTML Generator expects\nreturn [\n  {\n    json: {\n      reportDate: report.reportDate,\n      reportTimestamp: report.reportTimestamp,\n      isDaily: report.isDaily,\n      isWeekly: report.isWeekly,\n      reportType: report.reportType,\n      resolved: report.resolved,\n      ongoing: report.ongoing,\n      totalProcessed: report.totalProcessed,\n      totalResolved: report.totalResolved,\n      totalOngoing: report.totalOngoing\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -800
+      ],
+      "id": "c1baf339-33ce-473d-8a9b-706810d4ff19",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "content": "Triggers the automation Daily at midnight\n",
+        "height": 96,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        -144
+      ],
+      "typeVersion": 1,
+      "id": "eb5b2553-f16b-4f0a-8ca8-51aed644feeb",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Triggers the automation Every Monday at midnight\n",
+        "height": 96,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -128,
+        176
+      ],
+      "typeVersion": 1,
+      "id": "e219f43d-f095-4e26-a2af-baed8300a268",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose:** Pulls STP request records from Airtable\n",
+        "height": 128,
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        272,
+        32
+      ],
+      "typeVersion": 1,
+      "id": "70bee312-3eba-40f2-b938-3f26a7917002",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "### STP REPORTS AUTOMATION\n\nWhat this does:\n- Pulls STP request data from Airtable\n- Categorizes requests into **Resolved** vs **Ongoing**\n- Calculates duration since requisition date\n- Lists endorsed candidates with endorsement dates\n- Sends **Daily snapshot to Slack**\n- Sends **Weekly digest via Email**\n- (Future) Adds RAG status once Amber/Red criteria are defined\n\nRuns: Daily (Slack) + Weekly (Email)\n",
+        "height": 336,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -144,
+        -528
+      ],
+      "typeVersion": 1,
+      "id": "168d30c0-4cf4-4551-b834-2392d5860716",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose:** Categorizes STP requests into Resolved vs Ongoing\n\n**Logic Highlights:**\n\nCounts requests by status keywords (completed, filled, cancelled \u2192 Resolved; ongoing, requested, parked, paused \u2192 Ongoing).\n\nBuilds candidate lists with endorsement dates.\n\nCalculates duration in days since requisition date.",
+        "height": 320,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        656,
+        -192
+      ],
+      "typeVersion": 1,
+      "id": "30248891-7a37-4c15-86d3-eafee2409bbf",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose:** Routes the automation output based on report type.\n\n**Logic:**\n\nIf isDaily = true \u2192 send to Daily Slack report\n\nIf isWeekly = true \u2192 send to Weekly Email report",
+        "height": 224,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1184,
+        -96
+      ],
+      "typeVersion": 1,
+      "id": "71ea4c47-e876-4225-b9b8-b29b874df4e8",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Test - DO NOT TOUCH ",
+        "height": 304,
+        "width": 528
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1232,
+        -928
+      ],
+      "typeVersion": 1,
+      "id": "b7d47fa7-47e5-4970-bd5f-c355182755b7",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose**  \nTransforms the STP summary JSON into a styled HTML report for Slack/Email delivery.  \n\n**Key Features**  \n- **Sorting:** Ongoing requests sorted by duration (longest first)  \n- **RAG Coloring:**  \n  - Gray = No duration  \n  - Green = \u2264 14 days  \n  - Amber = 15\u201330 days  \n  - Red = > 30 days  \n- **Summary Section:** Counts of ongoing, resolved, and total processed requests  \n- **Detailed Cards:** Each ongoing request shows:  \n  - STP Code + Status badge  \n  - Duration in days (color-coded)  \n  - Request date  \n  - Candidate endorsements (with endorsed dates)  \n",
+        "height": 448,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1520,
+        -464
+      ],
+      "typeVersion": 1,
+      "id": "723e4ef6-346f-43b4-b314-382a55c1aba6",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose**  \nFormats the processed STP data into a **weekly email report** with both HTML and plain text versions.  \n\n**Key Features**  \n- **HTML Email:**  \n  - Header with report date  \n  - Section for **Resolved Requests** (count + table of details)  \n  - Section for **Ongoing Requests** (count + table of details)  \n  - Candidate details listed under each request  \n  - Footer with total processed + timestamp  \n- **Plain Text Fallback:**  \n  - Simple summary for email clients that don\u2019t support HTML  \n- **Subject Line:**  \n  - `Weekly STP Report - <reportDate>`  \n",
+        "height": 416,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1520,
+        288
+      ],
+      "typeVersion": 1,
+      "id": "65db7591-2805-4ca8-b23d-31e52824cd67",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose**  \nConverts the generated HTML report into an image for easy sharing in Slack or other platforms.  \n\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2240,
+        -224
+      ],
+      "typeVersion": 1,
+      "id": "1261d581-5420-46f8-beb8-ab6cc620f078",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "**Purpose**  \nSends the **weekly STP report** via Gmail.  \n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2208,
+        544
+      ],
+      "typeVersion": 1,
+      "id": "2812cd4a-990f-49de-a67f-d2e784ebda76",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2656,
+        64
+      ],
+      "id": "0569413f-8b65-41cc-9d35-d630bf001590",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === STEP 1: Get Airtable Data Safely ===\nlet stpRecords;\n// Handle different formats of Airtable responses\nif (Array.isArray(items)) {\n  if (Array.isArray(items[0].json)) {\n    stpRecords = items[0].json;\n  } else if (items[0].json.records && Array.isArray(items[0].json.records)) {\n    stpRecords = items[0].json.records.map(r => r.fields); // Airtable standard format\n  } else if (items[0].json.data && Array.isArray(items[0].json.data)) {\n    stpRecords = items[0].json.data;\n  } else if (items.length > 1) {\n    stpRecords = items.map(i => i.json);\n  } else {\n    stpRecords = [items[0].json];\n  }\n} else {\n  throw new Error(\"Unexpected data structure \u2014 check Airtable output.\");\n}\n\n// If still undefined, abort early\nif (!stpRecords || !stpRecords.length) {\n  throw new Error(\"No STP records found \u2014 Airtable may have returned empty data.\");\n}\n\n// === HELPER: Format date to human-readable format ===\nfunction formatDateHuman(dateString) {\n  if (!dateString) return \"N/A\";\n  \n  try {\n    const date = new Date(dateString);\n    if (isNaN(date)) return \"N/A\";\n    \n    // Format: November 10, 2025\n    const options = { year: 'numeric', month: 'long', day: 'numeric' };\n    return date.toLocaleDateString('en-US', options);\n  } catch (error) {\n    return \"N/A\";\n  }\n}\n\n// === STEP 2: Initialize Counters ===\nlet resolvedCount = 0;\nlet ongoingCount = 0;\nlet resolvedCandidates = [];\nlet ongoingCandidates = [];\n\n// === Track durations for averages ===\nlet ongoingDurations = [];\nlet resolvedDurations = [];\n\n// === STEP 3: Process Each Record ===\nfor (const record of stpRecords) {\n  if (!record) continue;\n  \n  const statusRaw = record[\"Requisition Status\"] || \"N/A\";\n  const status = String(statusRaw).trim();\n  const stpCode = record[\"STP Code\"] || record[\"STP Request ID\"] || \"N/A\";\n  const requisitionDate = record[\"Requisition Date\"] || null;\n  \n  // === Use TEXT fields instead of IDs ===\n  const endorsedVAsText = record[\"Endorsed VAs (text)\"] || [];\n  const placementReqsText = record[\"Placements Requirements (text)\"] || [];\n  const endorsedDates = Array.isArray(record[\"Endorsed to Placements\"]) ? record[\"Endorsed to Placements\"] : [];\n  \n  // === REVISED FILTER: Skip only records with no placement requirements ===\n  // We want to show ongoing requests even with 0 endorsements if they have placement requirements\n  if (!Array.isArray(placementReqsText) || placementReqsText.length === 0) {\n    continue; // Skip only if no placement requirements are linked\n  }\n  // Note: We're now keeping records with 0 endorsements as long as they have placement requirements\n  \n  // === Extract Placement Requirement (TEXT) ===\n  let placementRequirement = \"N/A\";\n  if (Array.isArray(placementReqsText) && placementReqsText.length > 0) {\n    placementRequirement = placementReqsText[0]; // Get first placement requirement text\n  }\n  \n  // === Calculate duration from STP request date to today ===\n  let durationDays = null;\n  if (requisitionDate) {\n    const reqDate = new Date(requisitionDate);\n    const today = new Date();\n    if (!isNaN(reqDate)) {\n      durationDays = Math.floor((today - reqDate) / (1000 * 60 * 60 * 24));\n    }\n  }\n  \n  // === Build Candidate List with TEXT names ===\n  const candidatesList = endorsedVAsText.map((vaName, index) => ({\n    vaId: vaName, // Now using the actual name instead of record ID\n    endorsedDate: endorsedDates[index] ? formatDateHuman(endorsedDates[index]) : \"N/A\",\n  }));\n  \n  // === Common Data Object ===\n  const baseData = {\n    stpCode,\n    status,\n    requisitionDate: formatDateHuman(requisitionDate), // Human-readable date\n    requisitionDateRaw: requisitionDate, // Keep raw for duration calculation\n    durationDays,\n    endorsementCount: endorsedVAsText.length,\n    candidates: candidatesList,\n    clientName: record[\"Client Name\"]?.[0] || \"N/A\",\n    role: record[\"Role\"]?.[0] || \"N/A\",\n    placementRequirement: placementRequirement, // Using text field\n  };\n  \n  // === Categorize Based on Keywords in Status ===\n  if (\n    /completed|filled|cancelled/i.test(status)\n  ) {\n    resolvedCount++;\n    resolvedCandidates.push(baseData);\n    // Track duration for resolved requests\n    if (durationDays !== null && durationDays > 0) {\n      resolvedDurations.push(durationDays);\n    }\n  } else if (\n    /ongoing|requested|parked|paused/i.test(status)\n  ) {\n    ongoingCount++;\n    ongoingCandidates.push(baseData);\n    // Track duration for ongoing requests\n    if (durationDays !== null && durationDays > 0) {\n      ongoingDurations.push(durationDays);\n    }\n  }\n}\n\n// === STEP 4: Calculate Average Durations ===\nconst calculateAverage = (arr) => {\n  if (arr.length === 0) return 0;\n  const sum = arr.reduce((acc, val) => acc + val, 0);\n  return Math.round(sum / arr.length);\n};\n\nconst avgOngoingDuration = calculateAverage(ongoingDurations);\nconst avgResolvedDuration = calculateAverage(resolvedDurations);\n\n// === Format current date for report ===\nconst today = new Date();\nconst reportDateFormatted = formatDateHuman(today.toISOString().split('T')[0]);\n\n// === STEP 5: Return Summary JSON ===\nreturn [\n  {\n    json: {\n      reportDate: today.toISOString().split(\"T\")[0], // Keep ISO for IF logic\n      reportDateFormatted: reportDateFormatted, // Human-readable for display\n      reportTimestamp: today.toLocaleString('en-US', { \n        month: '2-digit', \n        day: '2-digit', \n        year: 'numeric',\n        hour: '2-digit',\n        minute: '2-digit'\n      }),\n      isDaily: true,\n      reportType: \"daily\",\n      resolved: {\n        count: resolvedCount,\n        requests: resolvedCandidates,\n        avgDuration: avgResolvedDuration,\n      },\n      ongoing: {\n        count: ongoingCount,\n        requests: ongoingCandidates,\n        avgDuration: avgOngoingDuration,\n      },\n      totalProcessed: stpRecords.length,\n      totalResolved: resolvedCount,\n      totalOngoing: ongoingCount,\n      averageDurations: {\n        ongoing: avgOngoingDuration,\n        resolved: avgResolvedDuration,\n      },\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        336
+      ],
+      "id": "e85f0d84-5841-47aa-8740-1a2c9152cdd3",
+      "name": "Process STP Data1"
+    }
+  ],
+  "connections": {
+    "Daily": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly": {
+      "main": [
+        []
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Process STP Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Message Formatter": {
+      "main": [
+        []
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTML Version",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        []
+      ]
+    },
+    "Email Formatter": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML Version": {
+      "main": [
+        [
+          {
+            "node": "HTML/CSS to Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML/CSS to Image": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process STP Data": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Daily": {
+      "recurrenceRules": []
+    },
+    "node:Weekly": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "fd6feb4e-41b9-44f5-8490-e7b2670b15e7",
+  "activeVersionId": "fd6feb4e-41b9-44f5-8490-e7b2670b15e7",
+  "versionCounter": 171,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2025-11-06T17:12:52.023Z",
+      "createdAt": "2025-11-06T17:12:52.023Z",
+      "role": "workflow:owner",
+      "workflowId": "aqBq3IE7RCpvqHzE",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:18:12.837Z",
+    "createdAt": "2026-07-04T13:18:12.837Z",
+    "versionId": "fd6feb4e-41b9-44f5-8490-e7b2670b15e7",
+    "workflowId": "aqBq3IE7RCpvqHzE",
+    "nodes": [
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tbltJ5qVMmfYA6xnS",
+            "mode": "list",
+            "cachedResultName": "PL - STP Requests",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbltJ5qVMmfYA6xnS"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          320,
+          112
+        ],
+        "id": "3d839311-17fa-403e-9af2-750100ad1579",
+        "name": "Search records",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "q8BmWZk7OfzNINR9",
+            "name": "Airtable Personal Access Token account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "triggerAtHour": 22
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -32,
+          -96
+        ],
+        "id": "680d70a7-cc0b-4c3c-b8b3-6075b5b7b5c6",
+        "name": "Daily"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  1
+                ]
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          -32,
+          240
+        ],
+        "id": "d04516b8-a24f-4740-9e4f-c138c5a2d665",
+        "name": "Weekly"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C05FPQSFU92",
+            "mode": "id"
+          },
+          "text": "={{ $('HTML Version').item.json.slackMessage }}\n\n*Link to full report:* <{{ $json.image_url }}|Click here to view>",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          3136,
+          64
+        ],
+        "id": "cfb63a15-89e2-43ff-93dc-e625e4736aa9",
+        "name": "Send a message",
+        "webhookId": "f719ecb5-2533-4bc6-91a5-056e32b9acd5",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = items[0].json;\n\n// Sort function: longest duration first\nconst sortByDuration = (a, b) => {\n  const durationA = a.durationDays || 0;\n  const durationB = b.durationDays || 0;\n  return durationB - durationA; // Descending order (longest first)\n};\n\n// Sort the requests by duration\nconst sortedOngoing = [...data.ongoing.requests].sort(sortByDuration);\nconst sortedResolved = [...data.resolved.requests].sort(sortByDuration);\n\n// Build Slack message with markdown formatting\nlet slackMessage = `*Daily STP Report - ${data.reportDate}*\\n\\n`;\n\n// Summary section\nslackMessage += `*SUMMARY*\\n`;\nslackMessage += `\u2022 Ongoing Requests: *${data.ongoing.count}*\\n`;\nslackMessage += `\u2022 Resolved Requests: *${data.resolved.count}*\\n`;\nslackMessage += `\u2022 Total Processed: *${data.totalProcessed}*\\n`;\nslackMessage += `\\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\\n`;\n\n// Ongoing STP Requests (NOW FIRST!)\nslackMessage += ` *ONGOING STP REQUESTS: ${data.ongoing.count}*\\n`;\nslackMessage += `_(Sorted by duration: longest first)_\\n\\n`;\n\nif (data.ongoing.count > 0) {\n  sortedOngoing.forEach((req, index) => {\n    slackMessage += `*${index + 1}. ${req.stpCode}*\\n`;\n    slackMessage += `   \u2022 Status: ${req.status}\\n`;\n    slackMessage += `   \u2022 Duration: *${req.durationDays || 'N/A'} days* since request\\n`;\n    slackMessage += `   \u2022 Candidates Endorsed: *${req.endorsementCount}*\\n`;\n    \n    if (req.candidates.length > 0) {\n      slackMessage += `   \u2022 Endorsed Candidates:\\n`;\n      req.candidates.forEach((candidate, idx) => {\n        slackMessage += `      ${idx + 1}. \\`${candidate.vaId}\\` - Endorsed: ${candidate.endorsedDate}\\n`;\n      });\n    }\n    slackMessage += `\\n`;\n  });\n} else {\n  slackMessage += `_No ongoing requests_\\n\\n`;\n}\n\nslackMessage += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n\\n`;\n\n// Resolved STP Requests (NOW SECOND!)\nslackMessage += ` *RESOLVED STP REQUESTS: ${data.resolved.count}*\\n`;\nslackMessage += `_(Sorted by duration: longest first)_\\n\\n`;\n\nif (data.resolved.count > 0) {\n  sortedResolved.forEach((req, index) => {\n    slackMessage += `*${index + 1}. ${req.stpCode}*\\n`;\n    slackMessage += `   \u2022 Status: ${req.status}\\n`;\n    slackMessage += `   \u2022 Duration: *${req.durationDays || 'N/A'} days*\\n`;\n    slackMessage += `   \u2022 Candidates Endorsed: *${req.endorsementCount}*\\n`;\n    \n    if (req.candidates.length > 0) {\n      slackMessage += `   \u2022 Endorsed Candidates:\\n`;\n      req.candidates.forEach((candidate, idx) => {\n        slackMessage += `      ${idx + 1}. \\`${candidate.vaId}\\` - Endorsed: ${candidate.endorsedDate}\\n`;\n      });\n    }\n    slackMessage += `\\n`;\n  });\n} else {\n  slackMessage += `_No resolved requests today_\\n\\n`;\n}\n\nslackMessage += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\\n`;\nslackMessage += `_Report Generated: ${data.reportTimestamp}_`;\n\n// Return formatted message\nreturn [\n  {\n    json: {\n      text: slackMessage\n    }\n  }\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1312,
+          -816
+        ],
+        "id": "445e1bd7-6110-4be8-bda5-d61fb3761a77",
+        "name": "Slack Message Formatter"
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = items[0].json;\n\n// Build HTML email\nlet emailHTML = `\n<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .header { background-color: #4A90E2; color: white; padding: 20px; text-align: center; }\n    .section { margin: 20px; padding: 15px; border-left: 4px solid #4A90E2; background-color: #f9f9f9; }\n    .metric { font-size: 24px; font-weight: bold; color: #4A90E2; }\n    table { width: 100%; border-collapse: collapse; margin-top: 10px; }\n    th { background-color: #4A90E2; color: white; padding: 12px; text-align: left; }\n    td { padding: 10px; border-bottom: 1px solid #ddd; }\n    tr:hover { background-color: #f5f5f5; }\n    .candidate-list { font-size: 0.9em; color: #666; margin-top: 5px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1> Weekly STP Report</h1>\n    <p>${data.reportDate}</p>\n  </div>\n  \n  <div class=\"section\">\n    <h3> Resolved STP Requests</h3>\n    <p class=\"metric\">${data.resolved.count} Requests Resolved</p>\n    <table>\n      <thead>\n        <tr>\n          <th>STP Code</th>\n          <th>Status</th>\n          <th>Duration (Days)</th>\n          <th>Candidates Endorsed</th>\n          <th>Candidate Details</th>\n        </tr>\n      </thead>\n      <tbody>\n`;\n\nif (data.resolved.count > 0) {\n  data.resolved.requests.forEach(req => {\n    const candidateDetails = req.candidates.map(c => \n      `${c.vaId} (${c.endorsedDate})`\n    ).join('<br>');\n    \n    emailHTML += `\n        <tr>\n          <td><strong>${req.stpCode}</strong></td>\n          <td>${req.status}</td>\n          <td>${req.durationDays}</td>\n          <td>${req.endorsementCount}</td>\n          <td class=\"candidate-list\">${candidateDetails || 'None'}</td>\n        </tr>\n    `;\n  });\n} else {\n  emailHTML += `\n        <tr>\n          <td colspan=\"5\" style=\"text-align: center; color: #999;\">No resolved requests this week</td>\n        </tr>\n  `;\n}\n\nemailHTML += `\n      </tbody>\n    </table>\n  </div>\n  \n  <div class=\"section\">\n    <h3> Ongoing STP Requests</h3>\n    <p class=\"metric\">${data.ongoing.count} Requests In Progress</p>\n    <table>\n      <thead>\n        <tr>\n          <th>STP Code</th>\n          <th>Status</th>\n          <th>Duration (Days)</th>\n          <th>Candidates Endorsed</th>\n          <th>Candidate Details</th>\n        </tr>\n      </thead>\n      <tbody>\n`;\n\nif (data.ongoing.count > 0) {\n  data.ongoing.requests.forEach(req => {\n    const candidateDetails = req.candidates.map(c => \n      `${c.vaId} (${c.endorsedDate})`\n    ).join('<br>');\n    \n    emailHTML += `\n        <tr>\n          <td><strong>${req.stpCode}</strong></td>\n          <td>${req.status}</td>\n          <td>${req.durationDays}</td>\n          <td>${req.endorsementCount}</td>\n          <td class=\"candidate-list\">${candidateDetails || 'None'}</td>\n        </tr>\n    `;\n  });\n} else {\n  emailHTML += `\n        <tr>\n          <td colspan=\"5\" style=\"text-align: center; color: #999;\">No ongoing requests</td>\n        </tr>\n  `;\n}\n\nemailHTML += `\n      </tbody>\n    </table>\n  </div>\n  \n  <div style=\"text-align: center; margin-top: 30px; color: #999; font-size: 0.9em;\">\n    <p>Total STP Records Processed: ${data.totalProcessed}</p>\n    <p>Report Generated: ${new Date().toLocaleString()}</p>\n  </div>\n</body>\n</html>\n`;\n\n// Plain text version for email clients that don't support HTML\nlet emailPlainText = `Weekly STP Report - ${data.reportDate}\\n\\n`;\nemailPlainText += `RESOLVED STP REQUESTS: ${data.resolved.count}\\n`;\nemailPlainText += `ONGOING STP REQUESTS: ${data.ongoing.count}\\n\\n`;\nemailPlainText += `Total Records Processed: ${data.totalProcessed}`;\n\nreturn [\n  {\n    json: {\n      emailHTML: emailHTML,\n      emailPlainText: emailPlainText,\n      subject: `Weekly STP Report - ${data.reportDate}`,\n      resolved: data.resolved,\n      ongoing: data.ongoing\n    }\n  }\n];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1856,
+          688
+        ],
+        "id": "d9ea05fd-8e2a-41f3-810d-01187d5c774e",
+        "name": "Email Formatter"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.isDaily }}",
+                      "rightValue": "",
+                      "operator": {
+                        "type": "boolean",
+                        "operation": "true",
+                        "singleValue": true
+                      },
+                      "id": "c815ac29-93fb-4cb9-aa4a-188a48dd8954"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Daily"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 2
+                  },
+                  "conditions": [
+                    {
+                      "id": "7add16b4-2c12-4c20-b201-c3fa14c3d040",
+                      "leftValue": "={{ $json.isWeekly }}",
+                      "rightValue": "",
+                      "operator": {
+                        "type": "boolean",
+                        "operation": "true",
+                        "singleValue": true
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Weekly"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.2,
+        "position": [
+          1344,
+          96
+        ],
+        "id": "a685c042-a69c-4055-a047-93917e5c68b8",
+        "name": "Switch"
+      },
+      {
+        "parameters": {
+          "sendTo": "jenn@scalevirtually.com",
+          "subject": "={{ $json.subject }}",
+          "message": "={{ $json.emailHTML }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          2288,
+          688
+        ],
+        "id": "ae2ece1c-774c-4d0f-be67-fd08799ca16e",
+        "name": "Send Weekly Report",
+        "webhookId": "1529acd3-4ca7-4f7d-93ef-6328ab632049",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "QdsxfF1pgD1hbNDT",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = items[0].json;\n\n// Helper function to format dates to MMM-DD-YYYY\nconst formatDateToMMM_DD_YYYY = (dateString) => {\n  if (!dateString || dateString === 'N/A') return 'N/A';\n  \n  // Try to parse the date string\n  const date = new Date(dateString);\n  if (isNaN(date.getTime())) return dateString; // Return original if parsing fails\n  \n  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];\n  const month = months[date.getMonth()];\n  const day = String(date.getDate()).padStart(2, '0');\n  const year = date.getFullYear();\n  \n  return `${month}-${day}-${year}`;\n};\n\n// Sort helper\nconst sortByDuration = (a, b) => (b.durationDays || 0) - (a.durationDays || 0);\n\n// Ongoing only, sorted by duration\nconst ongoingRequests = (data.ongoing?.requests || []).sort(sortByDuration);\n\n// Helper function to determine RAG color\nconst getRAGColor = (days) => {\n  if (!days || days === 0) return '#6E86AD'; // Scale Virtually Grey\n  if (days > 30) return '#dc2626'; // Red\n  if (days > 14) return '#F17D19'; // Scale Virtually Orange (Amber)\n  return '#10b981'; // Green\n};\n\n// Helper function to get RAG emoji for Slack\nconst getRAGEmoji = (days) => {\n  if (!days || days === 0) return '\u26aa'; // White circle for N/A\n  if (days > 30) return '\ud83d\udd34'; // Red\n  if (days > 14) return '\ud83d\udfe0'; // Orange/Amber\n  return '\ud83d\udfe2'; // Green\n};\n\n// Use human-readable date from data and convert to MMM-DD-YYYY format\nconst formattedDate = formatDateToMMM_DD_YYYY(data.reportDateFormatted);\n\n// Get average durations\nconst avgOngoingDuration = data.averageDurations?.ongoing || 0;\nconst avgResolvedDuration = data.averageDurations?.resolved || 0;\n\n// === BUILD SLACK MESSAGE ===\nconst ongoingRAG = getRAGEmoji(avgOngoingDuration);\nconst resolvedRAG = getRAGEmoji(avgResolvedDuration);\n\nconst slackMessage = `Hi Team - Here's the STP report as of ${formattedDate}\n\n*Ongoing Requests:* ${data.ongoing?.count || 0} | *Avg Duration:* ${avgOngoingDuration} days ${ongoingRAG}\n*Completed Requests:* ${data.resolved?.count || 0} | *Avg Duration:* ${avgResolvedDuration} days ${resolvedRAG}`;\n\n// HTML build\nconst htmlContent = `\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\" />\n<meta name=\"viewport\" content=\"width=1600\" />\n<style>\n  body {\n    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;\n    background: #f5f5f5;\n    margin: 0;\n    padding: 0;\n    line-height: 1.6;\n  }\n  .container {\n    width: 1600px;\n    margin: 0 auto;\n    background: #FFFFFF;\n    box-shadow: 0 2px 8px rgba(0,0,0,0.1);\n  }\n  .header {\n    background: linear-gradient(135deg, #FFFFFF 0%, #FFF5F0 50%, #FFE8DC 100%);\n    color: #1f2937;\n    padding: 40px 20px;\n    text-align: center;\n    border-bottom: 3px solid #F17D19;\n  }\n  .logo-container {\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    margin-bottom: 20px;\n  }\n  .sv-logo {\n    width: 500px;\n    height: auto;\n  }\n  .header h1 {\n    font-size: 36px;\n    margin: 15px 0 8px 0;\n    font-weight: 700;\n    color: #1f2937;\n  }\n  .header .date {\n    font-size: 18px;\n    color: #6E86AD;\n    font-weight: 600;\n  }\n  .summary {\n    display: flex;\n    justify-content: space-around;\n    padding: 30px 0;\n    border-bottom: 2px solid #F17D19;\n    background: #FFFFFF;\n  }\n  .summary-item {\n    text-align: center;\n  }\n  .summary-item .label {\n    font-size: 13px;\n    color: #6E86AD;\n    text-transform: uppercase;\n    font-weight: 600;\n    letter-spacing: 0.5px;\n  }\n  .summary-item .value {\n    font-size: 40px;\n    font-weight: 700;\n    color: #1f2937;\n    margin-top: 5px;\n  }\n  .summary-item .sub-value {\n    font-size: 16px;\n    font-weight: 600;\n    margin-top: 5px;\n  }\n  .summary-item.ongoing .value { color: #F17D19; }\n  .summary-item.resolved .value { color: #10b981; }\n  .main {\n    padding: 40px 60px;\n    background: #f9fafb;\n  }\n  .section-header {\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n    margin-bottom: 25px;\n  }\n  .section-header h2 {\n    font-size: 26px;\n    font-weight: 700;\n    color: #1f2937;\n  }\n  .section-header .count {\n    background: #F17D19;\n    color: #FFFFFF;\n    font-weight: 700;\n    font-size: 16px;\n    padding: 8px 20px;\n    border-radius: 12px;\n  }\n  .section-note {\n    font-size: 13px;\n    color: #6E86AD;\n    margin-bottom: 25px;\n    font-weight: 500;\n  }\n  .grid {\n    display: grid;\n    grid-template-columns: repeat(3, 1fr);\n    gap: 24px;\n  }\n  .request-item {\n    background: #FFFFFF;\n    border: 2px solid #e5e7eb;\n    border-radius: 12px;\n    padding: 22px;\n    box-shadow: 0 2px 4px rgba(0,0,0,0.08);\n    transition: transform 0.2s, box-shadow 0.2s;\n  }\n  .request-item:hover {\n    transform: translateY(-2px);\n    box-shadow: 0 4px 12px rgba(241, 125, 25, 0.15);\n    border-color: #F17D19;\n  }\n  .request-header {\n    margin-bottom: 12px;\n    padding-bottom: 12px;\n    border-bottom: 2px solid #F17D19;\n  }\n  .req-title {\n    font-size: 17px;\n    font-weight: 700;\n    color: #1f2937;\n    text-transform: uppercase;\n    margin-bottom: 6px;\n    letter-spacing: 0.3px;\n  }\n  .req-subtitle {\n    font-size: 13px;\n    color: #6E86AD;\n    font-weight: 600;\n    margin-bottom: 8px;\n  }\n  .status-badge {\n    display: inline-block;\n    padding: 5px 12px;\n    border-radius: 8px;\n    font-size: 11px;\n    font-weight: 700;\n    text-transform: uppercase;\n    letter-spacing: 0.5px;\n  }\n  .status-badge.stp-ongoing {\n    background: #fef3c7;\n    color: #92400e;\n  }\n  .status-badge.stp-requested {\n    background: #fee2e2;\n    color: #991b1b;\n  }\n  .status-badge.stp-parked {\n    background: #e0e7ff;\n    color: #3730a3;\n  }\n  .info-row {\n    display: flex;\n    align-items: center;\n    margin-bottom: 10px;\n  }\n  .info-label {\n    color: #6E86AD;\n    text-transform: uppercase;\n    font-size: 11px;\n    font-weight: 700;\n    min-width: 120px;\n    letter-spacing: 0.5px;\n  }\n  .info-value {\n    font-size: 13px;\n    color: #374151;\n    font-weight: 600;\n  }\n  .duration-badge {\n    display: inline-block;\n    padding: 4px 12px;\n    border-radius: 6px;\n    font-weight: 700;\n    font-size: 14px;\n  }\n  .candidates {\n    background: #f9fafb;\n    border: 1px solid #e5e7eb;\n    border-radius: 8px;\n    padding: 12px 14px;\n    margin-top: 14px;\n  }\n  .candidates-title {\n    font-size: 12px;\n    color: #6E86AD;\n    font-weight: 700;\n    text-transform: uppercase;\n    margin-bottom: 10px;\n    letter-spacing: 0.5px;\n  }\n  .candidate-item {\n    display: flex;\n    justify-content: space-between;\n    font-size: 13px;\n    padding: 6px 0;\n    border-bottom: 1px solid #e5e7eb;\n  }\n  .candidate-item:last-child { border-bottom: none; }\n  .candidate-item .va-name {\n    color: #1f2937;\n    font-weight: 600;\n  }\n  .candidate-item .date {\n    color: #6E86AD;\n    font-size: 12px;\n  }\n  .footer {\n    padding: 25px;\n    background: #FFFFFF;\n    text-align: center;\n    font-size: 13px;\n    color: #6E86AD;\n    border-top: 2px solid #F17D19;\n    font-weight: 500;\n  }\n  .footer strong {\n    color: #1f2937;\n  }\n</style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <div class=\"logo-container\">\n        <svg class=\"sv-logo\" viewBox=\"0 0 700 150\" xmlns=\"http://www.w3.org/2000/svg\">\n          <!-- SCALE Text (Dark Grey) -->\n          <g fill=\"#3d3d3d\">\n            <text x=\"350\" y=\"70\" font-family=\"Arial, sans-serif\" font-size=\"75\" font-weight=\"700\" letter-spacing=\"-2\" text-anchor=\"middle\">SCALE</text>\n          </g>\n          \n          <!-- VIRTUALLY Text (Orange) -->\n          <g fill=\"#F17D19\">\n            <text x=\"350\" y=\"120\" font-family=\"Arial, sans-serif\" font-size=\"45\" font-weight=\"700\" letter-spacing=\"2\" text-anchor=\"middle\">VIRTUALLY</text>\n          </g>\n        </svg>\n      </div>\n      <h1>\ud83d\udcca Daily STP Report</h1>\n      <div class=\"date\">As of ${formattedDate}</div>\n    </div>\n\n    <div class=\"summary\">\n      <div class=\"summary-item ongoing\">\n        <div class=\"label\">Ongoing Requests</div>\n        <div class=\"value\">${data.ongoing?.count || 0}</div>\n        <div class=\"sub-value\" style=\"color: ${getRAGColor(avgOngoingDuration)};\">\n          Avg: ${avgOngoingDuration} days\n        </div>\n      </div>\n      <div class=\"summary-item resolved\">\n        <div class=\"label\">Resolved Requests</div>\n        <div class=\"value\">${data.resolved?.count || 0}</div>\n        <div class=\"sub-value\" style=\"color: ${getRAGColor(avgResolvedDuration)};\">\n          Avg: ${avgResolvedDuration} days\n        </div>\n      </div>\n      <div class=\"summary-item\">\n        <div class=\"label\">Total Processed</div>\n        <div class=\"value\">${data.totalProcessed || 0}</div>\n      </div>\n    </div>\n\n    <div class=\"main\">\n      <div class=\"section-header\">\n        <h2>\ud83d\udd04 Ongoing STP Requests</h2>\n        <div class=\"count\">${data.ongoing?.count || 0}</div>\n      </div>\n      <div class=\"section-note\">\ud83d\udccc Sorted by duration: longest first | \u2705 Only showing requests with endorsed candidates</div>\n      <div class=\"grid\">\n        ${ongoingRequests.map((req, i) => {\n          const d = req.durationDays || 0;\n          const durationColor = getRAGColor(d);\n          const statusClass = (req.status || '').toLowerCase().replace(/\\s+/g, '-').replace(/[^a-z0-9-]/g, '');\n          const placementReq = req.placementRequirement || 'N/A';\n          \n          return `\n            <div class=\"request-item\">\n              <div class=\"request-header\">\n                <div class=\"req-title\">${i + 1}. ${req.stpCode || 'N/A'}</div>\n                <div class=\"req-subtitle\">Placement Requirement: ${placementReq}</div>\n                <span class=\"status-badge ${statusClass}\">${req.status || 'N/A'}</span>\n              </div>\n              \n              <div class=\"info-row\">\n                <span class=\"info-label\">DURATION:</span>\n                <span class=\"duration-badge\" style=\"background-color: ${durationColor}20; color: ${durationColor}; border: 1px solid ${durationColor};\">\n                  ${d > 0 ? d + ' days' : 'N/A'}\n                </span>\n              </div>\n              \n              <div class=\"info-row\">\n                <span class=\"info-label\">REQUEST DATE:</span>\n                <span class=\"info-value\">${formatDateToMMM_DD_YYYY(req.requisitionDate)}</span>\n              </div>\n              \n              <div class=\"info-row\">\n                <span class=\"info-label\">CANDIDATES:</span>\n                <span class=\"info-value\">${req.endorsementCount || 0} endorsed</span>\n              </div>\n              \n              ${req.candidates?.length ? `\n                <div class=\"candidates\">\n                  <div class=\"candidates-title\">\u2713 Endorsed Candidates (${req.candidates.length})</div>\n                  ${req.candidates.map((c, idx) => `\n                    <div class=\"candidate-item\">\n                      <span class=\"va-name\">${idx + 1}. ${c.vaId || 'N/A'}</span>\n                      <span class=\"date\">\ud83d\udcc5 ${formatDateToMMM_DD_YYYY(c.endorsedDate)}</span>\n                    </div>\n                  `).join('')}\n                </div>\n              ` : ''}\n            </div>\n          `;\n        }).join('')}\n      </div>\n    </div>\n\n    <div class=\"footer\">\n      <strong>Report Generated:</strong> ${data.reportTimestamp || 'N/A'}\n    </div>\n  </div>\n</body>\n</html>\n`;\n\nreturn [\n  { \n    json: { \n      html: htmlContent,\n      slackMessage: slackMessage,\n      reportMetadata: {\n        date: formattedDate,\n        ongoingCount: data.ongoing?.count || 0,\n        ongoingAvgDuration: avgOngoingDuration,\n        ongoingRAG: ongoingRAG,\n        resolvedCount: data.resolved?.count || 0,\n        resolvedAvgDuration: avgResolvedDuration,\n        resolvedRAG: resolvedRAG,\n      }\n    } \n  }\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1824,
+          -64
+        ],
+        "id": "10aa7d59-98d4-46dd-b881-3cf3d836bb78",
+        "name": "HTML Version"
+      },
+      {
+        "parameters": {
+          "html_content": "={{ $json.html }}",
+          "viewPortWidth": 1920,
+          "viewPortHeight": "={{ 1080 }}"
+        },
+        "type": "n8n-nodes-htmlcsstoimage.htmlCssToImage",
+        "typeVersion": 1,
+        "position": [
+          2352,
+          -64
+        ],
+        "id": "fdadd281-0944-44cd-bdb9-033c35f120f0",
+        "name": "HTML/CSS to Image",
+        "credentials": {
+          "htmlcsstoimgApi": {
+            "id": "RgVbijNCeobh79Gr",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// === STEP 1: Get Airtable Data Safely ===\nlet stpRecords;\n// Handle different formats of Airtable responses\nif (Array.isArray(items)) {\n  if (Array.isArray(items[0].json)) {\n    stpRecords = items[0].json;\n  } else if (items[0].json.records && Array.isArray(items[0].json.records)) {\n    stpRecords = items[0].json.records.map(r => r.fields); // Airtable standard format\n  } else if (items[0].json.data && Array.isArray(items[0].json.data)) {\n    stpRecords = items[0].json.data;\n  } else if (items.length > 1) {\n    stpRecords = items.map(i => i.json);\n  } else {\n    stpRecords = [items[0].json];\n  }\n} else {\n  throw new Error(\"Unexpected data structure \u2014 check Airtable output.\");\n}\n\n// If still undefined, abort early\nif (!stpRecords || !stpRecords.length) {\n  throw new Error(\"No STP records found \u2014 Airtable may have returned empty data.\");\n}\n\n// === HELPER: Format date to human-readable format ===\nfunction formatDateHuman(dateString) {\n  if (!dateString) return \"N/A\";\n  \n  try {\n    const date = new Date(dateString);\n    if (isNaN(date)) return \"N/A\";\n    \n    // Format: November 10, 2025\n    const options = { year: 'numeric', month: 'long', day: 'numeric' };\n    return date.toLocaleDateString('en-US', options);\n  } catch (error) {\n    return \"N/A\";\n  }\n}\n\n// === STEP 2: Initialize Counters ===\nlet resolvedCount = 0;\nlet ongoingCount = 0;\nlet resolvedCandidates = [];\nlet ongoingCandidates = [];\n\n// === Track durations for averages ===\nlet ongoingDurations = [];\nlet resolvedDurations = [];\n\n// === STEP 3: Process Each Record ===\nfor (const record of stpRecords) {\n  if (!record) continue;\n  \n  const statusRaw = record[\"Requisition Status\"] || \"N/A\";\n  const status = String(statusRaw).trim();\n  const stpCode = record[\"STP Code\"] || record[\"STP Request ID\"] || \"N/A\";\n  const requisitionDate = record[\"Requisition Date\"] || null;\n  \n  // === Use TEXT fields instead of IDs ===\n  const endorsedVAsText = record[\"Endorsed VAs (text)\"] || [];\n  const placementReqsText = record[\"Placements Requirements (text)\"] || [];\n  const endorsedDates = Array.isArray(record[\"Endorsed to Placements\"]) ? record[\"Endorsed to Placements\"] : [];\n  \n  // === Check if the status is considered 'Ongoing' ===\n  const isOngoing = /ongoing|requested/i.test(status);\n\n  // === REVISED FILTER: Keep ALL Ongoing STPs. Skip others only if missing requirements ===\n  if (!isOngoing && (!Array.isArray(placementReqsText) || placementReqsText.length === 0)) {\n    continue; // Skip ONLY if it's a Resolved/Other status AND has no placement requirements\n  }\n  \n  // === Extract Placement Requirement (TEXT) ===\n  let placementRequirement = \"N/A\";\n  if (Array.isArray(placementReqsText) && placementReqsText.length > 0) {\n    placementRequirement = placementReqsText[0]; // Get first placement requirement text\n  }\n  \n  // === Calculate duration from STP request date to today ===\n  let durationDays = null;\n  if (requisitionDate) {\n    const reqDate = new Date(requisitionDate);\n    const today = new Date();\n    if (!isNaN(reqDate)) {\n      durationDays = Math.floor((today - reqDate) / (1000 * 60 * 60 * 24));\n    }\n  }\n  \n  // === Build Candidate List with TEXT names ===\n  const candidatesList = endorsedVAsText.map((vaName, index) => ({\n    vaId: vaName, // Now using the actual name instead of record ID\n    endorsedDate: endorsedDates[index] ? formatDateHuman(endorsedDates[index]) : \"N/A\",\n  }));\n  \n  // === Common Data Object ===\n  const baseData = {\n    stpCode,\n    status,\n    requisitionDate: formatDateHuman(requisitionDate), // Human-readable date\n    requisitionDateRaw: requisitionDate, // Keep raw for duration calculation\n    durationDays,\n    endorsementCount: endorsedVAsText.length,\n    candidates: candidatesList,\n    clientName: record[\"Client Name\"]?.[0] || \"N/A\",\n    role: record[\"Role\"]?.[0] || \"N/A\",\n    placementRequirement: placementRequirement, // Using text field\n  };\n  \n  // === Categorize Based on Keywords in Status ===\n  if (\n    /completed|filled|cancelled/i.test(status)\n  ) {\n    resolvedCount++;\n    resolvedCandidates.push(baseData);\n    // Track duration for resolved requests\n    if (durationDays !== null && durationDays > 0) {\n      resolvedDurations.push(durationDays);\n    }\n  } else if (isOngoing) {\n    ongoingCount++;\n    ongoingCandidates.push(baseData);\n    // Track duration for ongoing requests\n    if (durationDays !== null && durationDays > 0) {\n      ongoingDurations.push(durationDays);\n    }\n  }\n}\n\n// === STEP 4: Calculate Average Durations ===\nconst calculateAverage = (arr) => {\n  if (arr.length === 0) return 0;\n  const sum = arr.reduce((acc, val) => acc + val, 0);\n  return Math.round(sum / arr.length);\n};\n\nconst avgOngoingDuration = calculateAverage(ongoingDurations);\nconst avgResolvedDuration = calculateAverage(resolvedDurations);\n\n// === Format current date for report ===\nconst today = new Date();\nconst reportDateFormatted = formatDateHuman(today.toISOString().split('T')[0]);\n\n// === STEP 5: Return Summary JSON ===\nreturn [\n  {\n    json: {\n      reportDate: today.toISOString().split(\"T\")[0], // Keep ISO for IF logic\n      reportDateFormatted: reportDateFormatted, // Human-readable for display\n      reportTimestamp: today.toLocaleString('en-US', { \n        month: '2-digit', \n        day: '2-digit', \n        year: 'numeric',\n        hour: '2-digit',\n        minute: '2-digit'\n      }),\n      isDaily: true,\n      reportType: \"daily\",\n      resolved: {\n        count: resolvedCount,\n        requests: resolvedCandidates,\n        avgDuration: avgResolvedDuration,\n      },\n      ongoing: {\n        count: ongoingCount,\n        requests: ongoingCandidates,\n        avgDuration: avgOngoingDuration,\n      },\n      totalProcessed: stpRecords.length,\n      totalResolved: resolvedCount,\n      totalOngoing: ongoingCount,\n      averageDurations: {\n        ongoing: avgOngoingDuration,\n        resolved: avgResolvedDuration,\n      },\n    },\n  },\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          768,
+          112
+        ],
+        "id": "81dbeaa2-fc5e-4bf7-a7a8-69d1b3f8daab",
+        "name": "Process STP Data"
+      },
+      {
+        "parameters": {
+          "jsCode": "// === Process Data Function Node (Test Version for 2025-11-05) ===\n\n// --- 1\ufe0f\u20e3 Load the static test data ---\nconst testData = [\n  {\n    \"reportDate\": \"2025-11-06\",\n    \"reportTimestamp\": \"11/6/2025, 7:05:56 PM\",\n    \"isDaily\": true,\n    \"isWeekly\": false,\n    \"reportType\": \"daily\",\n    \"resolved\": {\n      \"count\": 28,\n      \"requests\": [\n        {\n          \"stpCode\": \"TARA-ADMIN\",\n          \"status\": \"FILLED\",\n          \"requisitionDate\": \"2025-09-02\",\n          \"durationDays\": 65,\n          \"endorsementCount\": 2,\n          \"candidates\": [\n            { \"vaId\": \"recidAPAjz6mQUaZN\", \"endorsedDate\": \"2025-09-16\" },\n            { \"vaId\": \"recfEhXlBra1jr0WX\", \"endorsedDate\": \"2025-09-16\" }\n          ],\n          \"clientName\": \"recu9b4oH9zpHUAjn\",\n          \"role\": \"recCa2hbI66Q8KYJQ\"\n        },\n        {\n          \"stpCode\": \"PROJAD-MATT-FOS\",\n          \"status\": \"FILLED\",\n          \"requisitionDate\": \"2025-07-25\",\n          \"durationDays\": 104,\n          \"endorsementCount\": 0,\n          \"candidates\": [],\n          \"clientName\": \"recw0cpXhuTyaf6Bp\",\n          \"role\": \"recQFFcgC83nIeVJS\"\n        }\n        // ... You can include more if needed for testing\n      ]\n    },\n    \"ongoing\": {\n      \"count\": 2,\n      \"requests\": [\n        {\n          \"stpCode\": \"EDDIE-LAM-LEADMAN\",\n          \"status\": \"Ongoing\",\n          \"requisitionDate\": \"2025-08-20\",\n          \"durationDays\": 78,\n          \"endorsementCount\": 5,\n          \"candidates\": [\n            { \"vaId\": \"recWl0IP29LrPb4rq\", \"endorsedDate\": \"2025-09-03\" },\n            { \"vaId\": \"recB6EjpVFee8bbRQ\", \"endorsedDate\": \"2025-09-05\" },\n            { \"vaId\": \"recuCmPTmLCepyRDz\", \"endorsedDate\": \"2025-10-24\" }\n          ],\n          \"clientName\": \"recjbz9XSXrryzepe\",\n          \"role\": \"recWku8MCXVP2mqBM\"\n        },\n        {\n          \"stpCode\": \"BF-EVA-OPS-PROJECT\",\n          \"status\": \"Ongoing\",\n          \"requisitionDate\": \"2025-09-10\",\n          \"durationDays\": 57,\n          \"endorsementCount\": 1,\n          \"candidates\": [\n            { \"vaId\": \"rec4UnY1XlDhJyayv\", \"endorsedDate\": \"2025-09-03\" }\n          ],\n          \"clientName\": \"N/A\",\n          \"role\": \"N/A\"\n        }\n      ]\n    },\n    \"totalProcessed\": 30,\n    \"totalResolved\": 28,\n    \"totalOngoing\": 2\n  }\n];\n\n// --- 2\ufe0f\u20e3 Simulate the same output format as live process ---\nconst report = testData[0];\n\n// Ensure structure matches what the HTML Generator expects\nreturn [\n  {\n    json: {\n      reportDate: report.reportDate,\n      reportTimestamp: report.reportTimestamp,\n      isDaily: report.isDaily,\n      isWeekly: report.isWeekly,\n      reportType: report.reportType,\n      resolved: report.resolved,\n      ongoing: report.ongoing,\n      totalProcessed: report.totalProcessed,\n      totalResolved: report.totalResolved,\n      totalOngoing: report.totalOngoing\n    }\n  }\n];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1568,
+          -800
+        ],
+        "id": "c1baf339-33ce-473d-8a9b-706810d4ff19",
+        "name": "Code"
+      },
+      {
+        "parameters": {
+          "content": "Triggers the automation Daily at midnight\n",
+          "height": 96,
+          "width": 192
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          -112,
+          -144
+        ],
+        "typeVersion": 1,
+        "id": "eb5b2553-f16b-4f0a-8ca8-51aed644feeb",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "content": "Triggers the automation Every Monday at midnight\n",
+          "height": 96,
+          "width": 192
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          -128,
+          176
+        ],
+        "typeVersion": 1,
+        "id": "e219f43d-f095-4e26-a2af-baed8300a268",
+        "name": "Sticky Note1"
+      },
+      {
+        "parameters": {
+          "content": "**Purpose:** Pulls STP request records from Airtable\n",
+          "height": 128,
+          "width": 176
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          272,
+          32
+        ],
+        "typeVersion": 1,
+        "id": "70bee312-3eba-40f2-b938-3f26a7917002",
+        "name": "Sticky Note2"
+      },
+      {
+        "parameters": {
+          "content": "### STP REPORTS AUTOMATION\n\nWhat this does:\n- Pulls STP request data from Airtable\n- Categorizes requests into **Resolved** vs **Ongoing**\n- Calculates duration since requisition date\n- Lists endorsed candidates with endorsement dates\n- Sends **Daily snapshot to Slack**\n- Sends **Weekly digest via Email**\n- (Future) Adds RAG status once Amber/Red criteria are defined\n\nRuns: Daily (Slack) + Weekly (Email)\n",
+          "height": 336,
+          "width": 384
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          -144,
+          -528
+        ],
+        "typeVersion": 1,
+        "id": "168d30c0-4cf4-4551-b834-2392d5860716",
+        "name": "Sticky Note3"
+      },
+      {
+        "parameters": {
+          "content": "**Purpose:** Categorizes STP requests into Resolved vs Ongoing\n\n**Logic Highlights:**\n\nCounts requests by status keywords (completed, filled, cancelled \u2192 Resolved; ongoing, requested, parked, paused \u2192 Ongoing).\n\nBuilds candidate lists with endorsement dates.\n\nCalculates duration in days since requisition date.",
+          "height": 320,
+          "width": 288
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          656,
+          -192
+        ],
+        "typeVersion": 1,
+        "id": "30248891-7a37-4c15-86d3-eafee2409bbf",
+        "name": "Sticky Note4"
+      },
+      {
+        "parameters": {
+          "content": "**Purpose:** Routes the automation output based on report type.\n\n**Logic:**\n\nIf isDaily = true \u2192 send to Daily Slack report\n\nIf isWeekly = true \u2192 send to Weekly Email report",
+          "height": 224,
+          "width": 256
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          1184,
+          -96
+        ],
+        "typeVersion": 1,
+        "id": "71ea4c47-e876-4225-b9b8-b29b874df4e8",
+        "name": "Sticky Note5"
+      },
+      {
+        "parameters": {
+          "content": "Test - DO NOT TOUCH ",
+          "height": 304,
+          "width": 528
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          1232,
+          -928
+        ],
+        "typeVersion": 1,
+        "id": "b7d47fa7-47e5-4970-bd5f-c355182755b7",
+        "name": "Sticky Note6"
+      },
+      {
+        "parameters": {
+          "content": "**Purpose**  \nTransforms the STP summary JSON into a styled HTML report for Slack/Email delivery.  \n\n**Key Features**  \n- **Sorting:** Ongoing requests sorted by duration (longest first)  \n- **RAG Coloring:**  \n  - Gray = No duration  \n  - Green = \u2264 14 days  \n  - Amber = 15\u201330 days  \n  - Red = > 30 days  \n- **Summary Section:** Counts of ongoing, resolved, and total processed requests  \n- **Detailed Cards:** Each ongoing request shows:  \n  - STP Code + Status badge  \n  - Duration in days (color-coded)  \n  - Request date  \n  - Candidate endorsements (with endorsed dates)  \n",
+          "height": 448,
+          "width": 512
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          1520,
+          -464
+        ],
+        "typeVersion": 1,
+        "id": "723e4ef6-346f-43b4-b314-382a55c1aba6",
+        "name": "Sticky Note7"
+      },
+      {
+        "parameters": {
+          "content": "**Purpose**  \nFormats the processed STP data into a **weekly email report** with both HTML and plain text versions.  \n\n**Key Features**  \n- **HTML Email:**  \n  - Header with report date  \n  - Section for **Resolved Requests** (count + table of details)  \n  - Section for **Ongoing Requests** (count + table of details)  \n  - Candidate details listed under each request  \n  - Footer with total processed + timestamp  \n- **Plain Text Fallback:**  \n  - Simple summary for email clients that don\u2019t support HTML  \n- **Subject Line:**  \n  - `Weekly STP Report - <reportDate>`  \n",
+          "height": 416,
+          "width": 512
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          1520,
+          288
+        ],
+        "typeVersion": 1,
+        "id": "65db7591-2805-4ca8-b23d-31e52824cd67",
+        "name": "Sticky Note8"
+      },
+      {
+        "parameters": {
+          "content": "**Purpose**  \nConverts the generated HTML report into an image for easy sharing in Slack or other platforms.  \n\n"
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2240,
+          -224
+        ],
+        "typeVersion": 1,
+        "id": "1261d581-5420-46f8-beb8-ab6cc620f078",
+        "name": "Sticky Note9"
+      },
+      {
+        "parameters": {
+          "content": "**Purpose**  \nSends the **weekly STP report** via Gmail.  \n"
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          2208,
+          544
+        ],
+        "typeVersion": 1,
+        "id": "2812cd4a-990f-49de-a67f-d2e784ebda76",
+        "name": "Sticky Note10"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineAll",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          2656,
+          64
+        ],
+        "id": "0569413f-8b65-41cc-9d35-d630bf001590",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "jsCode": "// === STEP 1: Get Airtable Data Safely ===\nlet stpRecords;\n// Handle different formats of Airtable responses\nif (Array.isArray(items)) {\n  if (Array.isArray(items[0].json)) {\n    stpRecords = items[0].json;\n  } else if (items[0].json.records && Array.isArray(items[0].json.records)) {\n    stpRecords = items[0].json.records.map(r => r.fields); // Airtable standard format\n  } else if (items[0].json.data && Array.isArray(items[0].json.data)) {\n    stpRecords = items[0].json.data;\n  } else if (items.length > 1) {\n    stpRecords = items.map(i => i.json);\n  } else {\n    stpRecords = [items[0].json];\n  }\n} else {\n  throw new Error(\"Unexpected data structure \u2014 check Airtable output.\");\n}\n\n// If still undefined, abort early\nif (!stpRecords || !stpRecords.length) {\n  throw new Error(\"No STP records found \u2014 Airtable may have returned empty data.\");\n}\n\n// === HELPER: Format date to human-readable format ===\nfunction formatDateHuman(dateString) {\n  if (!dateString) return \"N/A\";\n  \n  try {\n    const date = new Date(dateString);\n    if (isNaN(date)) return \"N/A\";\n    \n    // Format: November 10, 2025\n    const options = { year: 'numeric', month: 'long', day: 'numeric' };\n    return date.toLocaleDateString('en-US', options);\n  } catch (error) {\n    return \"N/A\";\n  }\n}\n\n// === STEP 2: Initialize Counters ===\nlet resolvedCount = 0;\nlet ongoingCount = 0;\nlet resolvedCandidates = [];\nlet ongoingCandidates = [];\n\n// === Track durations for averages ===\nlet ongoingDurations = [];\nlet resolvedDurations = [];\n\n// === STEP 3: Process Each Record ===\nfor (const record of stpRecords) {\n  if (!record) continue;\n  \n  const statusRaw = record[\"Requisition Status\"] || \"N/A\";\n  const status = String(statusRaw).trim();\n  const stpCode = record[\"STP Code\"] || record[\"STP Request ID\"] || \"N/A\";\n  const requisitionDate = record[\"Requisition Date\"] || null;\n  \n  // === Use TEXT fields instead of IDs ===\n  const endorsedVAsText = record[\"Endorsed VAs (text)\"] || [];\n  const placementReqsText = record[\"Placements Requirements (text)\"] || [];\n  const endorsedDates = Array.isArray(record[\"Endorsed to Placements\"]) ? record[\"Endorsed to Placements\"] : [];\n  \n  // === REVISED FILTER: Skip only records with no placement requirements ===\n  // We want to show ongoing requests even with 0 endorsements if they have placement requirements\n  if (!Array.isArray(placementReqsText) || placementReqsText.length === 0) {\n    continue; // Skip only if no placement requirements are linked\n  }\n  // Note: We're now keeping records with 0 endorsements as long as they have placement requirements\n  \n  // === Extract Placement Requirement (TEXT) ===\n  let placementRequirement = \"N/A\";\n  if (Array.isArray(placementReqsText) && placementReqsText.length > 0) {\n    placementRequirement = placementReqsText[0]; // Get first placement requirement text\n  }\n  \n  // === Calculate duration from STP request date to today ===\n  let durationDays = null;\n  if (requisitionDate) {\n    const reqDate = new Date(requisitionDate);\n    const today = new Date();\n    if (!isNaN(reqDate)) {\n      durationDays = Math.floor((today - reqDate) / (1000 * 60 * 60 * 24));\n    }\n  }\n  \n  // === Build Candidate List with TEXT names ===\n  const candidatesList = endorsedVAsText.map((vaName, index) => ({\n    vaId: vaName, // Now using the actual name instead of record ID\n    endorsedDate: endorsedDates[index] ? formatDateHuman(endorsedDates[index]) : \"N/A\",\n  }));\n  \n  // === Common Data Object ===\n  const baseData = {\n    stpCode,\n    status,\n    requisitionDate: formatDateHuman(requisitionDate), // Human-readable date\n    requisitionDateRaw: requisitionDate, // Keep raw for duration calculation\n    durationDays,\n    endorsementCount: endorsedVAsText.length,\n    candidates: candidatesList,\n    clientName: record[\"Client Name\"]?.[0] || \"N/A\",\n    role: record[\"Role\"]?.[0] || \"N/A\",\n    placementRequirement: placementRequirement, // Using text field\n  };\n  \n  // === Categorize Based on Keywords in Status ===\n  if (\n    /completed|filled|cancelled/i.test(status)\n  ) {\n    resolvedCount++;\n    resolvedCandidates.push(baseData);\n    // Track duration for resolved requests\n    if (durationDays !== null && durationDays > 0) {\n      resolvedDurations.push(durationDays);\n    }\n  } else if (\n    /ongoing|requested|parked|paused/i.test(status)\n  ) {\n    ongoingCount++;\n    ongoingCandidates.push(baseData);\n    // Track duration for ongoing requests\n    if (durationDays !== null && durationDays > 0) {\n      ongoingDurations.push(durationDays);\n    }\n  }\n}\n\n// === STEP 4: Calculate Average Durations ===\nconst calculateAverage = (arr) => {\n  if (arr.length === 0) return 0;\n  const sum = arr.reduce((acc, val) => acc + val, 0);\n  return Math.round(sum / arr.length);\n};\n\nconst avgOngoingDuration = calculateAverage(ongoingDurations);\nconst avgResolvedDuration = calculateAverage(resolvedDurations);\n\n// === Format current date for report ===\nconst today = new Date();\nconst reportDateFormatted = formatDateHuman(today.toISOString().split('T')[0]);\n\n// === STEP 5: Return Summary JSON ===\nreturn [\n  {\n    json: {\n      reportDate: today.toISOString().split(\"T\")[0], // Keep ISO for IF logic\n      reportDateFormatted: reportDateFormatted, // Human-readable for display\n      reportTimestamp: today.toLocaleString('en-US', { \n        month: '2-digit', \n        day: '2-digit', \n        year: 'numeric',\n        hour: '2-digit',\n        minute: '2-digit'\n      }),\n      isDaily: true,\n      reportType: \"daily\",\n      resolved: {\n        count: resolvedCount,\n        requests: resolvedCandidates,\n        avgDuration: avgResolvedDuration,\n      },\n      ongoing: {\n        count: ongoingCount,\n        requests: ongoingCandidates,\n        avgDuration: avgOngoingDuration,\n      },\n      totalProcessed: stpRecords.length,\n      totalResolved: resolvedCount,\n      totalOngoing: ongoingCount,\n      averageDurations: {\n        ongoing: avgOngoingDuration,\n        resolved: avgResolvedDuration,\n      },\n    },\n  },\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          768,
+          336
+        ],
+        "id": "e85f0d84-5841-47aa-8740-1a2c9152cdd3",
+        "name": "Process STP Data1"
+      }
+    ],
+    "connections": {
+      "Daily": {
+        "main": [
+          [
+            {
+              "node": "Search records",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Weekly": {
+        "main": [
+          []
+        ]
+      },
+      "Search records": {
+        "main": [
+          [
+            {
+              "node": "Process STP Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Slack Message Formatter": {
+        "main": [
+          []
+        ]
+      },
+      "Send a message": {
+        "main": [
+          []
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "HTML Version",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 1
+            }
+          ],
+          []
+        ]
+      },
+      "Email Formatter": {
+        "main": [
+          [
+            {
+              "node": "Send Weekly Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTML Version": {
+        "main": [
+          [
+            {
+              "node": "HTML/CSS to Image",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTML/CSS to Image": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Process STP Data": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

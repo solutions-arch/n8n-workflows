@@ -1,0 +1,258 @@
+{
+  "updatedAt": "2025-12-01T18:10:17.000Z",
+  "createdAt": "2025-11-18T16:24:19.282Z",
+  "id": "LkTGC3dWsDDlBklY",
+  "name": "Bubble Webhook to Populate Attendance Tracker",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bubble-webhook",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "d157b9a4-aa3f-4b4a-a056-1ff70749eed7",
+      "name": "Bubble Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        64,
+        96
+      ],
+      "webhookId": "4ea91da0-25d6-45a7-a363-65d6b5c577ee"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "spreadsheetId",
+              "value": "1pv9dovl-_9C4HrvAcxwS13u3E2FIRIby5uZLmgwkEGE",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "sheetName",
+              "value": "Form Responses 2023",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "084d3685-4a2b-454f-9633-0aaad814cd51",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        288,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Workflow Configuration').first().json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.sheetName }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.body.Timestamp }}",
+            "Email Address": "={{ $json.body['Email Address'] }}",
+            "Name": "={{ $json.body.Name }}",
+            "Work Date in CST": "={{ $json.body['Work Date in CST'] }}",
+            "Status": "={{ $json.body.Status }}",
+            "Unique ID": "={{ $json.body['Unique ID'] }}",
+            "Notes": "={{ $('Bubble Webhook Trigger').item.json.body.Notes }}"
+          },
+          "matchingColumns": [
+            "Unique ID"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Work Date in CST",
+              "displayName": "Work Date in CST",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unique ID",
+              "displayName": "Unique ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0e99dc48-ffa2-4b22-a0c6-87fb44e1a7de",
+      "name": "Add Row to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        512,
+        96
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "B7ZzKKtqbTnMLqO4",
+          "name": "JMM Sheets"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Bubble Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Add Row to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "d8a2ab20-6173-48bd-a196-eeaa53ff7b99",
+  "activeVersionId": null,
+  "versionCounter": 22,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-18T16:24:19.285Z",
+      "createdAt": "2025-11-18T16:24:19.285Z",
+      "role": "workflow:owner",
+      "workflowId": "LkTGC3dWsDDlBklY",
+      "projectId": "FtQDRp9NTnHC2f4o",
+      "project": {
+        "updatedAt": "2026-04-09T18:34:38.902Z",
+        "createdAt": "2025-09-03T13:17:34.780Z",
+        "id": "FtQDRp9NTnHC2f4o",
+        "name": "Solution Architects <solutions@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-03T13:17:34.780Z",
+            "createdAt": "2025-09-03T13:17:34.780Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "FtQDRp9NTnHC2f4o",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

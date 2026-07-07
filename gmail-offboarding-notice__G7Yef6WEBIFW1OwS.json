@@ -1,0 +1,243 @@
+{
+  "updatedAt": "2026-07-04T13:06:31.773Z",
+  "createdAt": "2026-02-27T15:03:39.772Z",
+  "id": "G7Yef6WEBIFW1OwS",
+  "name": "[Gmail] Offboarding Notice",
+  "description": "Test Description",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "subject:(\"Offboarding Notice\")"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "01e6629f-86e0-48c2-9e1b-a4790df64310",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UJOF7gMKW80Euvj8",
+          "name": "PJ SV Project"
+        }
+      }
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timeSavedPerExecution": 20,
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1772205037,
+        "possibleDuplicates": [
+          "19c9fa703b297def"
+        ]
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19c9fa703b297def",
+          "threadId": "19c9fa703b297def",
+          "labelIds": [
+            "IMPORTANT",
+            "CATEGORY_PERSONAL",
+            "INBOX"
+          ],
+          "sizeEstimate": 756997,
+          "headers": {
+            "delivered-to": "Delivered-To: pj@scalevirtually.com",
+            "received": "Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])\r\n        by mx.google.com with SMTPS id 38308e7fff4ca-389f2fb0bc8sor9243781fa.14.2026.02.27.07.10.48\r\n        for <pj@scalevirtually.com>\r\n        (Google Transport Security);\r\n        Fri, 27 Feb 2026 07:10:48 -0800 (PST)",
+            "x-received": "X-Received: by 2002:a2e:b891:0:b0:387:da4:1664 with SMTP id\r\n 38308e7fff4ca-389ff36c5abmr21441341fa.36.1772205047706; Fri, 27 Feb 2026\r\n 07:10:47 -0800 (PST)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1772205048; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=U7TCbNMysWfnkaQ2npmZZ4eIQB1hnbmZVoZYkZpuIIwCMA4qgL3nWPiRZK/zMzH7O4\r\n         NcIWwljN3/DlwOJD1+jkMxc2hVIqixrBxgTrv87JFYIPzVZ+QceYROcuPxSqwxMmrt9f\r\n         fHlfe5J4icZuXMBgfWEb9LAsIhmAq14GFoAPqRF5IdKe8mpH4yMNrIv1pwbAYhe3iDkq\r\n         DWwr0tTnGmiHxsftOZV4qfm5sQP2juggUKkHOa8V17u7/436DSsODXXm0TeW828wRzH4\r\n         pe2ixN7u9HSE+bhKS/nDmNPf0UjrKP2A+G/nu11chHwQhu/NraJLHa7EsoShSPMBYGfX\r\n         ZoYA==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:subject:message-id:date:thread-index:mime-version:in-reply-to\r\n         :references:from:dkim-signature;\r\n        bh=tS23YKTzxE0WliP92X+hSr2vGokkt14STMuN5GZhA+8=;\r\n        fh=tlYm/YtPJtRBmo1RHldLY/mjSiYqIveEeruv7SDW4dE=;\r\n        b=kyI6l5pMkbg/56HbTO6OaJQA3NVyiHcQg4s8e1tc6TR6N46unAuWaJIGmBJi6E7Wf7\r\n         mNPtZ5d1CrxY7mxdx/uJcpWgsAeivL4Z+ZvyDn5CuoF/LGpyYIivSr4HePQK7rzjCEoE\r\n         ICn2UDsgze0CCneXTrTVkBTedc9R6Mw5s7s/AJQKWZyMlRStQ1kPjmNf0sE6InsyLaSP\r\n         3RtSxr3Ukgu+cblY90Ek3c3GsN5vIqgrL0D1T1EnXY1R40aTyA+y4xcwKv1lFIhWF6aZ\r\n         xV6C1XT8hQ+YJzMLEYycwKzTBvjLREL6KMLxZPJGrg/Uotep10zBxQeRwXrfDS/J/jWI\r\n         R48Q==;\r\n        darn=scalevirtually.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com; arc=none",
+            "return-path": "Return-Path: <aja@scalevirtually.com>",
+            "received-spf": "Received-SPF: fail (google.com: domain of aja@scalevirtually.com does not designate 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       dkim=pass header.i=@scalevirtually-com.20230601.gappssmtp.com header.s=20230601 header.b=RAdKhmvR;\r\n       arc=pass (i=1);\r\n       spf=fail (google.com: domain of aja@scalevirtually.com does not designate 209.85.220.41 as permitted sender) smtp.mailfrom=aja@scalevirtually.com;\r\n       dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=scalevirtually.com;\r\n       dara=neutral header.i=@scalevirtually.com",
+            "dkim-signature": "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=scalevirtually-com.20230601.gappssmtp.com; s=20230601; t=1772205048; x=1772809848; darn=scalevirtually.com;\r\n        h=to:subject:message-id:date:thread-index:mime-version:in-reply-to\r\n         :references:from:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=tS23YKTzxE0WliP92X+hSr2vGokkt14STMuN5GZhA+8=;\r\n        b=RAdKhmvRQB5oLZw0J5fnd3LPD1NBVfdb1Ako9Kur+uozBFjh1Um8XpPwyF5Tz/U+Jc\r\n         e7XPpR2EkdG7gREAy5ZYs+I/aMqIz2NgALU+Wv+Jgq+kXYFvL2wsIq8uS8m4RXDBR+Ix\r\n         BvKPxTpqlFiovDL5cbgQaNyf87IgiMgs/DXwDWa5dnoqR4uL2b1h5DCezN8GQVznFxyb\r\n         WOnLuLp/1JYcAkZoK9SFiuJMwJXVKWxyoPk4sPt11F4jHj9mvxBV4U+8k+Vtk0RqS0MI\r\n         g4CZPWS8ve00Sp4b8jNGSqQU/VLKTHpzbEHi7Sbt1IsALLVALMv8N0Bnn6JlcI80WeSI\r\n         BkqA==",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20230601; t=1772205048; x=1772809848;\r\n        h=to:subject:message-id:date:thread-index:mime-version:in-reply-to\r\n         :references:from:x-gm-gg:x-gm-message-state:from:to:cc:subject:date\r\n         :message-id:reply-to;\r\n        bh=tS23YKTzxE0WliP92X+hSr2vGokkt14STMuN5GZhA+8=;\r\n        b=s0biGHFQjEhZ7E3j7JzdkEAD5puvRYcq0HKJDwM5rXmBEShKAaNTgp9g8rUlG+yUMz\r\n         uw1Uegzu3ncUf0BjMITQO+L3GFj5YmGnKVG8gS0qIcaPzUhEWm1YRLznupIeldSM3cmP\r\n         EDsCgXiUm7kzZnTrOV+5UDHD0fGCE/JtKkmB39jLWSleCwkNmrYOgwEHfINvje9RCWGk\r\n         iA26MtYu1sUvETxHf692fv3iWhsX49I3gtPuWDAMoOhs/PW4nsGzT9zXst/XqrcN6ElP\r\n         lVn1hU14tO5Fzod9YtGqfa1iQgK2wLI6Kc8LWJui+dCC5eQtfscGIBgy0uO5Q8V07aJg\r\n         RE4Q==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0YwmmL/YXgxCJ0wy9SjsY53asJ7aDe6pu238uBtialMsH3L9S5QS\r\n\t3G9cJC+J6hGUQxfZ3TF5gopITOajbp/5QX1ORHLSnN14JEeQO7ZXQ8HYGhO+IE4x4o8pxxL4lO4\r\n\tYk+nFBtaWRVy8YT25RreN/A5eUHhnoyRNUMgR5Jlpefx5mS76xjUnld8OZg==",
+            "x-gm-gg": "X-Gm-Gg: ATEYQzw+EbSd0G79SOIaMqThC8pUvheKgmvQpSMgRf3kDyoxmssDIzVZGezQA75IvVG\r\n\tl86myR/x+Vu7w9Ass2ns6H533b+twEnUV+6PnZoKvkDUmonct/Zfj2FbJHRuDQry5qLAxNvtmkM\r\n\tTrZJ1A7c4/FoLybbRFdI+khbB92Dau3gKSnKce7KH2U1u0GDIihclVZ+n2E8YtTqnwiHNPAcahv\r\n\t3Fpz1KRLC15egy5CTrjyuPylCYPZIrvm6of11Wr7N27AQLKd1kQMTM9oGEBR45HBlYt3mSdBoSw\r\n\tcLZaY7T7N9bBaNvEVY3V7VkakXqe0CRNwdmFnrX8",
+            "from": "From: Aja Mojica <aja@scalevirtually.com>",
+            "references": "References: <CAOZCF4Am36nm_tsdgQEMJAoTkdBF5ng3yxdwjp0Lui=0k+KyDQ@mail.gmail.com>",
+            "in-reply-to": "In-Reply-To: <CAOZCF4Am36nm_tsdgQEMJAoTkdBF5ng3yxdwjp0Lui=0k+KyDQ@mail.gmail.com>",
+            "mime-version": "MIME-Version: 1.0",
+            "x-mailer": "X-Mailer: Microsoft Outlook 16.0",
+            "thread-index": "Thread-Index: AQJLkWTz6cxWTuCffR51/WkokTA8vLS406Ow",
+            "date": "Date: Fri, 27 Feb 2026 09:10:37 -0600",
+            "x-gm-features": "X-Gm-Features: AaiRm51vATjnDrmKIRieqctRckaaVvWLsHdZi3Ue8T0_4LNmWQbjGGyUJ6NY6rE",
+            "message-id": "Message-ID: <01991c24bc781b41a8b7366132f90de6@mail.gmail.com>",
+            "subject": "Subject: FW: Offboarding Notice: Raphael Stephen Cueva",
+            "to": "To: Patrick Jansen Villanueva <pj@scalevirtually.com>",
+            "content-type": "Content-Type: multipart/mixed; boundary=\"00000000000056ad4e064bcfa432\""
+          },
+          "html": "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"><meta name=\"Generator\" content=\"Microsoft Word 15 (filtered medium)\"><style><!--\n/* Font Definitions */\n@font-face\n\t{font-family:Wingdings;\n\tpanose-1:5 0 0 0 0 0 0 0 0 0;}\n@font-face\n\t{font-family:\"Cambria Math\";\n\tpanose-1:2 4 5 3 5 4 6 3 2 4;}\n@font-face\n\t{font-family:Calibri;\n\tpanose-1:2 15 5 2 2 2 4 3 2 4;}\n@font-face\n\t{font-family:Aptos;}\n/* Style Definitions */\np.MsoNormal, li.MsoNormal, div.MsoNormal\n\t{margin:0in;\n\tfont-size:12.0pt;\n\tfont-family:\"Aptos\",sans-serif;}\nh2\n\t{mso-style-priority:9;\n\tmso-style-link:\"Heading 2 Char\";\n\tmso-margin-top-alt:auto;\n\tmargin-right:0in;\n\tmso-margin-bottom-alt:auto;\n\tmargin-left:0in;\n\tfont-size:18.0pt;\n\tfont-family:\"Aptos\",sans-serif;\n\tfont-weight:bold;}\na:link, span.MsoHyperlink\n\t{mso-style-priority:99;\n\tcolor:blue;\n\ttext-decoration:underline;}\nspan.Heading2Char\n\t{mso-style-name:\"Heading 2 Char\";\n\tmso-style-priority:9;\n\tmso-style-link:\"Heading 2\";\n\tfont-family:\"Aptos Display\",sans-serif;\n\tcolor:#0F4761;\n\tmso-ligatures:none;}\nspan.EmailStyle20\n\t{mso-style-type:personal-reply;\n\tfont-family:\"Aptos\",sans-serif;\n\tcolor:windowtext;}\n.MsoChpDefault\n\t{mso-style-type:export-only;}\n@page WordSection1\n\t{size:8.5in 11.0in;\n\tmargin:1.0in 1.0in 1.0in 1.0in;}\ndiv.WordSection1\n\t{page:WordSection1;}\n/* List Definitions */\n@list l0\n\t{mso-list-id:1126705711;\n\tmso-list-template-ids:870058250;}\n@list l0:level1\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0b7;\n\tmso-level-tab-stop:.5in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Symbol;}\n@list l0:level2\n\t{mso-level-number-format:bullet;\n\tmso-level-text:o;\n\tmso-level-tab-stop:1.0in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:\"Courier New\";\n\tmso-bidi-font-family:\"Times New Roman\";}\n@list l0:level3\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0a7;\n\tmso-level-tab-stop:1.5in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Wingdings;}\n@list l0:level4\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0a7;\n\tmso-level-tab-stop:2.0in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Wingdings;}\n@list l0:level5\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0a7;\n\tmso-level-tab-stop:2.5in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Wingdings;}\n@list l0:level6\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0a7;\n\tmso-level-tab-stop:3.0in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Wingdings;}\n@list l0:level7\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0a7;\n\tmso-level-tab-stop:3.5in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Wingdings;}\n@list l0:level8\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0a7;\n\tmso-level-tab-stop:4.0in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Wingdings;}\n@list l0:level9\n\t{mso-level-number-format:bullet;\n\tmso-level-text:\uf0a7;\n\tmso-level-tab-stop:4.5in;\n\tmso-level-number-position:left;\n\ttext-indent:-.25in;\n\tmso-ansi-font-size:10.0pt;\n\tfont-family:Wingdings;}\nol\n\t{margin-bottom:0in;}\nul\n\t{margin-bottom:0in;}\n--></style></head><body lang=\"EN-US\" link=\"blue\" vlink=\"purple\" style=\"word-wrap:break-word\"><div class=\"WordSection1\"><p class=\"MsoNormal\">\u00a0</p><p class=\"MsoNormal\">\u00a0</p><div style=\"border:none;border-top:solid #e1e1e1 1.0pt;padding:3.0pt 0in 0in 0in\"><p class=\"MsoNormal\"><b><span style=\"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif\">From:</span></b><span style=\"font-size:11.0pt;font-family:&quot;Calibri&quot;,sans-serif\"> Aja Mojica &lt;<a href=\"mailto:aja@scalevirtually.com\">aja@scalevirtually.com</a>&gt; <br><b>Sent:</b> Thursday, February 12, 2026 7:46 AM<br><b>To:</b> Scale Virtually Finance Team &lt;<a href=\"mailto:finance@scalevirtually.com\">finance@scalevirtually.com</a>&gt;; Scale Virtually DevOps &lt;<a href=\"mailto:devops@scalevirtually.com\">devops@scalevirtually.com</a>&gt;; Scale Virtually Human Resource &lt;<a href=\"mailto:hr@scalevirtually.com\">hr@scalevirtually.com</a>&gt;<br><b>Cc:</b> Amanda de Jesus &lt;<a href=\"mailto:amanda@scalevirtually.com\">amanda@scalevirtually.com</a>&gt;; Jan Salvador &lt;<a href=\"mailto:january@scalevirtually.com\">january@scalevirtually.com</a>&gt;; Jesylou Jopio &lt;<a href=\"mailto:jesy@scalevirtually.com\">jesy@scalevirtually.com</a>&gt;<br><b>Subject:</b> Offboarding Notice: Raphael Stephen Cueva</span></p></div><p class=\"MsoNormal\">\u00a0</p><div><div><p><span style=\"font-family:&quot;Arial&quot;,sans-serif\">Hi Team,\u00a0</span></p><p class=\"MsoNormal\"><span style=\"font-family:&quot;Arial&quot;,sans-serif\">Sending the attrition notification for\u00a0</span><b>Raphael Stephen Cueva</b><span style=\"font-family:&quot;Arial&quot;,sans-serif\">, effective today February 12, 2026 (last day of work Feb 11, 2026):</span></p><p class=\"MsoNormal\">\u00a0</p><p class=\"MsoNormal\"><span style=\"font-family:&quot;Arial&quot;,sans-serif\">Reason for offboarding: Resignation (PFA resignation notice)</span></p><p class=\"MsoNormal\" style=\"margin-left:47.25pt\"><span style=\"font-family:&quot;Arial&quot;,sans-serif\"><a href=\"mailto:finance@scalevirtually.com\" target=\"_blank\"><span style=\"color:#467886\">@Scale Virtually Finance Team</span></a>\u00a0 -\u00a0Please hold pay for February 20, 2026</span></p><p class=\"MsoNormal\" style=\"margin-left:47.25pt\"><span style=\"font-family:&quot;Arial&quot;,sans-serif\"><a href=\"mailto:devops@scalevirtually.com\" target=\"_blank\"><span style=\"color:#467886\">@Scale Virtually DevOps</span></a>\u00a0 - Submitted Helpdesk Ticket for System Sweep</span></p><p class=\"MsoNormal\" style=\"margin-left:47.25pt\"><span style=\"font-family:&quot;Arial&quot;,sans-serif\"><a href=\"mailto:hr@scalevirtually.com\" target=\"_blank\"><span style=\"color:#467886\">@Scale Virtually Human Resource</span></a>\u00a0- ICA Exit after system sweep</span></p><ul type=\"disc\"><li class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-list:l0 level1 lfo1\"><span style=\"font-family:&quot;Arial&quot;,sans-serif\">Personal Email:</span>\u00a0<a href=\"mailto:78vermilion@gmail.com\">78vermilion@gmail.com</a></li><li class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto;mso-list:l0 level1 lfo1\"><span style=\"font-family:&quot;Arial&quot;,sans-serif\">Mobile: +639166005704</span></li></ul><p><span style=\"font-family:&quot;Arial&quot;,sans-serif\">Thanks,</span></p></div><div><div><div><table class=\"MsoNormalTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"721\" style=\"width:540.4pt;border-collapse:collapse\"><tr><td width=\"150\" style=\"width:112.5pt;padding:0in 0in 0in 0in\"><p class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto\"><img border=\"0\" width=\"130\" height=\"128\" style=\"width:1.3541in;height:1.3333in\" id=\"_x0000_i1028\" src=\"https://scalevirtually.ph/wp-content/uploads/2023/02/ScaleVirtually_logo.jpg\"></p></td><td style=\"padding:0in 0in 0in 0in\"><h2 style=\"margin:0in\"><span style=\"font-size:13.5pt;color:#3a3a3a\">Aja Mojica</span></h2><p style=\"margin:0in;line-height:16.5pt\"><span style=\"font-size:10.5pt;color:#3a3a3a\">Scale Virtually LLC</span></p><p style=\"margin:0in;line-height:16.5pt\"><span style=\"font-size:10.5pt;color:#3a3a3a\">Client Services Manager</span></p></td><td width=\"30\" style=\"width:22.5pt;padding:0in 0in 0in 0in\"></td><td width=\"1\" style=\"width:.75pt;border:none;border-left:solid #f17d1a 1.0pt;padding:0in 0in 0in 0in\"></td><td width=\"30\" style=\"width:22.5pt;padding:0in 0in 0in 0in\"></td><td style=\"padding:0in 0in 0in 0in\"><table class=\"MsoNormalTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"215\" style=\"width:161.35pt;border-collapse:collapse;border-spacing:0px;vertical-align:-webkit-baseline-middle\"><tr style=\"height:18.75pt\"><td width=\"30\" style=\"width:22.5pt;padding:0in 0in 0in 0in;height:18.75pt;border-spacing:0px;vertical-align:-webkit-baseline-middle\"><table class=\"MsoNormalTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"30\" style=\"width:22.5pt;border-collapse:collapse\"><tr style=\"border-spacing:0px;vertical-align:-webkit-baseline-middle\"><td valign=\"bottom\" style=\"padding:0in 0in 0in 0in;border-spacing:0px;vertical-align:-webkit-baseline-middle\"><p class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto\"><span style=\"color:black;background:#f17d1a\"><img border=\"0\" width=\"13\" height=\"13\" style=\"width:.1388in;height:.1388in\" id=\"_x0000_i1027\" src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/phone-icon-2x.png\" alt=\"mobilePhone\"></span></p></td></tr></table></td><td style=\"padding:0in 0in 0in 0in;height:18.75pt\"><p class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto\"><span style=\"color:#3a3a3a\"><a href=\"web+voip:(773)%20739-2004\" target=\"_blank\"><span style=\"font-size:9.0pt;color:#3a3a3a\">(773) 739-2004</span></a></span></p></td></tr><tr style=\"height:18.75pt\"><td width=\"30\" style=\"width:22.5pt;padding:0in 0in 0in 0in;height:18.75pt\"><table class=\"MsoNormalTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"30\" style=\"width:22.5pt;border-collapse:collapse;border-spacing:0px;vertical-align:-webkit-baseline-middle\"><tr><td valign=\"bottom\" style=\"padding:0in 0in 0in 0in;border-spacing:0px;vertical-align:-webkit-baseline-middle\"><p class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto\"><span style=\"color:black;background:#f17d1a\"><img border=\"0\" width=\"13\" height=\"13\" style=\"width:.1388in;height:.1388in\" id=\"_x0000_i1026\" src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/email-icon-2x.png\" alt=\"emailAddress\"></span></p></td></tr></table></td><td style=\"padding:0in 0in 0in 0in;height:18.75pt\"><p class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto\"><a href=\"mailto:aja@scalevirtually.com\" target=\"_blank\"><span style=\"font-size:9.0pt;color:#3a3a3a\">aja@scalevirtually.com</span></a></p></td></tr><tr style=\"height:18.75pt\"><td width=\"30\" style=\"width:22.5pt;padding:0in 0in 0in 0in;height:18.75pt\"><table class=\"MsoNormalTable\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"30\" style=\"width:22.5pt;border-collapse:collapse;border-spacing:0px;vertical-align:-webkit-baseline-middle\"><tr><td valign=\"bottom\" style=\"padding:0in 0in 0in 0in;border-spacing:0px;vertical-align:-webkit-baseline-middle\"><p class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto\"><span style=\"color:black;background:#f17d1a\"><img border=\"0\" width=\"13\" height=\"13\" style=\"width:.1388in;height:.1388in\" id=\"_x0000_i1025\" src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/link-icon-2x.png\" alt=\"website\"></span></p></td></tr></table></td><td style=\"padding:0in 0in 0in 0in;height:18.75pt\"><p class=\"MsoNormal\" style=\"mso-margin-top-alt:auto;mso-margin-bottom-alt:auto\"><a href=\"https://www.scalevirtually.com/\" target=\"_blank\"><span style=\"font-size:9.0pt;color:#3a3a3a\">www.scalevirtually.com</span></a></p></td></tr></table></td></tr></table><p class=\"MsoNormal\">\u00a0</p></div></div></div></div></div></body></html>\n",
+          "text": "*From:* Aja Mojica <aja@scalevirtually.com>\n*Sent:* Thursday, February 12, 2026 7:46 AM\n*To:* Scale Virtually Finance Team <finance@scalevirtually.com>; Scale\nVirtually DevOps <devops@scalevirtually.com>; Scale Virtually Human\nResource <hr@scalevirtually.com>\n*Cc:* Amanda de Jesus <amanda@scalevirtually.com>; Jan Salvador <\njanuary@scalevirtually.com>; Jesylou Jopio <jesy@scalevirtually.com>\n*Subject:* Offboarding Notice: Raphael Stephen Cueva\n\n\n\nHi Team,\n\nSending the attrition notification for *Raphael Stephen Cueva*, effective\ntoday February 12, 2026 (last day of work Feb 11, 2026):\n\n\n\nReason for offboarding: Resignation (PFA resignation notice)\n\n@Scale Virtually Finance Team <finance@scalevirtually.com>  - Please hold\npay for February 20, 2026\n\n@Scale Virtually DevOps <devops@scalevirtually.com>  - Submitted Helpdesk\nTicket for System Sweep\n\n@Scale Virtually Human Resource <hr@scalevirtually.com> - ICA Exit after\nsystem sweep\n\n   - Personal Email: 78vermilion@gmail.com\n   - Mobile: +639166005704\n\nThanks,\n\nAja Mojica\n\nScale Virtually LLC\n\nClient Services Manager\n\n[image: mobilePhone]\n\n(773) 739-2004 <web+voip:(773)%20739-2004>\n\n[image: emailAddress]\n\naja@scalevirtually.com\n\n[image: website]\n\nwww.scalevirtually.com\n",
+          "textAsHtml": "<p>*From:* Aja Mojica &lt;<a href=\"mailto:aja@scalevirtually.com\">aja@scalevirtually.com</a>&gt;<br/>*Sent:* Thursday, February 12, 2026 7:46 AM<br/>*To:* Scale Virtually Finance Team &lt;<a href=\"mailto:finance@scalevirtually.com\">finance@scalevirtually.com</a>&gt;; Scale<br/>Virtually DevOps &lt;<a href=\"mailto:devops@scalevirtually.com\">devops@scalevirtually.com</a>&gt;; Scale Virtually Human<br/>Resource &lt;<a href=\"mailto:hr@scalevirtually.com\">hr@scalevirtually.com</a>&gt;<br/>*Cc:* Amanda de Jesus &lt;<a href=\"mailto:amanda@scalevirtually.com\">amanda@scalevirtually.com</a>&gt;; Jan Salvador &lt;<br/><a href=\"mailto:january@scalevirtually.com\">january@scalevirtually.com</a>&gt;; Jesylou Jopio &lt;<a href=\"mailto:jesy@scalevirtually.com\">jesy@scalevirtually.com</a>&gt;<br/>*Subject:* Offboarding Notice: Raphael Stephen Cueva</p><p>Hi Team,</p><p>Sending the attrition notification for *Raphael Stephen Cueva*, effective<br/>today February 12, 2026 (last day of work Feb 11, 2026):</p><p>Reason for offboarding: Resignation (PFA resignation notice)</p><p><a href=\"https://twitter.com/Scale\">@Scale</a> Virtually Finance Team &lt;<a href=\"mailto:finance@scalevirtually.com\">finance@scalevirtually.com</a>&gt;  - Please hold<br/>pay for February 20, 2026</p><p><a href=\"https://twitter.com/Scale\">@Scale</a> Virtually DevOps &lt;<a href=\"mailto:devops@scalevirtually.com\">devops@scalevirtually.com</a>&gt;  - Submitted Helpdesk<br/>Ticket for System Sweep</p><p><a href=\"https://twitter.com/Scale\">@Scale</a> Virtually Human Resource &lt;<a href=\"mailto:hr@scalevirtually.com\">hr@scalevirtually.com</a>&gt; - ICA Exit after<br/>system sweep</p><p>   - Personal Email: <a href=\"mailto:78vermilion@gmail.com\">78vermilion@gmail.com</a><br/>   - Mobile: +639166005704</p><p>Thanks,</p><p>Aja Mojica</p><p>Scale Virtually LLC</p><p>Client Services Manager</p><p>[image: mobilePhone]</p><p>(773) 739-2004 &lt;web+voip:(773)%20739-2004&gt;</p><p>[image: emailAddress]</p><p><a href=\"mailto:aja@scalevirtually.com\">aja@scalevirtually.com</a></p><p>[image: website]</p><p><a href=\"http://www.scalevirtually.com\">www.scalevirtually.com</a></p>",
+          "subject": "FW: Offboarding Notice: Raphael Stephen Cueva",
+          "references": "<CAOZCF4Am36nm_tsdgQEMJAoTkdBF5ng3yxdwjp0Lui=0k+KyDQ@mail.gmail.com>",
+          "date": "2026-02-27T15:10:37.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "pj@scalevirtually.com",
+                "name": "Patrick Jansen Villanueva"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Patrick Jansen Villanueva</span> &lt;<a href=\"mailto:pj@scalevirtually.com\" class=\"mp_address_email\">pj@scalevirtually.com</a>&gt;</span>",
+            "text": "\"Patrick Jansen Villanueva\" <pj@scalevirtually.com>"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "aja@scalevirtually.com",
+                "name": "Aja Mojica"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Aja Mojica</span> &lt;<a href=\"mailto:aja@scalevirtually.com\" class=\"mp_address_email\">aja@scalevirtually.com</a>&gt;</span>",
+            "text": "\"Aja Mojica\" <aja@scalevirtually.com>"
+          },
+          "messageId": "<01991c24bc781b41a8b7366132f90de6@mail.gmail.com>",
+          "inReplyTo": "<CAOZCF4Am36nm_tsdgQEMJAoTkdBF5ng3yxdwjp0Lui=0k+KyDQ@mail.gmail.com>"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "d3d5aee6-cdb5-4b7f-9c9e-5fb1446fc530",
+  "activeVersionId": "d3d5aee6-cdb5-4b7f-9c9e-5fb1446fc530",
+  "versionCounter": 282,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-27T15:03:39.777Z",
+      "createdAt": "2026-02-27T15:03:39.777Z",
+      "role": "workflow:owner",
+      "workflowId": "G7Yef6WEBIFW1OwS",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T02:39:48.849Z",
+      "createdAt": "2026-04-29T02:39:48.849Z",
+      "id": "PEeL9xSBFkGsagXN",
+      "name": "Development"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:06:31.774Z",
+    "createdAt": "2026-07-04T13:06:31.774Z",
+    "versionId": "d3d5aee6-cdb5-4b7f-9c9e-5fb1446fc530",
+    "workflowId": "G7Yef6WEBIFW1OwS",
+    "nodes": [
+      {
+        "parameters": {
+          "pollTimes": {
+            "item": [
+              {
+                "mode": "everyMinute"
+              }
+            ]
+          },
+          "simple": false,
+          "filters": {
+            "q": "subject:(\"Offboarding Notice\")"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmailTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          0,
+          0
+        ],
+        "id": "01e6629f-86e0-48c2-9e1b-a4790df64310",
+        "name": "Gmail Trigger",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "UJOF7gMKW80Euvj8",
+            "name": "PJ SV Project"
+          }
+        }
+      }
+    ],
+    "connections": {},
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

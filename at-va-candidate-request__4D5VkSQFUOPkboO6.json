@@ -1,0 +1,557 @@
+{
+  "updatedAt": "2026-07-04T13:17:21.807Z",
+  "createdAt": "2025-11-20T15:20:58.260Z",
+  "id": "4D5VkSQFUOPkboO6",
+  "name": "[AT] VA Candidate Request",
+  "description": "Sends an email summary and Slack notification when a new VA Candidate Request is submitted, including the requested role, client details, rate, start date, JD link, onboarding info, and replacement details when applicable.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d27b8757-c626-4ee4-be6f-3db47f77f385",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -496,
+        176
+      ],
+      "id": "37296388-6b43-44ad-ba21-30f1e0564b20",
+      "name": "Webhook",
+      "webhookId": "d27b8757-c626-4ee4-be6f-3db47f77f385"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop through all incoming items\nfor (const item of $input.all()) {\n  \n  // 1. DATA EXTRACTION\n  const data = item.json.body || item.json;\n\n  // 2. FORMATTING HELPERS\n  const formatDate = (dateString) => {\n    if (!dateString) return 'TBD';\n    return new Date(dateString).toLocaleDateString('en-US', { \n      month: 'long', day: 'numeric', year: 'numeric' \n    });\n  };\n\n  const safeGet = (val, fallback = '') => {\n    if (Array.isArray(val)) return val[0] || fallback;\n    return val || fallback;\n  };\n\n  const formatMultiLine = (text) => {\n    if (!text) return '';\n    return text.replace(/\\n/g, '<br>');\n  };\n\n  const formatCurrency = (val) => {\n    if (val === undefined || val === null || val === '') return '0';\n    return `$${val}`;\n  };\n\n  // 3. PREPARE VARIABLES\n  const requestDate = formatDate(data.candidateRequestDate);\n  const expectedStartDate = formatDate(data.expectedStartDate);\n\n  const requestor = safeGet(data.requestor, 'Unknown');\n  const role = safeGet(data.roles, 'N/A');\n  \n  // --- NEW VARIABLES ---\n  const fullTime = safeGet(data.fullTime, 'N/A'); \n  const requiredMVA = safeGet(data.requiredMVA, 'N/A');\n  // ---------------------\n\n  const jdLink = data.jdClientProfile || '#';\n\n  // --- REPLACEMENT LOGIC ---\n  const replacedMVA = safeGet(data.replacedMVA, '');\n  const replacementReason = safeGet(data.replacementReason, '');\n  const resignationWhy = data.resignationWhy || ''; // Long text field\n\n  // CLIENT DETAILS\n  const clientName = safeGet(data.clientName, 'TBD');\n  const clientEmail = safeGet(data.clientEmail, '').trim();\n  const rawClientPhone = safeGet(data.clientPhoneNumber, '');\n  const clientPhone = (rawClientPhone && rawClientPhone !== 'None') ? rawClientPhone : '';\n\n  const interviewer = clientName; \n\n  let contactDetails = '';\n  if (clientEmail || clientPhone) {\n    contactDetails = [clientEmail, clientPhone].filter(Boolean).join('<br>');\n  } else {\n    contactDetails = 'N/A';\n  }\n\n  const clientRate = formatCurrency(data.finalClientRate);\n  const timezone = safeGet(data.timeZone, 'EST');\n  const suf = formatCurrency(safeGet(data.suf, '0'));\n  const company = safeGet(data.company, 'N/A');\n  const address = safeGet(data.billingAddress, 'N/A');\n  const summary = data.requestSummary || 'No summary provided.';\n  \n  const zoomLink = data.zoomLink || 'N/A';\n  const onboarding = data.onboardingStrategy || 'N/A';\n\n  // --- CONDITIONAL HTML ROWS ---\n  \n  // 1. Replaced MVA Row\n  const replacedMVARow = replacedMVA ? `\n    <tr>\n      <td class=\"label-col\">Replaced MVA</td>\n      <td class=\"value-col\" style=\"color: #d97706; font-weight: bold;\">${replacedMVA}</td>\n    </tr>\n  ` : '';\n\n  // 2. Replacement Reason Row\n  const replacementReasonRow = replacementReason ? `\n    <tr>\n      <td class=\"label-col\">Replacement Reason</td>\n      <td class=\"value-col\">${replacementReason}</td>\n    </tr>\n  ` : '';\n\n  // 3. Resignation/Details Row (Uses formatMultiLine for long text)\n  const resignationWhyRow = resignationWhy ? `\n    <tr>\n      <td class=\"label-col\">If VA Resignation, why?</td>\n      <td class=\"value-col\">${formatMultiLine(resignationWhy)}</td>\n    </tr>\n  ` : '';\n\n  // 4. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.5; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  .meta-section { margin-bottom: 25px; }\n  .meta-row { font-size: 14px; margin-bottom: 6px; color: #111827; }\n  .meta-label { font-weight: 800; color: #000000; margin-right: 5px; }\n\n  .greeting { margin-bottom: 15px; font-size: 14px; }\n  .intro-text { margin-bottom: 15px; font-size: 14px; }\n\n  .intro-block {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin: 0 0 35px 0;\n    color: #4b5563;\n    font-size: 14px;\n  }\n  .summary-label { \n    font-weight: 800; \n    color: #374151; \n    display: block; \n    margin-bottom: 5px; \n    font-style: normal; \n    font-size: 14px;\n  }\n  .summary-text { \n    font-style: italic; \n    color: #374151; \n    font-size: 14px;\n  }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 30px; \n    border: 1px solid #e5e7eb; \n  }\n  th { \n    background-color: #E8833A; \n    color: #ffffff; \n    padding: 12px; \n    text-align: center; \n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 14px;\n    letter-spacing: 0.5px;\n  }\n  td { \n    padding: 12px 15px; \n    border-bottom: 1px solid #e5e7eb; \n    vertical-align: top; \n    font-size: 14px;\n  }\n  .label-col { \n    width: 35%; \n    background-color: #f0f2f5; \n    color: #111827; \n    font-weight: 800; \n    border-right: 1px solid #e5e7eb;\n  }\n  .value-col { width: 65%; color: #374151; }\n  a { color: #2563EB; text-decoration: underline; }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"greeting\">Hi <strong>Placements Team</strong>,</div>\n        <div class=\"intro-text\">A new Candidate Request Form has been submitted.</div>\n\n        <div class=\"meta-section\">\n          <div class=\"meta-row\"><span class=\"meta-label\">Candidate Request Date:</span> ${requestDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Expected VA Start Date:</span> ${expectedStartDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Requestor:</span> ${requestor}</div>\n        </div>\n\n        <div class=\"intro-block\">\n          <span class=\"summary-label\">Summary:</span>\n          <span class=\"summary-text\">${formatMultiLine(summary)}</span>\n        </div>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Requesting for Candidates</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Role</td>\n            <td class=\"value-col\">${role}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Full/Part Time</td>\n            <td class=\"value-col\">${fullTime}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Required MVA</td>\n            <td class=\"value-col\">${requiredMVA}</td>\n          </tr>\n          \n          ${replacedMVARow}\n          ${replacementReasonRow}\n          ${resignationWhyRow}\n\n          <tr>\n            <td class=\"label-col\">JD + Client Profile</td>\n            <td class=\"value-col\"><a href=\"${jdLink}\">View JD Link</a></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer (POC)</td>\n            <td class=\"value-col\">${interviewer}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer Contact</td>\n            <td class=\"value-col\">${contactDetails}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Rate</td>\n            <td class=\"value-col\">${clientRate}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Account Details</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Timezone</td>\n            <td class=\"value-col\">${timezone}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">SUF</td>\n            <td class=\"value-col\">${suf}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Name</td>\n            <td class=\"value-col\">${company}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Address</td>\n            <td class=\"value-col\">${address}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">CIO and Process Onboarding Info</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Zoom Link</td>\n            <td class=\"value-col\">\n              ${zoomLink !== 'N/A' && zoomLink.startsWith('http') ? `<a href=\"${zoomLink}\">${zoomLink}</a>` : zoomLink}\n            </td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Onboarding Strategy</td>\n            <td class=\"value-col\">${onboarding}</td>\n          </tr>\n        </table>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.email_html = htmlContent;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -16
+      ],
+      "id": "e84056d2-859c-498e-8a20-9ad118225693",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "51f12bfd-6246-4de0-af0c-405fdc70bed5",
+              "leftValue": "={{ $json.body.pocName[0] || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cc140367-1449-418a-ab93-0877647d7c09",
+              "leftValue": "={{ $json.body.pocPhone[0] || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -112,
+        176
+      ],
+      "id": "23f48e17-8f33-4782-9acf-5a3d374ac107",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop through all incoming items\nfor (const item of $input.all()) {\n  \n  // 1. DATA EXTRACTION\n  const data = item.json.body || item.json;\n\n  // 2. FORMATTING HELPERS\n  const formatDate = (dateString) => {\n    if (!dateString) return 'TBD';\n    return new Date(dateString).toLocaleDateString('en-US', { \n      month: 'long', day: 'numeric', year: 'numeric' \n    });\n  };\n\n  const safeGet = (val, fallback = '') => {\n    if (Array.isArray(val)) return val[0] || fallback;\n    return val || fallback;\n  };\n\n  const formatMultiLine = (text) => {\n    if (!text) return '';\n    return text.replace(/\\n/g, '<br>');\n  };\n\n  const formatCurrency = (val) => {\n    if (val === undefined || val === null || val === '') return '0';\n    return `$${val}`;\n  };\n\n  // 3. PREPARE VARIABLES\n  const requestDate = formatDate(data.candidateRequestDate);\n  const expectedStartDate = formatDate(data.expectedStartDate);\n\n  const requestor = safeGet(data.requestor, 'Unknown');\n  const role = safeGet(data.roles, 'N/A');\n  \n  // --- NEW VARIABLES ---\n  const fullTime = safeGet(data.fullTime, 'N/A');\n  const requiredMVA = safeGet(data.requiredMVA, 'N/A');\n  // ---------------------\n\n  const jdLink = data.jdClientProfile || '#';\n\n  // --- REPLACEMENT INFO ---\n  const replacedMVA = safeGet(data.replacedMVA, '');\n  // NEW: Extract reason and details\n  const replacementReason = safeGet(data.replacementReason, '');\n  const resignationWhy = data.resignationWhy || ''; \n\n  // POC DETAILS\n  const pocName = safeGet(data.pocName, 'TBD');\n  const pocRole = safeGet(data.pocRole, '');\n  const pocEmail = (data.pocEmail || '').trim();\n  const pocPhone = safeGet(data.pocPhone, '');\n\n  const interviewer = pocRole ? `${pocName} - ${pocRole}` : pocName;\n\n  let contactDetails = '';\n  if (pocEmail || pocPhone) {\n    contactDetails = [pocEmail, pocPhone].filter(Boolean).join('<br>');\n  } else {\n    contactDetails = 'N/A';\n  }\n\n  const clientRate = formatCurrency(data.finalClientRate);\n  const timezone = safeGet(data.timeZone, 'EST');\n  const suf = formatCurrency(safeGet(data.suf, '0'));\n  const company = safeGet(data.company, 'N/A');\n  const address = safeGet(data.billingAddress, 'N/A');\n  const summary = data.requestSummary || 'No summary provided.';\n  \n  const zoomLink = data.zoomLink || 'N/A';\n  const onboarding = data.onboardingStrategy || 'N/A';\n\n  // --- CONDITIONAL HTML ROWS ---\n  \n  // 1. Replaced MVA Row\n  const replacedMVARow = replacedMVA ? `\n    <tr>\n      <td class=\"label-col\">Replaced MVA</td>\n      <td class=\"value-col\" style=\"color: #d97706; font-weight: bold;\">${replacedMVA}</td>\n    </tr>\n  ` : '';\n\n  // 2. NEW: Replacement Reason Row\n  const replacementReasonRow = replacementReason ? `\n    <tr>\n      <td class=\"label-col\">Replacement Reason</td>\n      <td class=\"value-col\">${replacementReason}</td>\n    </tr>\n  ` : '';\n\n  // 3. NEW: Resignation/Details Row (Long Text)\n  const resignationWhyRow = resignationWhy ? `\n    <tr>\n      <td class=\"label-col\">If VA Resignation, why?</td>\n      <td class=\"value-col\">${formatMultiLine(resignationWhy)}</td>\n    </tr>\n  ` : '';\n\n  // 4. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.5; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  .meta-section { margin-bottom: 25px; }\n  .meta-row { font-size: 14px; margin-bottom: 6px; color: #111827; }\n  .meta-label { font-weight: 800; color: #000000; margin-right: 5px; }\n\n  .greeting { margin-bottom: 15px; font-size: 14px; }\n  .intro-text { margin-bottom: 15px; font-size: 14px; }\n\n  .intro-block {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin: 0 0 35px 0;\n    color: #4b5563;\n    font-size: 14px;\n  }\n  .summary-label { \n    font-weight: 800; \n    color: #374151; \n    display: block; \n    margin-bottom: 5px; \n    font-style: normal; \n    font-size: 14px;\n  }\n  .summary-text { \n    font-style: italic; \n    color: #374151; \n    font-size: 14px;\n  }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 30px; \n    border: 1px solid #e5e7eb; \n  }\n  th { \n    background-color: #E8833A; \n    color: #ffffff; \n    padding: 12px; \n    text-align: center; \n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 14px;\n    letter-spacing: 0.5px;\n  }\n  td { \n    padding: 12px 15px; \n    border-bottom: 1px solid #e5e7eb; \n    vertical-align: top; \n    font-size: 14px;\n  }\n  .label-col { \n    width: 35%; \n    background-color: #f0f2f5; \n    color: #111827; \n    font-weight: 800; \n    border-right: 1px solid #e5e7eb;\n  }\n  .value-col { width: 65%; color: #374151; }\n  a { color: #2563EB; text-decoration: underline; }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"greeting\">Hi <strong>Placements Team</strong>,</div>\n        <div class=\"intro-text\">A new Candidate Request Form has been submitted.</div>\n\n        <div class=\"meta-section\">\n          <div class=\"meta-row\"><span class=\"meta-label\">Candidate Request Date:</span> ${requestDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Expected VA Start Date:</span> ${expectedStartDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Requestor:</span> ${requestor}</div>\n        </div>\n\n        <div class=\"intro-block\">\n          <span class=\"summary-label\">Summary:</span>\n          <span class=\"summary-text\">${formatMultiLine(summary)}</span>\n        </div>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Requesting for Candidates</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Role</td>\n            <td class=\"value-col\">${role}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Full/Part Time</td>\n            <td class=\"value-col\">${fullTime}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Required MVA</td>\n            <td class=\"value-col\">${requiredMVA}</td>\n          </tr>\n          \n          ${replacedMVARow}\n          ${replacementReasonRow}\n          ${resignationWhyRow}\n\n          <tr>\n            <td class=\"label-col\">JD + Client Profile</td>\n            <td class=\"value-col\"><a href=\"${jdLink}\">View JD Link</a></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer (POC)</td>\n            <td class=\"value-col\">${interviewer}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer Contact</td>\n            <td class=\"value-col\">${contactDetails}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Rate</td>\n            <td class=\"value-col\">${clientRate}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Account Details</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Timezone</td>\n            <td class=\"value-col\">${timezone}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">SUF</td>\n            <td class=\"value-col\">${suf}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Name</td>\n            <td class=\"value-col\">${company}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Address</td>\n            <td class=\"value-col\">${address}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">CIO and Process Onboarding Info</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Zoom Link</td>\n            <td class=\"value-col\">\n              ${zoomLink !== 'N/A' && zoomLink.startsWith('http') ? `<a href=\"${zoomLink}\">${zoomLink}</a>` : zoomLink}\n            </td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Onboarding Strategy</td>\n            <td class=\"value-col\">${onboarding}</td>\n          </tr>\n        </table>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.email_html = htmlContent;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        320
+      ],
+      "id": "d516ce3c-cfa8-49f2-b46f-dc160c3189ea",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Code in JavaScript2\n// Slack message with Block Kit (Single Column Layout)\n// Solves the \"Airtable Login\" unfurl issue\n\nconst source = $items(\"Webhook\", 0)[0].json;\nconst data = source.body || source;\n\n// 1. Capture Data\nconst recordId = data.recordId || 'N/A';\nconst safeFirst = (val, fallback = 'N/A') => Array.isArray(val) ? (val[0] ?? fallback) : (val ?? fallback);\n\n// Airtable Constants\nconst AIRTABLE_BASE_ID = 'apptuAm73VyH7pcHA';\nconst AIRTABLE_TABLE_ID = 'tblzMCMKzacW1QxcW';\nconst AIRTABLE_VIEW_ID = 'viwmQJRsBGHMsnuIQ';\n\n// Extract Fields\nconst role = safeFirst(data.roles, 'N/A');\nconst client = safeFirst(data.clientName, 'N/A');\nconst requestor = safeFirst(data.requestor, 'Unknown');\n\n// 2. Build URL\nconst interfaceUrl = `https://airtable.com/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_ID}/${AIRTABLE_VIEW_ID}/${recordId}`;\n\n// 3. Build the Block Kit Payload\n// Single column layout using standard text blocks with newlines (\\n)\nconst blocks = [\n  {\n    \"type\": \"header\",\n    \"text\": {\n      \"type\": \"plain_text\",\n      \"text\": \"New Candidate Request Submitted\",\n      \"emoji\": true\n    }\n  },\n  {\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": `*Role:*\\n${role}\\n\\n*Client:*\\n${client}\\n\\n*Requestor:*\\n${requestor}`\n    }\n  },\n  {\n    \"type\": \"divider\"\n  },\n  {\n    \"type\": \"actions\",\n    \"elements\": [\n      {\n        \"type\": \"button\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"View Record in Airtable\",\n          \"emoji\": true\n        },\n        \"url\": interfaceUrl,\n        \"style\": \"primary\" // Blue button\n      }\n    ]\n  }\n];\n\n// Fallback text for mobile notifications\nconst summaryText = `New Request: ${role} for ${client}`;\n\n// 4. Return Payload\nreturn {\n  slack_payload: {\n    channel: \"C053KLFLVFU\", // <--- Your Channel ID\n    text: summaryText,      // Notification text\n    blocks: blocks,         // Visual blocks\n    unfurl_links: false,    // Hide generic preview\n    unfurl_media: false\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        112
+      ],
+      "id": "c5e9dd4b-88a2-4817-abd1-b259367c28be",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.slack_payload }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1472,
+        240
+      ],
+      "id": "1c7a0404-0b84-4647-b0ae-c94657029fa4",
+      "name": "HTTP Request",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.requestorEmail[0] }}",
+        "subject": "=VA Candidate Request: {{ $('Webhook').item.json.body.company }} - {{ $('Webhook').item.json.body.roles }}",
+        "message": "={{ $json.email_html }}",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        160
+      ],
+      "id": "e9a39bd5-978e-4fc9-8c66-6bdb60a6c611",
+      "name": "Send a message2",
+      "webhookId": "21407011-b265-49cc-b323-8094088a6318",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "timeSavedPerExecution": 15,
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "0be34a80-f857-4c07-8ca4-f1f6ed9b54c9",
+  "activeVersionId": "0be34a80-f857-4c07-8ca4-f1f6ed9b54c9",
+  "versionCounter": 203,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-20T15:20:58.269Z",
+      "createdAt": "2025-11-20T15:20:58.269Z",
+      "role": "workflow:owner",
+      "workflowId": "4D5VkSQFUOPkboO6",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:17:21.808Z",
+    "createdAt": "2026-07-04T13:17:21.808Z",
+    "versionId": "0be34a80-f857-4c07-8ca4-f1f6ed9b54c9",
+    "workflowId": "4D5VkSQFUOPkboO6",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "d27b8757-c626-4ee4-be6f-3db47f77f385",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -496,
+          176
+        ],
+        "id": "37296388-6b43-44ad-ba21-30f1e0564b20",
+        "name": "Webhook",
+        "webhookId": "d27b8757-c626-4ee4-be6f-3db47f77f385"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Loop through all incoming items\nfor (const item of $input.all()) {\n  \n  // 1. DATA EXTRACTION\n  const data = item.json.body || item.json;\n\n  // 2. FORMATTING HELPERS\n  const formatDate = (dateString) => {\n    if (!dateString) return 'TBD';\n    return new Date(dateString).toLocaleDateString('en-US', { \n      month: 'long', day: 'numeric', year: 'numeric' \n    });\n  };\n\n  const safeGet = (val, fallback = '') => {\n    if (Array.isArray(val)) return val[0] || fallback;\n    return val || fallback;\n  };\n\n  const formatMultiLine = (text) => {\n    if (!text) return '';\n    return text.replace(/\\n/g, '<br>');\n  };\n\n  const formatCurrency = (val) => {\n    if (val === undefined || val === null || val === '') return '0';\n    return `$${val}`;\n  };\n\n  // 3. PREPARE VARIABLES\n  const requestDate = formatDate(data.candidateRequestDate);\n  const expectedStartDate = formatDate(data.expectedStartDate);\n\n  const requestor = safeGet(data.requestor, 'Unknown');\n  const role = safeGet(data.roles, 'N/A');\n  \n  // --- NEW VARIABLES ---\n  const fullTime = safeGet(data.fullTime, 'N/A'); \n  const requiredMVA = safeGet(data.requiredMVA, 'N/A');\n  // ---------------------\n\n  const jdLink = data.jdClientProfile || '#';\n\n  // --- REPLACEMENT LOGIC ---\n  const replacedMVA = safeGet(data.replacedMVA, '');\n  const replacementReason = safeGet(data.replacementReason, '');\n  const resignationWhy = data.resignationWhy || ''; // Long text field\n\n  // CLIENT DETAILS\n  const clientName = safeGet(data.clientName, 'TBD');\n  const clientEmail = safeGet(data.clientEmail, '').trim();\n  const rawClientPhone = safeGet(data.clientPhoneNumber, '');\n  const clientPhone = (rawClientPhone && rawClientPhone !== 'None') ? rawClientPhone : '';\n\n  const interviewer = clientName; \n\n  let contactDetails = '';\n  if (clientEmail || clientPhone) {\n    contactDetails = [clientEmail, clientPhone].filter(Boolean).join('<br>');\n  } else {\n    contactDetails = 'N/A';\n  }\n\n  const clientRate = formatCurrency(data.finalClientRate);\n  const timezone = safeGet(data.timeZone, 'EST');\n  const suf = formatCurrency(safeGet(data.suf, '0'));\n  const company = safeGet(data.company, 'N/A');\n  const address = safeGet(data.billingAddress, 'N/A');\n  const summary = data.requestSummary || 'No summary provided.';\n  \n  const zoomLink = data.zoomLink || 'N/A';\n  const onboarding = data.onboardingStrategy || 'N/A';\n\n  // --- CONDITIONAL HTML ROWS ---\n  \n  // 1. Replaced MVA Row\n  const replacedMVARow = replacedMVA ? `\n    <tr>\n      <td class=\"label-col\">Replaced MVA</td>\n      <td class=\"value-col\" style=\"color: #d97706; font-weight: bold;\">${replacedMVA}</td>\n    </tr>\n  ` : '';\n\n  // 2. Replacement Reason Row\n  const replacementReasonRow = replacementReason ? `\n    <tr>\n      <td class=\"label-col\">Replacement Reason</td>\n      <td class=\"value-col\">${replacementReason}</td>\n    </tr>\n  ` : '';\n\n  // 3. Resignation/Details Row (Uses formatMultiLine for long text)\n  const resignationWhyRow = resignationWhy ? `\n    <tr>\n      <td class=\"label-col\">If VA Resignation, why?</td>\n      <td class=\"value-col\">${formatMultiLine(resignationWhy)}</td>\n    </tr>\n  ` : '';\n\n  // 4. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.5; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  .meta-section { margin-bottom: 25px; }\n  .meta-row { font-size: 14px; margin-bottom: 6px; color: #111827; }\n  .meta-label { font-weight: 800; color: #000000; margin-right: 5px; }\n\n  .greeting { margin-bottom: 15px; font-size: 14px; }\n  .intro-text { margin-bottom: 15px; font-size: 14px; }\n\n  .intro-block {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin: 0 0 35px 0;\n    color: #4b5563;\n    font-size: 14px;\n  }\n  .summary-label { \n    font-weight: 800; \n    color: #374151; \n    display: block; \n    margin-bottom: 5px; \n    font-style: normal; \n    font-size: 14px;\n  }\n  .summary-text { \n    font-style: italic; \n    color: #374151; \n    font-size: 14px;\n  }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 30px; \n    border: 1px solid #e5e7eb; \n  }\n  th { \n    background-color: #E8833A; \n    color: #ffffff; \n    padding: 12px; \n    text-align: center; \n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 14px;\n    letter-spacing: 0.5px;\n  }\n  td { \n    padding: 12px 15px; \n    border-bottom: 1px solid #e5e7eb; \n    vertical-align: top; \n    font-size: 14px;\n  }\n  .label-col { \n    width: 35%; \n    background-color: #f0f2f5; \n    color: #111827; \n    font-weight: 800; \n    border-right: 1px solid #e5e7eb;\n  }\n  .value-col { width: 65%; color: #374151; }\n  a { color: #2563EB; text-decoration: underline; }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"greeting\">Hi <strong>Placements Team</strong>,</div>\n        <div class=\"intro-text\">A new Candidate Request Form has been submitted.</div>\n\n        <div class=\"meta-section\">\n          <div class=\"meta-row\"><span class=\"meta-label\">Candidate Request Date:</span> ${requestDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Expected VA Start Date:</span> ${expectedStartDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Requestor:</span> ${requestor}</div>\n        </div>\n\n        <div class=\"intro-block\">\n          <span class=\"summary-label\">Summary:</span>\n          <span class=\"summary-text\">${formatMultiLine(summary)}</span>\n        </div>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Requesting for Candidates</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Role</td>\n            <td class=\"value-col\">${role}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Full/Part Time</td>\n            <td class=\"value-col\">${fullTime}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Required MVA</td>\n            <td class=\"value-col\">${requiredMVA}</td>\n          </tr>\n          \n          ${replacedMVARow}\n          ${replacementReasonRow}\n          ${resignationWhyRow}\n\n          <tr>\n            <td class=\"label-col\">JD + Client Profile</td>\n            <td class=\"value-col\"><a href=\"${jdLink}\">View JD Link</a></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer (POC)</td>\n            <td class=\"value-col\">${interviewer}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer Contact</td>\n            <td class=\"value-col\">${contactDetails}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Rate</td>\n            <td class=\"value-col\">${clientRate}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Account Details</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Timezone</td>\n            <td class=\"value-col\">${timezone}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">SUF</td>\n            <td class=\"value-col\">${suf}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Name</td>\n            <td class=\"value-col\">${company}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Address</td>\n            <td class=\"value-col\">${address}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">CIO and Process Onboarding Info</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Zoom Link</td>\n            <td class=\"value-col\">\n              ${zoomLink !== 'N/A' && zoomLink.startsWith('http') ? `<a href=\"${zoomLink}\">${zoomLink}</a>` : zoomLink}\n            </td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Onboarding Strategy</td>\n            <td class=\"value-col\">${onboarding}</td>\n          </tr>\n        </table>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.email_html = htmlContent;\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          432,
+          -16
+        ],
+        "id": "e84056d2-859c-498e-8a20-9ad118225693",
+        "name": "Code in JavaScript1"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "51f12bfd-6246-4de0-af0c-405fdc70bed5",
+                "leftValue": "={{ $json.body.pocName[0] || '' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              },
+              {
+                "id": "cc140367-1449-418a-ab93-0877647d7c09",
+                "leftValue": "={{ $json.body.pocPhone[0] || '' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -112,
+          176
+        ],
+        "id": "23f48e17-8f33-4782-9acf-5a3d374ac107",
+        "name": "If"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Loop through all incoming items\nfor (const item of $input.all()) {\n  \n  // 1. DATA EXTRACTION\n  const data = item.json.body || item.json;\n\n  // 2. FORMATTING HELPERS\n  const formatDate = (dateString) => {\n    if (!dateString) return 'TBD';\n    return new Date(dateString).toLocaleDateString('en-US', { \n      month: 'long', day: 'numeric', year: 'numeric' \n    });\n  };\n\n  const safeGet = (val, fallback = '') => {\n    if (Array.isArray(val)) return val[0] || fallback;\n    return val || fallback;\n  };\n\n  const formatMultiLine = (text) => {\n    if (!text) return '';\n    return text.replace(/\\n/g, '<br>');\n  };\n\n  const formatCurrency = (val) => {\n    if (val === undefined || val === null || val === '') return '0';\n    return `$${val}`;\n  };\n\n  // 3. PREPARE VARIABLES\n  const requestDate = formatDate(data.candidateRequestDate);\n  const expectedStartDate = formatDate(data.expectedStartDate);\n\n  const requestor = safeGet(data.requestor, 'Unknown');\n  const role = safeGet(data.roles, 'N/A');\n  \n  // --- NEW VARIABLES ---\n  const fullTime = safeGet(data.fullTime, 'N/A');\n  const requiredMVA = safeGet(data.requiredMVA, 'N/A');\n  // ---------------------\n\n  const jdLink = data.jdClientProfile || '#';\n\n  // --- REPLACEMENT INFO ---\n  const replacedMVA = safeGet(data.replacedMVA, '');\n  // NEW: Extract reason and details\n  const replacementReason = safeGet(data.replacementReason, '');\n  const resignationWhy = data.resignationWhy || ''; \n\n  // POC DETAILS\n  const pocName = safeGet(data.pocName, 'TBD');\n  const pocRole = safeGet(data.pocRole, '');\n  const pocEmail = (data.pocEmail || '').trim();\n  const pocPhone = safeGet(data.pocPhone, '');\n\n  const interviewer = pocRole ? `${pocName} - ${pocRole}` : pocName;\n\n  let contactDetails = '';\n  if (pocEmail || pocPhone) {\n    contactDetails = [pocEmail, pocPhone].filter(Boolean).join('<br>');\n  } else {\n    contactDetails = 'N/A';\n  }\n\n  const clientRate = formatCurrency(data.finalClientRate);\n  const timezone = safeGet(data.timeZone, 'EST');\n  const suf = formatCurrency(safeGet(data.suf, '0'));\n  const company = safeGet(data.company, 'N/A');\n  const address = safeGet(data.billingAddress, 'N/A');\n  const summary = data.requestSummary || 'No summary provided.';\n  \n  const zoomLink = data.zoomLink || 'N/A';\n  const onboarding = data.onboardingStrategy || 'N/A';\n\n  // --- CONDITIONAL HTML ROWS ---\n  \n  // 1. Replaced MVA Row\n  const replacedMVARow = replacedMVA ? `\n    <tr>\n      <td class=\"label-col\">Replaced MVA</td>\n      <td class=\"value-col\" style=\"color: #d97706; font-weight: bold;\">${replacedMVA}</td>\n    </tr>\n  ` : '';\n\n  // 2. NEW: Replacement Reason Row\n  const replacementReasonRow = replacementReason ? `\n    <tr>\n      <td class=\"label-col\">Replacement Reason</td>\n      <td class=\"value-col\">${replacementReason}</td>\n    </tr>\n  ` : '';\n\n  // 3. NEW: Resignation/Details Row (Long Text)\n  const resignationWhyRow = resignationWhy ? `\n    <tr>\n      <td class=\"label-col\">If VA Resignation, why?</td>\n      <td class=\"value-col\">${formatMultiLine(resignationWhy)}</td>\n    </tr>\n  ` : '';\n\n  // 4. HTML CONSTRUCTION\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body {\n    margin: 0;\n    padding: 0;\n    background-color: #f4f6f8;\n  }\n  body { \n    font-family: Helvetica, Arial, sans-serif; \n    color: #333333; \n    line-height: 1.5; \n    font-size: 14px; \n  }\n  .outer-wrapper {\n    width: 100%;\n    background-color: #f4f6f8;\n    padding: 20px 0;\n  }\n  .container { \n    max-width: 650px; \n    margin: 0 auto; \n    border: 1px solid #e5e7eb; \n    border-radius: 8px; \n    padding: 30px; \n    background-color: #ffffff; \n    text-align: left;\n  }\n  .meta-section { margin-bottom: 25px; }\n  .meta-row { font-size: 14px; margin-bottom: 6px; color: #111827; }\n  .meta-label { font-weight: 800; color: #000000; margin-right: 5px; }\n\n  .greeting { margin-bottom: 15px; font-size: 14px; }\n  .intro-text { margin-bottom: 15px; font-size: 14px; }\n\n  .intro-block {\n    background-color: #fff7ed;\n    border-left: 5px solid #E8833A;\n    padding: 15px 20px;\n    margin: 0 0 35px 0;\n    color: #4b5563;\n    font-size: 14px;\n  }\n  .summary-label { \n    font-weight: 800; \n    color: #374151; \n    display: block; \n    margin-bottom: 5px; \n    font-style: normal; \n    font-size: 14px;\n  }\n  .summary-text { \n    font-style: italic; \n    color: #374151; \n    font-size: 14px;\n  }\n\n  table { \n    width: 100%; \n    border-collapse: collapse; \n    margin-bottom: 30px; \n    border: 1px solid #e5e7eb; \n  }\n  th { \n    background-color: #E8833A; \n    color: #ffffff; \n    padding: 12px; \n    text-align: center; \n    font-weight: 700;\n    text-transform: uppercase; \n    font-size: 14px;\n    letter-spacing: 0.5px;\n  }\n  td { \n    padding: 12px 15px; \n    border-bottom: 1px solid #e5e7eb; \n    vertical-align: top; \n    font-size: 14px;\n  }\n  .label-col { \n    width: 35%; \n    background-color: #f0f2f5; \n    color: #111827; \n    font-weight: 800; \n    border-right: 1px solid #e5e7eb;\n  }\n  .value-col { width: 65%; color: #374151; }\n  a { color: #2563EB; text-decoration: underline; }\n</style>\n</head>\n<body>\n\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        \n        <div class=\"greeting\">Hi <strong>Placements Team</strong>,</div>\n        <div class=\"intro-text\">A new Candidate Request Form has been submitted.</div>\n\n        <div class=\"meta-section\">\n          <div class=\"meta-row\"><span class=\"meta-label\">Candidate Request Date:</span> ${requestDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Expected VA Start Date:</span> ${expectedStartDate}</div>\n          <div class=\"meta-row\"><span class=\"meta-label\">Requestor:</span> ${requestor}</div>\n        </div>\n\n        <div class=\"intro-block\">\n          <span class=\"summary-label\">Summary:</span>\n          <span class=\"summary-text\">${formatMultiLine(summary)}</span>\n        </div>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Requesting for Candidates</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Role</td>\n            <td class=\"value-col\">${role}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Full/Part Time</td>\n            <td class=\"value-col\">${fullTime}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Required MVA</td>\n            <td class=\"value-col\">${requiredMVA}</td>\n          </tr>\n          \n          ${replacedMVARow}\n          ${replacementReasonRow}\n          ${resignationWhyRow}\n\n          <tr>\n            <td class=\"label-col\">JD + Client Profile</td>\n            <td class=\"value-col\"><a href=\"${jdLink}\">View JD Link</a></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer (POC)</td>\n            <td class=\"value-col\">${interviewer}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Interviewer Contact</td>\n            <td class=\"value-col\">${contactDetails}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Rate</td>\n            <td class=\"value-col\">${clientRate}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">Account Details</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Client Timezone</td>\n            <td class=\"value-col\">${timezone}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">SUF</td>\n            <td class=\"value-col\">${suf}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Name</td>\n            <td class=\"value-col\">${company}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Company Address</td>\n            <td class=\"value-col\">${address}</td>\n          </tr>\n        </table>\n\n        <table role=\"presentation\">\n          <tr>\n            <th colspan=\"2\">CIO and Process Onboarding Info</th>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Zoom Link</td>\n            <td class=\"value-col\">\n              ${zoomLink !== 'N/A' && zoomLink.startsWith('http') ? `<a href=\"${zoomLink}\">${zoomLink}</a>` : zoomLink}\n            </td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Onboarding Strategy</td>\n            <td class=\"value-col\">${onboarding}</td>\n          </tr>\n        </table>\n\n      </div>\n    </td>\n  </tr>\n</table>\n\n</body>\n</html>\n  `;\n\n  item.json.email_html = htmlContent;\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          432,
+          320
+        ],
+        "id": "d516ce3c-cfa8-49f2-b46f-dc160c3189ea",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Code in JavaScript2\n// Slack message with Block Kit (Single Column Layout)\n// Solves the \"Airtable Login\" unfurl issue\n\nconst source = $items(\"Webhook\", 0)[0].json;\nconst data = source.body || source;\n\n// 1. Capture Data\nconst recordId = data.recordId || 'N/A';\nconst safeFirst = (val, fallback = 'N/A') => Array.isArray(val) ? (val[0] ?? fallback) : (val ?? fallback);\n\n// Airtable Constants\nconst AIRTABLE_BASE_ID = 'apptuAm73VyH7pcHA';\nconst AIRTABLE_TABLE_ID = 'tblzMCMKzacW1QxcW';\nconst AIRTABLE_VIEW_ID = 'viwmQJRsBGHMsnuIQ';\n\n// Extract Fields\nconst role = safeFirst(data.roles, 'N/A');\nconst client = safeFirst(data.clientName, 'N/A');\nconst requestor = safeFirst(data.requestor, 'Unknown');\n\n// 2. Build URL\nconst interfaceUrl = `https://airtable.com/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_ID}/${AIRTABLE_VIEW_ID}/${recordId}`;\n\n// 3. Build the Block Kit Payload\n// Single column layout using standard text blocks with newlines (\\n)\nconst blocks = [\n  {\n    \"type\": \"header\",\n    \"text\": {\n      \"type\": \"plain_text\",\n      \"text\": \"New Candidate Request Submitted\",\n      \"emoji\": true\n    }\n  },\n  {\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": `*Role:*\\n${role}\\n\\n*Client:*\\n${client}\\n\\n*Requestor:*\\n${requestor}`\n    }\n  },\n  {\n    \"type\": \"divider\"\n  },\n  {\n    \"type\": \"actions\",\n    \"elements\": [\n      {\n        \"type\": \"button\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"View Record in Airtable\",\n          \"emoji\": true\n        },\n        \"url\": interfaceUrl,\n        \"style\": \"primary\" // Blue button\n      }\n    ]\n  }\n];\n\n// Fallback text for mobile notifications\nconst summaryText = `New Request: ${role} for ${client}`;\n\n// 4. Return Payload\nreturn {\n  slack_payload: {\n    channel: \"C053KLFLVFU\", // <--- Your Channel ID\n    text: summaryText,      // Notification text\n    blocks: blocks,         // Visual blocks\n    unfurl_links: false,    // Hide generic preview\n    unfurl_media: false\n  }\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1184,
+          112
+        ],
+        "id": "c5e9dd4b-88a2-4817-abd1-b259367c28be",
+        "name": "Code in JavaScript2"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.postMessage",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.slack_payload }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          1472,
+          240
+        ],
+        "id": "1c7a0404-0b84-4647-b0ae-c94657029fa4",
+        "name": "HTTP Request",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Webhook').item.json.body.requestorEmail[0] }}",
+          "subject": "=VA Candidate Request: {{ $('Webhook').item.json.body.company }} - {{ $('Webhook').item.json.body.roles }}",
+          "message": "={{ $json.email_html }}",
+          "options": {
+            "appendAttribution": false,
+            "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          928,
+          160
+        ],
+        "id": "e9a39bd5-978e-4fc9-8c66-6bdb60a6c611",
+        "name": "Send a message2",
+        "webhookId": "21407011-b265-49cc-b323-8094088a6318",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript1": {
+        "main": [
+          [
+            {
+              "node": "Send a message2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Send a message2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript2": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send a message2": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

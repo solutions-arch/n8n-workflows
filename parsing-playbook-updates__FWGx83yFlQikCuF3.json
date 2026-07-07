@@ -1,0 +1,328 @@
+{
+  "updatedAt": "2026-04-14T13:06:59.000Z",
+  "createdAt": "2025-09-10T17:15:33.446Z",
+  "id": "FWGx83yFlQikCuF3",
+  "name": "Parsing (Playbook Updates)",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "subject:playbook"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "51ea9c53-9a38-41cf-ac3c-2d9b5fc28d79",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xmDPLqosYVRcU1DG",
+          "name": "PJ SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "107270e0-c125-4c77-9e59-ad0b45279655",
+      "name": "Get a message",
+      "webhookId": "0ac70ff3-e002-4c0a-95e1-0abd2843a5d2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xmDPLqosYVRcU1DG",
+          "name": "PJ SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/threads/{{$json[\"threadId\"]}}?format=full",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "f56dda28-ff5d-4274-bb9d-f307a433178c",
+      "name": "HTTP Request",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "xmDPLqosYVRcU1DG",
+          "name": "PJ SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- helpers ----\nfunction decodeBase64Url(s) {\n  if (!s || typeof s !== 'string') return '';\n  s = s.replace(/-/g, '+').replace(/_/g, '/');\n  const pad = s.length % 4 ? 4 - (s.length % 4) : 0;\n  return Buffer.from(s + '='.repeat(pad), 'base64').toString('utf8');\n}\n\nfunction extractText(payload) {\n  const texts = [];\n  (function walk(part) {\n    if (!part) return;\n    const mime = part.mimeType || '';\n    if (part.body && part.body.data && (mime === 'text/plain' || mime === 'text/html')) {\n      texts.push(decodeBase64Url(part.body.data));\n    }\n    (part.parts || []).forEach(walk);\n  })(payload);\n  const plain = texts.find(t => !t.trim().startsWith('<')) || texts[0] || '';\n  return (plain || '').trim();\n}\n\nfunction headersToMap(arr = []) {\n  return arr.reduce((acc, h) => {\n    if (h && h.name) acc[h.name.toLowerCase()] = h.value || '';\n    return acc;\n  }, {});\n}\n\nfunction canonicalizeSubject(s = '') {\n  return s.replace(/^\\s*(re|fw|fwd)\\s*:/i, '').trim();\n}\n\nfunction collectMessages(j) {\n  if (Array.isArray(j?.messages)) return j.messages;         // threads.get\n  if (Array.isArray(j?.body?.messages)) return j.body.messages; // http wrapper\n  if (j?.payload) return [j];                                // messages.get\n  return [];\n}\n\n// ---- main ----\nconst input = items[0].json || items[0];\nconst rawMsgs = collectMessages(input);\n\n// Normalize: {date, from, subject, body}\nconst msgs = rawMsgs.map(m => {\n  const headers = headersToMap(m.payload?.headers || []);\n  const dateIso = m.internalDate\n    ? new Date(Number(m.internalDate)).toISOString()\n    : (headers['date'] ? new Date(headers['date']).toISOString() : '');\n  const subject = headers['subject'] || '';\n  const body = extractText(m.payload) || m.snippet || '';\n  return { date: dateIso, from: headers['from'] || '', subject, body: body.trim() };\n});\n\n// If nothing found, return empty fields so downstream nodes don't crash\nif (!msgs.length) {\n  return [{ json: { thread_subject: '', thread_text: '' } }];\n}\n\n// Sort chronological (oldest \u2192 newest)\nmsgs.sort((a, b) => (a.date > b.date ? 1 : -1));\n\n// Build timeline\nconst thread_text = msgs.map((m, i) =>\n  `--- Message ${i + 1} ---\\nDate: ${m.date}\\nFrom: ${m.from}\\nSubject: ${m.subject}\\n\\n${m.body}\\n`\n).join('\\n');\n\n// Canonical subject (prefer original/first; fallback to last)\nconst firstSub = msgs[0].subject || '';\nconst lastSub  = msgs[msgs.length - 1].subject || '';\nconst thread_subject = canonicalizeSubject(firstSub) || canonicalizeSubject(lastSub);\n\n// Output\nreturn [{ json: { thread_subject, thread_text } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "ed640310-1248-478b-a35c-8a023a3274a3",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an operations analyst. Read an entire email thread about a \u201cplaybook\u201d and return ONE JSON object ONLY (no prose, no code fences). MIME type must be application/json.\n\nTASKS\n1) Determine the CURRENT status of the playbook.\n2) Identify the most plausible owner of the next action.\n3) Provide short evidence (verbatim or near-verbatim quote) and any explicit decisions.\n4) Derive concrete next actions and any due date.\n\nSTATUS CATEGORIES (choose exactly one)\n- \"Draft\": initial creation/brainstorming; sections missing/TBD.\n- \"In Progress\": actively being worked on; edits/assignments underway.\n- \"Needs Review\": appears complete enough but awaiting confirmation/feedback/sign-off; \u201calmost done,\u201d \u201cfinal check,\u201d etc.\n- \"Blocked\": explicitly waiting on dependency/info/approval, or someone says they cannot proceed.\n- \"Approved\": explicitly signed off/final/ready to publish.\n- \"Superseded\": replaced by a newer version/process or stated obsolete.\n- \"Not a Playbook\": thread is unrelated to a playbook.\n\nDECISION PRECEDENCE\n- Prefer the most recent message. If older messages say \u201cdone\u201d but a newer one requests changes, pick \"Needs Review\" or \"In Progress\" accordingly.\n\nOWNERSHIP RULES\n- If a person says they \u201cdon\u2019t have time,\u201d \u201ccan\u2019t jump in,\u201d or only asks a question, they are NOT the owner.\n- If someone is asked to confirm/act (explicit mention, @name, \u201cChris please confirm\u201d), that person is the owner.\n- If unclear, pick the consistent maintainer in the thread (default to \"Chris\"). Use \"Team\" only if the thread clearly assigns to a group.\n\nDUE DATES\n- Extract only explicit dates. Return \"YYYY-MM-DD\". If no clear date, return \"\".\n\nNEXT ACTIONS\n- Write concrete, minimal steps (who + what). No vague \u201cfollow up\u201d unless that is explicitly the request.\n\nEVIDENCE & DECISIONS\n- \"evidence\" must be a short quote/paraphrase (\u2264120 chars) present in the thread.\n- \"latest_decision\" is for explicit approvals/commitments; otherwise \"\".\n\nCONFIDENCE\n- 0.9\u20131.0: explicit evidence and clear assignment/decision.\n- 0.6\u20130.8: reasonable inference with some ambiguity.\n- 0.3\u20130.5: weak/contradictory evidence.\n- If unsure overall, choose \"Needs Review\", leave unknown fields empty, and set confidence \u22640.6.\n\nOUTPUT SCHEMA \u2014 return exactly this JSON shape\n{\n  \"subject\": \"string (canonical thread subject; no 'Re:'/'Fwd:' if possible)\",\n  \"status\": \"Draft|In Progress|Needs Review|Blocked|Approved|Superseded|Not a Playbook\",\n  \"evidence\": \"string (\u2264120 chars)\",\n  \"latest_decision\": \"string\",\n  \"owner\": \"string (person or Team)\",\n  \"due_date\": \"YYYY-MM-DD or \\\"\\\"\",\n  \"next_actions\": [\"string\", \"string\"],\n  \"confidence\": 0\n}\n\nCONSTRAINTS\n- Use ONLY information from the provided thread text.\n- If a canonical subject is provided in the user message, copy it verbatim into \"subject\"; otherwise derive from the most recent \u201cSubject:\u201d header (strip leading Re:/Fwd:).\n- Keep strings concise; ignore signatures/footers.\n- Return ONE JSON object only; no markdown, no extra keys.\n\nThread subject (canonical): {{$json.thread_subject}}\n\nThread (chronological):\n{{$json.thread_text}}\n\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "fb114b9b-1dbf-4cad-8410-53bdd0134551",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": {
+          "maxOutputTokens": 2048,
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        976,
+        224
+      ],
+      "id": "904f59d9-fd59-4e09-9860-387d9afb669a",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7BN2R0TQRbTnikkq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "={{ $json.slack_message }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "1d885eeb-a543-4021-84fb-8709d6d2ea77",
+      "name": "Send a message",
+      "webhookId": "9c8db177-8bed-481a-b577-d1b04d5c9cd8",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ---- Parse AI output (works for plain JSON or \"```json ... ```\" string) ----\nfunction stripFences(s){\n  return typeof s === 'string'\n    ? s.replace(/^```(?:json)?\\s*/i,'').replace(/```$/,'').trim()\n    : s;\n}\nlet ai = $json;\nif (typeof ai === 'string') ai = JSON.parse(stripFences(ai));\nif (ai && typeof ai === 'object' && typeof ai.output === 'string') {\n  ai = JSON.parse(stripFences(ai.output));\n}\n\n// ---- Optional: get thread URL from your builder node (rename if needed) ----\nconst tb = ($items('Code', 0, 0)[0] || { json:{} }).json;\nconst gmailUrl = tb.thread_id ? `https://mail.google.com/mail/u/0/#inbox/${tb.thread_id}` : '';\n\n// ---- Status emoji map ----\nconst emojiMap = {\n  'Approved':'\u2705', 'Needs Review':'\ud83d\udfe1', 'In Progress':'\ud83d\udee0\ufe0f',\n  'Blocked':'\ud83d\udd34', 'Draft':'\ud83d\udcdd', 'Superseded':'\ud83d\uddc2\ufe0f', 'Not a Playbook':'\u2753'\n};\nconst statusEmoji = emojiMap[ai.status] || '';\n\n// ---- Format next actions ----\nconst next = Array.isArray(ai.next_actions) && ai.next_actions.length\n  ? ai.next_actions.map((x,i)=>`${i+1}. ${x}`).join('\\n')\n  : '\u2014';\n\n// ---- Build Slack message ----\nconst text =\n  `<!channel> Please see details of a playbook update below:\\n` +\n  `*Subject:* ${ai.subject || '\u2014'}\\n` +\n  `*Status:* ${statusEmoji} ${ai.status || '\u2014'}\\n` +\n  `*Owner:* ${ai.owner || '\u2014'}\\n` +\n  `*Due:* ${ai.due_date || '\u2014'}\\n` +\n  `*Next:*\\n${next}\\n` +\n  `\\n\\nPlease update the status accordingly. Thank you.`;\n\n// ---- Output for Slack node ----\nreturn [{ json: { ...ai, slack_message: text } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "2ebdf3d8-3caa-4f77-ab5e-805a3677cfd2",
+      "name": "Code1"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1761656276,
+        "possibleDuplicates": [
+          "199e4d1d322accaa",
+          "199cfccfe9a98755"
+        ]
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "8c29d472-9a2b-47e4-99df-17ab7801f75d",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-10-16T14:40:16.538Z",
+      "createdAt": "2025-10-16T14:40:16.538Z",
+      "role": "workflow:owner",
+      "workflowId": "FWGx83yFlQikCuF3",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

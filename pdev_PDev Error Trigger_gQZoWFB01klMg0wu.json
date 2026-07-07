@@ -1,0 +1,474 @@
+{
+  "name": "PDev Error Trigger",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "26c6fba9-ace7-4943-be86-eebbf2d81039",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9014746495",
+        "space": "90144231827",
+        "folder": "90147380759",
+        "list": "901415447206",
+        "name": "={{ $json.workflow_name }} - {{ $json.last_node_executed }} Error",
+        "additionalFields": {
+          "assignees": [
+            95098109
+          ],
+          "content": "=Error Details:\n{{ $json.error_message }}"
+        }
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "838e0480-1df4-4710-ae62-c7d773bda431",
+      "name": "Bugs (Per Folder)",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "pov43Hd26gF6W6Cp",
+          "name": "ClickUp OAuth2 Sol"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const execution = item.json.execution ?? {};\n  const workflow = item.json.workflow ?? {};\n  const error = execution.error ?? {};\n\n  const timestamp = error.timestamp;\n\n  let readableTimestamp = \"N/A\";\n  let errorTimestamp = null;\n\n  if (timestamp) {\n    const date = new Date(timestamp);\n\n    errorTimestamp = date.toISOString();\n\n    const formatter = new Intl.DateTimeFormat(\"en-US\", {\n      timeZone: \"Asia/Manila\",\n      month: \"long\",\n      day: \"2-digit\",\n      year: \"numeric\",\n      hour: \"2-digit\",\n      minute: \"2-digit\",\n      second: \"2-digit\",\n      hour12: false\n    });\n\n    readableTimestamp = formatter.format(date);\n  }\n\n  return {\n    json: {\n      // n8n execution details\n      execution_id: String(execution.id ?? \"\"),\n      execution_url: execution.url ?? null,\n\n      // workflow details\n      workflow_id: workflow.id ?? null,\n      workflow_name: workflow.name ?? null,\n\n      // execution metadata\n      mode: execution.mode ?? null,\n      last_node_executed: execution.lastNodeExecuted ?? null,\n\n      // error details\n      error_name: error.name ?? null,\n      error_message: error.message ?? null,\n      error_timestamp: errorTimestamp,\n\n      // for ClickUp/Slack only\n      readableTimestamp,\n\n      // bug tracking\n      status: \"reported\",\n      severity: error.name === \"WorkflowCrashedError\" ? \"high\" : \"medium\",\n      source: \"n8n_error_trigger\",\n\n      // raw/debug fields\n      error_context: error.context ?? {},\n      raw_payload: item.json\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "9da7a4aa-85ca-474d-8919-c766c78d10ee",
+      "name": "Normalize Bug Metadata"
+    },
+    {
+      "parameters": {
+        "tableId": "workflow_bug_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "execution_id",
+              "fieldValue": "={{ $json.execution_id }}"
+            },
+            {
+              "fieldId": "workflow_id",
+              "fieldValue": "={{ $json.workflow_id }}"
+            },
+            {
+              "fieldId": "workflow_name",
+              "fieldValue": "={{ $json.workflow_name }}"
+            },
+            {
+              "fieldId": "execution_url",
+              "fieldValue": "={{ $json.execution_url }}"
+            },
+            {
+              "fieldId": "mode",
+              "fieldValue": "={{ $json.mode }}"
+            },
+            {
+              "fieldId": "last_node_executed",
+              "fieldValue": "={{ $json.last_node_executed }}"
+            },
+            {
+              "fieldId": "error_name",
+              "fieldValue": "={{ $json.error_name }}"
+            },
+            {
+              "fieldId": "error_message",
+              "fieldValue": "={{ $json.error_message }}"
+            },
+            {
+              "fieldId": "error_timestamp",
+              "fieldValue": "={{ $json.error_timestamp }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "severity",
+              "fieldValue": "={{ $json.severity }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $json.source }}"
+            },
+            {
+              "fieldId": "error_context",
+              "fieldValue": "={{ $json.error_context }}"
+            },
+            {
+              "fieldId": "raw_payload",
+              "fieldValue": "={{ $json.raw_payload }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "0508472d-114a-4cd2-972d-284bb174ac40",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_bug_logs",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create a row').item.json.execution_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "clickup_task_id",
+              "fieldValue": "={{ $('Bugs (Per Folder)').item.json.id }}"
+            },
+            {
+              "fieldId": "clickup_task_url",
+              "fieldValue": "={{ $('Bugs (Per Folder)').item.json.url }}"
+            },
+            {
+              "fieldId": "clickup_task_status",
+              "fieldValue": "REPORTED"
+            },
+            {
+              "fieldId": "clickup_task_created_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "clickup_response",
+              "fieldValue": "={{ JSON.stringify($('Bugs (Per Folder)').item.json) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "54ddb144-a3d4-4812-8855-91730b47b9ce",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "=A *PDev workflow* encountered an error. \n\nError Message: \n{{ $('Normalize Bug Metadata').first().json.error_message }}\n\nTimestamp: {{ $('Normalize Bug Metadata').first().json.readableTimestamp }}\n\nLast Node Executed: {{ $('Normalize Bug Metadata').first().json.last_node_executed }}\n\nPlease investigate the failure here: <{{ $('Normalize Bug Metadata').first().json.raw_payload.execution.url }}|View Execution Details>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "296ee4c6-9c86-41be-87fd-e3d30e073588",
+      "name": "Send a message1",
+      "webhookId": "b90cb9e5-ad3a-4ada-b8ba-ff903eae04f3",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Send a message1": [
+      {
+        "json": {
+          "ok": true,
+          "channel": "C09ESC12MA5",
+          "message": {
+            "user": "U09DY2Q1FN3",
+            "type": "message",
+            "ts": "1777675626.302329",
+            "bot_id": "B09DY2Q1CMV",
+            "app_id": "A09DY1SCJA3",
+            "text": "A *Placements workflow* encountered an error. \n\nError Message: \n\nWorkflow did not finish, possible out-of-memory issue\n\nTimestamp: May-01-2026 22:07:15\n\nLast Node Executed: Code in JavaScript\n\nPlease investigate the failure here: <https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168|View Execution Details>",
+            "team": "T03N8PRACSD",
+            "bot_profile": {
+              "id": "B09DY2Q1CMV",
+              "app_id": "A09DY1SCJA3",
+              "user_id": "U09DY2Q1FN3",
+              "name": "SV Portal",
+              "icons": {
+                "image_36": "https://avatars.slack-edge.com/2025-09-09/9515818056272_71a027dec9f988dee064_36.png",
+                "image_48": "https://avatars.slack-edge.com/2025-09-09/9515818056272_71a027dec9f988dee064_48.png",
+                "image_72": "https://avatars.slack-edge.com/2025-09-09/9515818056272_71a027dec9f988dee064_72.png"
+              },
+              "deleted": false,
+              "updated": 1757442752,
+              "team_id": "T03N8PRACSD"
+            },
+            "blocks": [
+              {
+                "type": "rich_text",
+                "block_id": "RnvGW",
+                "elements": [
+                  {
+                    "type": "rich_text_section",
+                    "elements": [
+                      {
+                        "type": "text",
+                        "text": "A "
+                      },
+                      {
+                        "type": "text",
+                        "text": "Placements workflow",
+                        "style": {
+                          "bold": true
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " encountered an error. \n\nError Message: \n\nWorkflow did not finish, possible out-of-memory issue\n\nTimestamp: May-01-2026 22:07:15\n\nLast Node Executed: Code in JavaScript\n\nPlease investigate the failure here: "
+                      },
+                      {
+                        "type": "link",
+                        "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+                        "text": "View Execution Details"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "message_timestamp": "1777675626.302329"
+        }
+      }
+    ],
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": "39259",
+            "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/BUl21Nrd85iFFXS1/executions/39259",
+            "error": {
+              "level": "warning",
+              "tags": {},
+              "description": "new row for relation \"workflow_executions\" violates check constraint \"workflow_executions_time_saved_source_check\"",
+              "timestamp": 1778180610025,
+              "context": {},
+              "functionality": "regular",
+              "name": "NodeApiError",
+              "node": {
+                "parameters": {
+                  "useCustomSchema": false,
+                  "resource": "row",
+                  "operation": "create",
+                  "tableId": "workflow_executions",
+                  "dataToSend": "defineBelow",
+                  "fieldsUi": {
+                    "fieldValues": [
+                      {
+                        "fieldId": "execution_id",
+                        "fieldValue": "={{ $execution.id }}"
+                      },
+                      {
+                        "fieldId": "workflow_id",
+                        "fieldValue": "={{ $workflow.id }}"
+                      },
+                      {
+                        "fieldId": "workflow_name",
+                        "fieldValue": "={{ $workflow.name }}"
+                      },
+                      {
+                        "fieldId": "status",
+                        "fieldValue": "success"
+                      },
+                      {
+                        "fieldId": "time_saved_minutes",
+                        "fieldValue": "25"
+                      },
+                      {
+                        "fieldId": "time_saved_source",
+                        "fieldValue": "workflow_manual"
+                      },
+                      {
+                        "fieldId": "time_saved_reason",
+                        "fieldValue": "Workflow completed intended output"
+                      },
+                      {
+                        "fieldId": "synced_at",
+                        "fieldValue": "={{ new Date().toISOString() }}"
+                      }
+                    ]
+                  }
+                },
+                "type": "n8n-nodes-base.supabase",
+                "typeVersion": 1,
+                "position": [
+                  3008,
+                  1264
+                ],
+                "id": "afdd93e8-8a2a-4ff5-b4da-613dc68ed196",
+                "name": "Create a row",
+                "credentials": {
+                  "supabaseApi": {
+                    "id": "6igLhSgAHJqsX9Pd",
+                    "name": "n8n metadata"
+                  }
+                }
+              },
+              "messages": [
+                "400 - {\"code\":\"23514\",\"details\":\"Failing row contains (39259, BUl21Nrd85iFFXS1, [Fathom] PEC MoM Generator, success, null, null, null, null, null, null, null, null, 2026-05-07 19:03:29.083+00, 25, workflow_manual, Workflow completed intended output).\",\"hint\":null,\"message\":\"new row for relation \\\"workflow_executions\\\" violates check constraint \\\"workflow_executions_time_saved_source_check\\\"\"}"
+              ],
+              "httpCode": "400",
+              "message": "Bad request - please check your parameters: new row for relation \"workflow_executions\" violates check constraint \"workflow_executions_time_saved_source_check\"",
+              "stack": "NodeApiError: Bad request - please check your parameters: new row for relation \"workflow_executions\" violates check constraint \"workflow_executions_time_saved_source_check\"\n    at ExecuteContext.requestWithAuthentication (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/node-execution-context/utils/request-helper-functions.ts:1294:10)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at ExecuteContext.requestWithAuthentication (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/node-execution-context/utils/request-helper-functions.ts:1594:11)\n    at ExecuteContext.supabaseApiRequest (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Supabase/GenericFunctions.ts:80:10)\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Supabase/Supabase.node.ts:210:41)\n    at WorkflowExecute.executeNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1045:8)\n    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1226:11)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1662:27\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:2274:11"
+            },
+            "lastNodeExecuted": "Create a row",
+            "mode": "webhook",
+            "executionContext": {
+              "version": 1,
+              "establishedAt": 1778180598152,
+              "source": "webhook"
+            }
+          },
+          "workflow": {
+            "id": "BUl21Nrd85iFFXS1",
+            "name": "[Fathom] PEC MoM Generator"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Bug Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Bug Metadata": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Bugs (Per Folder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bugs (Per Folder)": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "443fa154-9dfd-4735-9855-547b343d4cf7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b06c82296e26ffae4ee1414f5f6f1fab985a46e1996657541736162432921043"
+  },
+  "id": "gQZoWFB01klMg0wu",
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ]
+}

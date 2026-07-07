@@ -1,0 +1,1204 @@
+{
+  "updatedAt": "2026-05-06T16:36:39.000Z",
+  "createdAt": "2026-05-05T14:47:02.896Z",
+  "id": "ZeH3oOJwB6KGbgiG",
+  "name": "[Bubble] Support Sync",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "support-sync",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -384,
+        96
+      ],
+      "id": "a4289fd4-60c0-42d5-a7a9-4f0bda880c50",
+      "name": "Webhook",
+      "webhookId": "6f8122a3-2ea6-46e0-9f99-4384a490ae9c"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        144,
+        144
+      ],
+      "id": "050fa30f-b32c-4bc8-b88d-af08abc8e116",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxho5QOix1I061r",
+          "mode": "list",
+          "cachedResultName": "SV Support",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+        },
+        "filterByFormula": "={Bubble Unique ID} = \"{{ $json.body[\"Bubble Unique ID\"] }}\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        -96,
+        224
+      ],
+      "id": "77b09e88-682c-4f3a-a5f5-2f08c5feeed2",
+      "name": "Search Projects",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxho5QOix1I061r",
+          "mode": "list",
+          "cachedResultName": "SV Support",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "Name": "={{ $json.body.Name }}",
+            "Department": "={{ $json.body.Department }}",
+            "Role": "={{ $json.body.Role }}",
+            "SV Email": "={{ $json.body[\"SV Email\"] }}",
+            "SV Status": "={{ $json.body[\"SV Status\"] }}",
+            "SV Start Date": "={{ $json.body[\"SV Start Date\"] }}",
+            "Contractor ID": "={{ $json.body[\"Contractor ID\"] }}",
+            "Bubble Unique ID": "={{ $json.body[\"Bubble Unique ID\"] }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Photo",
+              "displayName": "Photo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Department",
+              "displayName": "Department",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Client Services",
+                  "value": "Client Services"
+                },
+                {
+                  "name": "Business Development and Sales",
+                  "value": "Business Development and Sales"
+                },
+                {
+                  "name": "QA and Training",
+                  "value": "QA and Training"
+                },
+                {
+                  "name": "Operations",
+                  "value": "Operations"
+                },
+                {
+                  "name": "Talent Acquisitions",
+                  "value": "Talent Acquisitions"
+                },
+                {
+                  "name": "Finance",
+                  "value": "Finance"
+                },
+                {
+                  "name": "DevOPS",
+                  "value": "DevOPS"
+                },
+                {
+                  "name": "Executive",
+                  "value": "Executive"
+                },
+                {
+                  "name": "Contractor Services",
+                  "value": "Contractor Services"
+                },
+                {
+                  "name": "Marketing",
+                  "value": "Marketing"
+                },
+                {
+                  "name": "Solution Architects",
+                  "value": "Solution Architects"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Team",
+              "displayName": "Team",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Process Engineering",
+                  "value": "Process Engineering"
+                },
+                {
+                  "name": "Solution Architects",
+                  "value": "Solution Architects"
+                },
+                {
+                  "name": "Placements",
+                  "value": "Placements"
+                },
+                {
+                  "name": "Department Heads",
+                  "value": "Department Heads"
+                },
+                {
+                  "name": "SV",
+                  "value": "SV"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Client Services Manager",
+                  "value": "Client Services Manager"
+                },
+                {
+                  "name": "Process Development Supervisor",
+                  "value": "Process Development Supervisor"
+                },
+                {
+                  "name": "Process Engineer",
+                  "value": "Process Engineer"
+                },
+                {
+                  "name": "Technical Consultant",
+                  "value": "Technical Consultant"
+                },
+                {
+                  "name": "Placement Specialist",
+                  "value": "Placement Specialist"
+                },
+                {
+                  "name": "Automation Engineer",
+                  "value": "Automation Engineer"
+                },
+                {
+                  "name": "Business Analyst",
+                  "value": "Business Analyst"
+                },
+                {
+                  "name": "Sales Director",
+                  "value": "Sales Director"
+                },
+                {
+                  "name": "Executive Assistant",
+                  "value": "Executive Assistant"
+                },
+                {
+                  "name": "Helpdesk & Implementation Specialist",
+                  "value": "Helpdesk & Implementation Specialist"
+                },
+                {
+                  "name": "Finance Manager",
+                  "value": "Finance Manager"
+                },
+                {
+                  "name": "Service Delivery Manager",
+                  "value": "Service Delivery Manager"
+                },
+                {
+                  "name": "Success Coach",
+                  "value": "Success Coach"
+                },
+                {
+                  "name": "Implementation Supervisor",
+                  "value": "Implementation Supervisor"
+                },
+                {
+                  "name": "Development Operations Engineer",
+                  "value": "Development Operations Engineer"
+                },
+                {
+                  "name": "Director of Shared Services",
+                  "value": "Director of Shared Services"
+                },
+                {
+                  "name": "Contractor Services Manager",
+                  "value": "Contractor Services Manager"
+                },
+                {
+                  "name": "Director of Talent Acquisitions",
+                  "value": "Director of Talent Acquisitions"
+                },
+                {
+                  "name": "Sales Manager",
+                  "value": "Sales Manager"
+                },
+                {
+                  "name": "Account Executive",
+                  "value": "Account Executive"
+                },
+                {
+                  "name": "Sales Closer",
+                  "value": "Sales Closer"
+                },
+                {
+                  "name": "VP for Operations",
+                  "value": "VP for Operations"
+                },
+                {
+                  "name": "COO",
+                  "value": "COO"
+                },
+                {
+                  "name": "CEO",
+                  "value": "CEO"
+                },
+                {
+                  "name": "Back-End Developer",
+                  "value": "Back-End Developer"
+                },
+                {
+                  "name": "Front-End Developer",
+                  "value": "Front-End Developer"
+                },
+                {
+                  "name": "Lead Generation Operations Manager",
+                  "value": "Lead Generation Operations Manager"
+                },
+                {
+                  "name": "Digital Marketing Coordinator",
+                  "value": "Digital Marketing Coordinator"
+                },
+                {
+                  "name": "Call Center Manager",
+                  "value": "Call Center Manager"
+                },
+                {
+                  "name": "Finance Analyst",
+                  "value": "Finance Analyst"
+                },
+                {
+                  "name": "Finance Specialist",
+                  "value": "Finance Specialist"
+                },
+                {
+                  "name": "Head of Projects",
+                  "value": "Head of Projects"
+                },
+                {
+                  "name": "Talent Acquisitions Department Head",
+                  "value": "Talent Acquisitions Department Head"
+                },
+                {
+                  "name": "Talent Acquisition Specialist",
+                  "value": "Talent Acquisition Specialist"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SV Email",
+              "displayName": "SV Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SV Status",
+              "displayName": "SV Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Active",
+                  "value": "Active"
+                },
+                {
+                  "name": "Inactive",
+                  "value": "Inactive"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SV Start Date",
+              "displayName": "SV Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "SV Last Working Day",
+              "displayName": "SV Last Working Day",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Birthday",
+              "displayName": "Birthday",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Current Age",
+              "displayName": "Current Age",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Primary Mobile Number",
+              "displayName": "Primary Mobile Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Personal Email",
+              "displayName": "Personal Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Zoom Phone",
+              "displayName": "Zoom Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Province",
+              "displayName": "Province",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "RFP Requested By",
+              "displayName": "RFP Requested By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements",
+              "displayName": "PDEV Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements copy",
+              "displayName": "PDEV Requirements copy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Time Off and Holidays",
+              "displayName": "Time Off and Holidays",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Availability (Per Week)",
+              "displayName": "Availability (Per Week)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Time Off",
+              "displayName": "Time Off",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Approved Days Off",
+              "displayName": "Approved Days Off",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants",
+              "displayName": "Virtual Assistants",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Hours (from Interactions)",
+              "displayName": "Hours (from Interactions)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Hours WC0331",
+              "displayName": "Hours WC0331",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Count (Billable Hours)",
+              "displayName": "Count (Billable Hours)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants 2",
+              "displayName": "Virtual Assistants 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Back-To-Placements",
+              "displayName": "Back-To-Placements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PTOs used",
+              "displayName": "PTOs used",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Sales QA",
+              "displayName": "Sales QA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Slack ID",
+              "displayName": "Slack ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Back-To-Placements 2",
+              "displayName": "Back-To-Placements 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Billable Activities copy",
+              "displayName": "Billable Activities copy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Interface Feedback",
+              "displayName": "Interface Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Interface Feedback 2",
+              "displayName": "Interface Feedback 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "RFPs Closed",
+              "displayName": "RFPs Closed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements 2",
+              "displayName": "PDEV Requirements 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Clients",
+              "displayName": "Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PDEV",
+              "displayName": "PDEV",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants copy",
+              "displayName": "Virtual Assistants copy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PEC Tasks",
+              "displayName": "PEC Tasks",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Projects_New",
+              "displayName": "Projects_New",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Projects_New 2",
+              "displayName": "Projects_New 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Projects",
+              "displayName": "Projects",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Support Record ID",
+              "displayName": "Support Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Slack User ID",
+              "displayName": "Slack User ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Placements",
+              "displayName": "VA Placements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Contractor ID",
+              "displayName": "Contractor ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Bubble Unique ID",
+              "displayName": "Bubble Unique ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ClickUp Member ID",
+              "displayName": "ClickUp Member ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants 3",
+              "displayName": "Virtual Assistants 3",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Limbo Removal",
+              "displayName": "Limbo Removal",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Projects 2",
+              "displayName": "Projects 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL - STP Requests",
+              "displayName": "PL - STP Requests",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL - STP Requests 2",
+              "displayName": "PL - STP Requests 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Chatbot Stress Test Feedback",
+              "displayName": "Chatbot Stress Test Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Chatbot Stress Test Feedback 2",
+              "displayName": "Chatbot Stress Test Feedback 2",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PE Insights",
+              "displayName": "PE Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        352,
+        144
+      ],
+      "id": "5a238ead-37ec-491b-b1ff-428608c97b2d",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Projects": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Projects",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Bubble",
+            "content-length": "101",
+            "accept-encoding": "gzip, br",
+            "baggage": "bubblegroup.client.version=ed3c3e128e229baf70387e9fef94ef1b7f032f4e,bubblegroup.client.commit_timestamp=1772583259000,bubblegroup.http.route=workflow%2Fstart,bubblegroup.http.host=scalevirtually.net,bubblegroup.workflow.appname=janssen-97365,bubblegroup.workflow.app_version=live,bubblegroup.workflow.situation=page_wf,user_agent.origin=web,bubblegroup.workflow.id=bUhSt,bubblegroup.workflow.event.type=ButtonClicked,bubblegroup.workflow.action.id=bUhUN,bubblegroup.workflow.action.type=apiconnector2-bUUWr0.bUhTi",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "54.191.66.197",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9d716d5f7fb6fef8-PDX",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "traceparent": "00-986b3909ccf7e0caa75313e7220fd568-479fa047bfcafe67-01",
+            "x-bubble-depth": "1",
+            "x-forwarded-for": "54.191.66.197, 172.68.174.165",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-6d69f46f85-m5lwt",
+            "x-is-trusted": "yes",
+            "x-real-ip": "54.191.66.197"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "Name": "Patrick Jansen Villanueva",
+            "Department": "Solution Architects",
+            "Role": "Business Analyst",
+            "SV Email": "pj@scalevirtually.com",
+            "SV Status": "Active",
+            "SV Start Date": "7/24/2025",
+            "Contractor ID": "PV07256542",
+            "Bubble Unique ID": "1753364130568x790131013685084200"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/dbf9817b-a9aa-459f-8ba6-7be7d489e3da",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "versionId": "b6be1340-2c2f-4f8a-aa11-8319d6bdd4a6",
+  "activeVersionId": null,
+  "versionCounter": 7,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-05T14:47:02.901Z",
+      "createdAt": "2026-05-05T14:47:02.901Z",
+      "role": "workflow:owner",
+      "workflowId": "ZeH3oOJwB6KGbgiG",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T02:39:48.849Z",
+      "createdAt": "2026-04-29T02:39:48.849Z",
+      "id": "PEeL9xSBFkGsagXN",
+      "name": "Development"
+    }
+  ],
+  "activeVersion": null
+}

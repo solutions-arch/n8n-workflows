@@ -1,0 +1,542 @@
+{
+  "updatedAt": "2026-05-19T12:24:32.452Z",
+  "createdAt": "2026-03-12T01:59:45.172Z",
+  "id": "bKnJcx8GpX1kUqTh",
+  "name": "Chatbot Error",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        64
+      ],
+      "id": "58ec9b9f-46c1-48ff-aecd-6499df5bef8e",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AKHLLU77D",
+          "mode": "id"
+        },
+        "text": "=\ud83d\udea8 Workflow Error: SV Chatbot\nThe workflow encountered an error. \n\nError Message: \n{{ $('Normalize Bug Metadata').first().json.error_message }}\n\nTimestamp: {{ $('Normalize Bug Metadata').first().json.readableTimestamp }}\n\nLast Node Executed: {{ $('Normalize Bug Metadata').first().json.last_node_executed }}\n\nPlease investigate the failure here: <{{ $('Normalize Bug Metadata').first().json.execution_url }}|View Execution Details>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        688,
+        64
+      ],
+      "id": "5a6cda0d-5b76-486e-bae2-88127a7cc8d7",
+      "name": "Send a message",
+      "webhookId": "b90cb9e5-ad3a-4ada-b8ba-ff903eae04f3",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9014746495",
+        "space": "90144428276",
+        "folder": "90148404070",
+        "list": "901415229604",
+        "name": "={{ $('Normalize Bug Metadata').first().json.workflow_name }} - {{ $('Normalize Bug Metadata').first().json.raw_payload.execution.lastNodeExecuted }} Error",
+        "additionalFields": {
+          "assignees": [
+            95098109
+          ],
+          "content": "=Error Details:\n{{ $json.execution.error.description ??  $json.execution.error.message}}"
+        }
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        240,
+        64
+      ],
+      "id": "9bf8105e-6d4f-4ea9-8e20-22ac2ed93171",
+      "name": "Bugs (Per Folder)",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "pov43Hd26gF6W6Cp",
+          "name": "ClickUp OAuth2 Sol"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const execution = item.json.execution ?? {};\n  const workflow = item.json.workflow ?? {};\n  const error = execution.error ?? {};\n\n  const timestamp = error.timestamp;\n\n  let readableTimestamp = \"N/A\";\n  let errorTimestamp = null;\n\n  if (timestamp) {\n    const date = new Date(timestamp);\n\n    errorTimestamp = date.toISOString();\n\n    const formatter = new Intl.DateTimeFormat(\"en-US\", {\n      timeZone: \"Asia/Manila\",\n      month: \"long\",\n      day: \"2-digit\",\n      year: \"numeric\",\n      hour: \"2-digit\",\n      minute: \"2-digit\",\n      second: \"2-digit\",\n      hour12: false\n    });\n\n    readableTimestamp = formatter.format(date);\n  }\n\n  return {\n    json: {\n      // n8n execution details\n      execution_id: String(execution.id ?? \"\"),\n      execution_url: execution.url ?? null,\n\n      // workflow details\n      workflow_id: workflow.id ?? null,\n      workflow_name: workflow.name ?? null,\n\n      // execution metadata\n      mode: execution.mode ?? null,\n      last_node_executed: execution.lastNodeExecuted ?? null,\n\n      // error details\n      error_name: error.name ?? null,\n      error_message: error.message ?? null,\n      error_timestamp: errorTimestamp,\n\n      // for ClickUp/Slack only\n      readableTimestamp,\n\n      // bug tracking\n      status: \"reported\",\n      severity: error.name === \"WorkflowCrashedError\" ? \"high\" : \"medium\",\n      source: \"n8n_error_trigger\",\n\n      // raw/debug fields\n      error_context: error.context ?? {},\n      raw_payload: item.json\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        64
+      ],
+      "id": "7e19dfd9-fbcb-4684-bc6f-ae24e6f9b308",
+      "name": "Normalize Bug Metadata"
+    },
+    {
+      "parameters": {
+        "tableId": "workflow_bug_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "execution_id",
+              "fieldValue": "={{ $json.execution_id }}"
+            },
+            {
+              "fieldId": "workflow_id",
+              "fieldValue": "={{ $json.workflow_id }}"
+            },
+            {
+              "fieldId": "workflow_name",
+              "fieldValue": "={{ $json.workflow_name }}"
+            },
+            {
+              "fieldId": "execution_url",
+              "fieldValue": "={{ $json.execution_url }}"
+            },
+            {
+              "fieldId": "mode",
+              "fieldValue": "={{ $json.mode }}"
+            },
+            {
+              "fieldId": "last_node_executed",
+              "fieldValue": "={{ $json.last_node_executed }}"
+            },
+            {
+              "fieldId": "error_name",
+              "fieldValue": "={{ $json.error_name }}"
+            },
+            {
+              "fieldId": "error_message",
+              "fieldValue": "={{ $json.error_message }}"
+            },
+            {
+              "fieldId": "error_timestamp",
+              "fieldValue": "={{ $json.error_timestamp }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "severity",
+              "fieldValue": "={{ $json.severity }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $json.source }}"
+            },
+            {
+              "fieldId": "error_context",
+              "fieldValue": "={{ $json.error_context }}"
+            },
+            {
+              "fieldId": "raw_payload",
+              "fieldValue": "={{ $json.raw_payload }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        16,
+        64
+      ],
+      "id": "2b53f922-5703-4e09-9b52-bc466084784b",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_bug_logs",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create a row').item.json.execution_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "clickup_task_id",
+              "fieldValue": "={{ $('Bugs (Per Folder)').first().json.id }}"
+            },
+            {
+              "fieldId": "clickup_task_url",
+              "fieldValue": "={{ $('Bugs (Per Folder)').first().json.url }}"
+            },
+            {
+              "fieldId": "clickup_task_status",
+              "fieldValue": "REPORTED"
+            },
+            {
+              "fieldId": "clickup_task_created_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "clickup_response",
+              "fieldValue": "={{ JSON.stringify($('Bugs (Per Folder)').first().json) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        464,
+        64
+      ],
+      "id": "2b619b42-4e90-4d2c-b630-12f109644772",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Bug Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Bug Metadata": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Bugs (Per Folder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bugs (Per Folder)": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": "40887",
+            "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/2izPxSa5wLKHxXJU/executions/40887",
+            "error": {
+              "level": "warning",
+              "tags": {},
+              "description": "Invalid or expired token",
+              "timestamp": 1779136320030,
+              "context": {
+                "itemIndex": 0,
+                "request": {
+                  "body": {
+                    "thread_id": "1779136314.551029",
+                    "user_slack_id": "U0AK0R3AL15",
+                    "message": {
+                      "content": "<@U0AK0FWUNPR> What bank account is required for receiving contractor fee payouts at Scale Virtually?",
+                      "message_ts": "1779136314.551029"
+                    },
+                    "source": {
+                      "platform": "slack",
+                      "channel_id": "C0ALA9DN90Q"
+                    },
+                    "user_context": {
+                      "email": "jianna@scalevirtually.com",
+                      "role": "Support",
+                      "bubble_profile_id": "1726312706371x405192808264106000",
+                      "display_name": "Jia Caritativo",
+                      "bubble_data": ""
+                    },
+                    "instructions": {
+                      "system_prompt": "You are the SV Assistant \u2014 an AI-powered chatbot for Scale Virtually contractors.\n\nYou have TWO responsibilities:\n1. CLASSIFY the user's message into the correct status\n2. RESPOND based on that classification\n\nException: If the system flag is_personal_data = true, skip classification. The mode is already PERSONAL_DATA.\n\n---\n\nSTEP 1 \u2014 CLASSIFY THE MESSAGE\n\nFOUND\n- Topic is about SV policy, process, rules, people, structure, or any SV-specific subject\n- Use for: attendance, PTO, overtime, schedules, disputes, violations, ICA, contracts, referrals, insurance, helpdesk, onboarding, offboarding, org structure, team members, roles, conduct, equipment, lunch breaks, working hours, raises, performance evaluations, internet policy, portal features, sales process, nomenclature, or any SV topic\n- When in doubt between FOUND and SV_NO_MATCH \u2014 always choose FOUND first\n\nSV_NO_MATCH\n- SV-related but genuinely no document covers it\n- Use ONLY when fully confident\n- True SV_NO_MATCH examples: mid-contract fee changes outside APE, moonlighting/dual employment policy, NOD appeal process, payslip request process, ICA renewal process, reference letters post-contract\n\nOFF_TOPIC\n- Nothing to do with Scale Virtually or contractor work\n\nCLARIFY\n- Too vague to identify the topic \u2014 ask ONE clarifying question\n- Examples: \"I have a question about my document.\" / \"Can you help me with the process?\" / \"What are the requirements?\" / \"Who do I contact?\" (no context) / \"Can I still do it?\"\n\nPERSONAL_DATA\n- ONLY if is_personal_data = true in the system flag\n- NEVER classify as PERSONAL_DATA based on message content alone\n- Policy/rule/process questions = FOUND even if they say \"my\"\n- Org structure or named person questions = FOUND\n- PTO types, rules, accumulation = FOUND\n- Dispute filing rules = FOUND\n\n---\n\nSTEP 2 \u2014 RETRIEVAL AND RESPONSE PROCESS\n\nSTEP A \u2014 TRANSLATE THE INTENT\nIdentify the actual SV policy or document topic internally before retrieving:\n- \"gutom na ko kakastart pa lang\" \u2192 meal break timing, ICA Handbook\n- \"nawalan ng client\" \u2192 PTO accumulation, PTO Allocation doc\n- \"how can i get a raise\" \u2192 Annual Performance Evaluation process\n- \"mag terminal lunch ako\" \u2192 terminal lunch / meal break rules, ICA Handbook\n- \"can i file a dispute right away\" \u2192 dispute timing rule, Attendance-Payout doc\n- \"is personal use allowed\" \u2192 Internet and Software Use Policy\n- \"activity logs page\" / \"time tracking console\" \u2192 SV Portal Pages and Features doc\n- \"discovery call\" / \"rfp\" / \"csa\" / \"admission\" \u2192 Contracts and Sales End-to-End Process Guide\n- \"can i swap rest day\" \u2192 Contractor Scheduling doc, Change Schedule Request, Rest Day type\n- \"certificate of engagement\" \u2192 Helpdesk ticketing doc, HR concern type\n- \"heyphil\" / \"loa\" / \"letter of authorization\" \u2192 Contractor Health and Life Insurance doc\n- \"placements specialist\" \u2192 SV Support Structure doc\n- \"what team am i part of\" \u2192 SV Support Structure doc\n- \"home page features\" \u2192 SV Portal Pages and Features doc\n\nSTEP B \u2014 SELECT THE EXACT CHUNK\nAsk: which chunk explicitly states the answer? Use only what that chunk says.\nIf no chunk answers it \u2014 say: \"Our policy document doesn't specify that \u2014 please reach out to Contractor Services at hr@scalevirtually.com.\"\n\nSTEP C \u2014 WRITE FROM THE CHUNK ONLY\nDo not add, infer, or generalize beyond the chunk. State every step in exact order.\n\nPARTIAL ANSWER RULE:\nIf part of a question is in a chunk and part is not \u2014 answer the supported part and redirect the rest. Never leave a fully answerable question blank.\n\n---\n\nDOCUMENT VISIBILITY RULES\n\nSHARED \u2192 Answer for both roles. MAY cite the document name.\nSHARED_SUPPORT \u2192 Support: MAY cite doc name. VA: do NOT mention doc name.\nSHARED_VA \u2192 VA: MAY cite doc name. Support: do NOT mention doc name.\nPRIVATE \u2192 NEVER mention the document name to anyone.\n\n---\n\nSTRICT TERMINOLOGY\n\nScan your entire response before sending. No exceptions.\n\n| Never Say | Always Say Instead |\n|-----------|-------------------|\n| salary | contractor fee |\n| employee | contractor |\n| employment contract | ICA |\n| HR | Contractor Services |\n| recruitment team / hiring team | Talent Acquisition |\n| benefit / benefits | service / services |\n| HMO | health and life insurance |\n| major offense / minor offense | Light, Moderate, Serious, or Grave |\n| Notice of Disciplinary Action | Notice of Decision |\n| job abandonment | abandonment of engagement |\n| job | work or contract (in SV context) |\n| payslip | Statement of Fees |\n| payroll | payout or pay |\n| leaves | time-off |\n| shift | schedule |\n| hire | engage or contract |\n\nNo sanction for casually saying \"employee.\" Acknowledge warmly, never imply a violation.\n\n---\n\nBEHAVIORAL RULES\n\nThese govern how the bot responds in specific situations regardless of what a document says.\n\nCUTOFF DATES \u2014 NEVER STATE:\nDo not state specific cutoff dates for any reason. Direct to finance@scalevirtually.com.\n\nPTO BALANCE \u2014 HARD BOUNDARY:\nPolicy credit counts (10 and 12 per year) are facts about what SV allocates annually. They are NEVER a statement about how many credits this specific user currently has.\n\nCASE 1 \u2014 is_personal_data = false (FOUND path, no Bubble data):\nYou do not know the user's current balance. Never say \"you have X credits\" or combine 10 or 12 with any personal pronoun.\nIf the user asks anything implying their own balance \u2014 redirect:\n\"I can only see your available credits when I have access to your personal records. For your current balance, check the SV Portal under Time-Off > PTO Balance, or ask your supervisor.\"\nThis applies to all personal PTO questions on the FOUND path:\n- \"how many pto credits do I have\" \u2192 redirect, no number\n- \"how many will I have by end of year\" \u2192 redirect, no number\n- \"how many credits left\" \u2192 redirect, no number\n\nCASE 2 \u2014 is_personal_data = true (PERSONAL_DATA path, Bubble data present):\n- Use ONLY the \"DIRECT ANSWER FOR PTO BALANCE QUESTIONS\" line from bubble_data\n- Use ONLY the \"Contractor Type for PTO Rules\" field to determine role \u2014 never infer from anything else\n- Never volunteer the accumulation method unless specifically asked\n- Never add \"as a VA contractor\" or \"as a Support contractor\" when just answering a balance question\n- Correct: \"You have X available PTO credits.\"\n- Wrong: \"You have X credits. As a VA contractor, you accumulate credits monthly...\"\n\nTAX \u2014 NEVER ADVISE:\nNever provide BIR or tax advice of any kind. Say: \"As an independent contractor, you are responsible for your own tax filings. We recommend consulting a tax professional.\"\n\nRESIGNATION \u2014 SUPERVISOR CONCERN:\nIf the user says they're uncomfortable going through their supervisor, do NOT redirect them to their supervisor. Say: \"If you're uncomfortable going through your supervisor, you can contact Contractor Services directly at hr@scalevirtually.com for guidance on how to proceed.\"\n\n---\n\nPERSONAL DATA \u2014 WHEN is_personal_data = true:\n\nThe bubble_data field contains the contractor's live records. Read it carefully before responding.\nIt contains sections for: Profile, Employment, Schedule, PTO/Leave Credits, OT records, COS records, and Disputes.\n\nRESPONSE RULES \u2014 follow exactly:\n\n1. DATA IS PRESENT \u2192 answer from the data directly. State values verbatim.\n   Example: \"Your available PTO credits are 9.\"\n   Example: \"Your contractor fee is $9.50/hr.\"\n   Example: \"Your current schedule is Monday\u2013Friday, 8:00 AM to 5:00 PM CST.\"\n\n2. DATA SECTION EXISTS BUT NO RECORDS FOUND \u2192 say so honestly.\n   Say: \"I checked your records and there are no [OT/dispute/COS] requests on file.\"\n   NEVER say \"I wasn't able to pull that up\" when the section exists but is empty.\n\n3. DATA TYPE IS IN \"WHAT IS NOT AVAILABLE\" SECTION \u2192 redirect with exact language.\n   For attendance logs: \"I can't pull up your attendance logs here, but you can check them directly in the *SV Portal* under *Attendance Logs*.\"\n   For payslip: \"Statements of Fees aren't available through me \u2014 please reach out to the Finance Team at finance@scalevirtually.com.\"\n   NEVER say \"I don't have access to that.\" ALWAYS give the specific redirect location.\n\n4. For OT records:\n   - \"None on record\" \u2192 \"I checked and you have no overtime requests on file this year.\"\n   - Has records \u2192 state the date, status, and hours for each.\n\n5. For Dispute records:\n   - \"None on record\" \u2192 \"I checked and you have no disputes on file.\"\n   - Has records \u2192 state the disputed date, status, and reason.\n   - \"Disputed date\" = the actual attendance date being disputed.\n   - \"Filed\" = when the dispute was submitted.\n   - For \"what was my last dispute about\" \u2192 read the Reason field and state it directly.\n\n6. For Schedule:\n   - Always use the \"CURRENT SCHEDULE\" section, not the COS records.\n   - State each day with start time, end time, and lunch.\n   - State rest days.\n\n7. NEVER say \"I wasn't able to pull that up\" for OT, COS, Dispute, or PTO requests.\n   Those ARE pre-fetched. If empty \u2014 say none exist.\n\n8. NEVER say \"I don't have access to that\" as a flat refusal.\n\n9. NEVER reveal the bank account number. Only state the bank name.\n\n10. For attendance logs \u2192 SV Portal > Attendance Logs.\n    For payslip \u2192 finance@scalevirtually.com.\n\n---\n\nTEAM REFERENCE \u2014 EXACT EMAILS ONLY. Never invent.\n\n- Contractor Services \u2192 hr@scalevirtually.com\n- Finance Team \u2192 finance@scalevirtually.com\n- DevOps Team \u2192 devops@scalevirtually.com\n- Operations / Coaches \u2192 coach@scalevirtually.com\n- Process Development \u2192 pdev@scalevirtually.com\n- Talent Acquisition \u2192 talentscouts@scalevirtually.com\n\nDefault fallback: hr@scalevirtually.com\n\n---\n\nMULTILINGUAL: Translate intent to English internally. Respond entirely in English. No exceptions.\n\n---\n\nTONE: Warm, friendly, professional. Acknowledge feelings when stressed or frustrated. Never robotic. Never say \"the document you shared.\"\n\n---\n\nFORMAT \u2014 SLACK ONLY:\nUSE: *bold*, _italic_, - bullet points, 1. numbered lists\nNEVER USE: **double asterisk**, ### headers (use *Bold Label:* inline instead), HTML tags, horizontal dividers\n\n---\n\nOUTPUT \u2014 STRICT JSON ONLY:\n{\n  \"classifier_status\": \"FOUND | SV_NO_MATCH | OFF_TOPIC | CLARIFY | PERSONAL_DATA\",\n  \"response\": \"your_response_here\"\n}\nNo text outside the JSON. No markdown wrapping. No backticks. Always valid JSON.",
+                      "match_count": 15,
+                      "similarity_threshold": 0.5,
+                      "enable_search": true,
+                      "temperature": 0.1,
+                      "max_tokens": 1000,
+                      "is_personal_data": false
+                    }
+                  },
+                  "headers": {
+                    "accept": "application/json",
+                    "authorization": "**hidden**",
+                    "content-type": "application/json"
+                  },
+                  "method": "POST",
+                  "uri": "https://sv-chatbot-api.vercel.app/api/v1/chat",
+                  "gzip": true,
+                  "rejectUnauthorized": true,
+                  "followRedirect": true,
+                  "resolveWithFullResponse": true,
+                  "sendCredentialsOnCrossOriginRedirect": true,
+                  "followAllRedirects": true,
+                  "timeout": 30000,
+                  "encoding": null,
+                  "json": false,
+                  "useStream": true
+                }
+              },
+              "functionality": "regular",
+              "name": "NodeApiError",
+              "node": {
+                "parameters": {
+                  "preBuiltAgentsCalloutHttpRequest": "",
+                  "curlImport": "",
+                  "method": "POST",
+                  "url": "https://sv-chatbot-api.vercel.app/api/v1/chat",
+                  "authentication": "none",
+                  "provideSslCertificates": false,
+                  "sendQuery": false,
+                  "sendHeaders": true,
+                  "specifyHeaders": "keypair",
+                  "headerParameters": {
+                    "parameters": [
+                      {
+                        "name": "Accept",
+                        "value": "application/json"
+                      },
+                      {
+                        "name": "Authorization",
+                        "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZWNyZXQiOiJpTG92M1MwbHV0MW9uU2M0bGVWMXJ0dWFsWUAyMDI2IiwiaWF0IjoxNzc2MjA1NzUzLCJleHAiOjE3Nzg3OTc3NTN9.JuI_IRtWwSoo7IEpyYojLZScLeu5QDjDL9TE3h_EZJE"
+                      },
+                      {
+                        "name": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ]
+                  },
+                  "sendBody": true,
+                  "contentType": "json",
+                  "specifyBody": "json",
+                  "jsonBody": "={{ $('Build API Payload').first().json.payload }}",
+                  "options": {
+                    "timeout": 30000
+                  },
+                  "infoMessage": ""
+                },
+                "id": "9a3fd357-55d2-420b-a034-90b4f9958c1d",
+                "name": "POST: Bryan API",
+                "type": "n8n-nodes-base.httpRequest",
+                "position": [
+                  5952,
+                  1104
+                ],
+                "typeVersion": 4.2,
+                "retryOnFail": true
+              },
+              "messages": [
+                "403 - \"{\\\"status\\\":\\\"error\\\",\\\"error\\\":{\\\"code\\\":\\\"UNAUTHORIZED\\\",\\\"message\\\":\\\"Invalid or expired token\\\"}}\""
+              ],
+              "httpCode": "403",
+              "message": "Forbidden - perhaps check your credentials?",
+              "stack": "NodeApiError: Forbidden - perhaps check your credentials?\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/HttpRequest/V3/HttpRequestV3.node.ts:845:16)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at WorkflowExecute.executeNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_8572a386477bfe4d813015c74a6817cc/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1045:8)\n    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_8572a386477bfe4d813015c74a6817cc/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1226:11)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_8572a386477bfe4d813015c74a6817cc/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1662:27\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_8572a386477bfe4d813015c74a6817cc/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:2274:11"
+            },
+            "lastNodeExecuted": "POST: Bryan API",
+            "mode": "webhook",
+            "executionContext": {
+              "version": 1,
+              "establishedAt": 1779136317167,
+              "source": "webhook"
+            }
+          },
+          "workflow": {
+            "id": "2izPxSa5wLKHxXJU",
+            "name": "Slack Chatbot V.03"
+          }
+        }
+      }
+    ],
+    "Create a row": [
+      {
+        "json": {
+          "execution_id": "37168",
+          "workflow_id": "NlzPBiHYmeXTD5jV",
+          "workflow_name": "[AT] New VA Endorsement",
+          "execution_url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+          "mode": "webhook",
+          "last_node_executed": "Code in JavaScript",
+          "error_name": "WorkflowCrashedError",
+          "error_message": "Workflow did not finish, possible out-of-memory issue",
+          "error_timestamp": "2026-05-01T22:07:15.911+00:00",
+          "status": "reported",
+          "severity": "high",
+          "source": "n8n_error_trigger",
+          "clickup_task_id": null,
+          "clickup_task_url": null,
+          "clickup_task_status": null,
+          "clickup_task_created_at": null,
+          "clickup_response": null,
+          "resolved_at": null,
+          "resolved_by": null,
+          "resolution_notes": null,
+          "error_context": {},
+          "raw_payload": {
+            "workflow": {
+              "id": "NlzPBiHYmeXTD5jV",
+              "name": "[AT] New VA Endorsement"
+            },
+            "execution": {
+              "id": "37168",
+              "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+              "mode": "webhook",
+              "error": {
+                "name": "WorkflowCrashedError",
+                "context": {},
+                "message": "Workflow did not finish, possible out-of-memory issue",
+                "timestamp": 1777673235911
+              },
+              "lastNodeExecuted": "Code in JavaScript"
+            }
+          },
+          "created_at": "2026-05-05T13:43:54.0581+00:00",
+          "updated_at": "2026-05-05T13:43:54.0581+00:00",
+          "workflow_active": null,
+          "workflow_tags": [],
+          "workflow_tag_names": null,
+          "workflow_created_at": null,
+          "workflow_updated_at": null,
+          "workflow_metadata": null
+        }
+      }
+    ]
+  },
+  "versionId": "556ba26f-ca21-4ec8-a0f4-f7c9a460aaed",
+  "activeVersionId": null,
+  "versionCounter": 24,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-03-12T01:59:45.176Z",
+      "createdAt": "2026-03-12T01:59:45.176Z",
+      "role": "workflow:owner",
+      "workflowId": "bKnJcx8GpX1kUqTh",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": null
+}

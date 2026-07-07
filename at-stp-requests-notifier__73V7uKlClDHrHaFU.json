@@ -1,0 +1,672 @@
+{
+  "updatedAt": "2026-07-04T13:17:53.684Z",
+  "createdAt": "2025-11-06T17:23:20.589Z",
+  "id": "73V7uKlClDHrHaFU",
+  "name": "[AT] STP Requests Notifier",
+  "description": "Automatically notifies the team via email and Slack when a new STP request is created in Airtable, including the role, client, company, rate, target start date, required MVA, hard requirements, JD link, and STP code.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d067fa64-198d-4c6b-a73c-3100b8b91f98",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0fda083e-7508-442a-bf3c-93216016ab9e",
+      "name": "Webhook",
+      "webhookId": "d067fa64-198d-4c6b-a73c-3100b8b91f98"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b946f2f-8da7-4d12-9b17-299a056251a3",
+              "name": "channelId",
+              "value": "={{ $json.slack.channelId }}",
+              "type": "string"
+            },
+            {
+              "id": "d7359940-d34e-4131-bb80-e19972b4ff35",
+              "name": "text",
+              "value": "={{ $json.slack.text }}",
+              "type": "string"
+            },
+            {
+              "id": "f48e4a5c-c0ad-47ce-b4b3-9712aee0bb6f",
+              "name": "blocks",
+              "value": "={{ $json.slack.blocks }}",
+              "type": "array"
+            },
+            {
+              "id": "70d622a8-6cc7-44cf-b17d-f423e6862719",
+              "name": "unfurl_links",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "678e3831-4b8c-4052-b551-a249204c04b4",
+              "name": "unfurl_media",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "d1409c13-0fc8-4580-8546-a5624af39d4d",
+              "name": "debug_blocks",
+              "value": "={{ JSON.stringify($json.slack.blocks, null, 2) }}",
+              "type": "string"
+            },
+            {
+              "id": "b3d60490-03f7-4229-85fd-991029232bfa",
+              "name": "peek_block0",
+              "value": "`{{ JSON.stringify(($json.slack.blocks",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        -176
+      ],
+      "id": "b4838827-8512-4408-a154-c0ef3ae8bc70",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C05FPQSFU92",
+          "mode": "id"
+        },
+        "messageType": "block",
+        "blocksUi": "={{ JSON.stringify({ blocks: $json.blocks, unfurl_links: $json.unfurl_links, unfurl_media: $json.unfurl_media }) }}\n",
+        "text": "={{ $json.text }}\n",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -176
+      ],
+      "id": "32d9a294-56d2-4ba3-9f2d-a0505631caa1",
+      "name": "Send a message",
+      "webhookId": "bd5ea639-9e60-494d-9823-237b1fdd97ef",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### STP REQUESTS AUTOMATION\n\nWhat this does:\n- Triggers whenever a new **STP Request record** is created in Airtable\n- Pulls request details\n- Formats the data into a **notification message**\n- Sends the notification via:\n  - **Email** (structured digest)\n  - **Slack** (quick snapshot)\n\nRuns: On new STP Request record creation\n",
+        "height": 320,
+        "width": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -80,
+        -560
+      ],
+      "typeVersion": 1,
+      "id": "a0a55ef2-8bbc-44fc-8cc6-aea6af16aecd",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "/***** Code Node \u2014 Format Slack + Email Messages for STP Requests *****/\n\nconst rec = $input.first().json.body.records[0]; // webhook payload root\n\nfunction clean(s){ return String(s || \"\").trim(); }\n\n// Extract fields from webhook payload\nconst role = clean(rec.role?.[0] || \"Unspecified Role\");\nconst client = clean(rec.clients?.[0] || \"Unknown Client\");\nconst jdLink = clean(rec.jd_profile?.[0] || \"\");\nconst employmentType = clean(rec.employment_type || \"N/A\");\nconst targetStartDate = clean(rec.target_start_date || \"N/A\");\nconst company = clean(rec.company?.[0] || \"N/A\");\nconst rate = rec.final_client_rate ? `$${rec.final_client_rate}/hr` : \"N/A\";\nconst hardRequirement = clean(rec.hard_requirement || \"N/A\");\nconst stpCode = clean(rec.stp_code || \"N/A\");\n\n// ---------- SLACK BLOCKS ----------\nconst messageBlocks = [];\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `*New STP Request \u2014 ${role}*` }\n});\nmessageBlocks.push({ type: \"divider\" });\n\nconst jdText = jdLink ? `here is the link to the *<${jdLink}|JD>.*` : `no JD link available.`;\nmessageBlocks.push({\n  type: \"section\",\n  text: {\n    type: \"mrkdwn\",\n    text: `Hi <!here>,\\n\\nA new sourcing request has been submitted for *${role}* with *${client}*.\\nFor your reference, ${jdText}`\n  }\n});\n\nmessageBlocks.push({\n  type: \"section\",\n  fields: [\n    { type: \"mrkdwn\", text: `*Client:* ${client}` },\n    { type: \"mrkdwn\", text: `*Company:* ${company}` },\n    { type: \"mrkdwn\", text: `*Employment Type:* ${employmentType}` },\n    { type: \"mrkdwn\", text: `*Rate:* ${rate}` },\n    { type: \"mrkdwn\", text: `*Target Start Date:* ${targetStartDate}` },\n    { type: \"mrkdwn\", text: `*Hard Requirement:* ${hardRequirement}` },\n  ]\n});\nmessageBlocks.push({ type: \"divider\" });\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `Please use the reference code *${stpCode}* for tracking.\\nThank you!` }\n});\n\n// ---------- EMAIL BODY ----------\nconst jdLinkHTML = jdLink\n  ? `<a href=\"${jdLink}\" target=\"_blank\">Job Description</a>`\n  : `Job Description (link unavailable)`;\n\nconst emailBody = `\n<p>Hi TA,</p>\n\n<p>\nWe would like to formally request assistance in sourcing a\n<strong>${role}</strong> for <strong>${client}</strong>.\n</p>\n\n<p>\nFor your reference and review, here is the link to the ${jdLinkHTML}.\n</p>\n\n<table style=\"border-collapse:collapse; margin-top:10px; margin-bottom:10px;\">\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Employment Type:</strong></td>\n    <td style=\"padding:3px 0;\">${employmentType}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Company:</strong></td>\n    <td style=\"padding:3px 0;\">${company}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Client Rate:</strong></td>\n    <td style=\"padding:3px 0;\">${rate}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Start Date:</strong></td>\n    <td style=\"padding:3px 0;\">${targetStartDate}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Hard Requirement:</strong></td>\n    <td style=\"padding:3px 0;\">${hardRequirement}</td>\n  </tr>\n</table>\n\n<p>Please use the reference code <strong>${stpCode}</strong> for easy tracking and documentation.</p>\n\n<p>\nShould you have any questions or need additional details, feel free to reach out at your convenience.\n</p>\n\n<p>Thank you!</p>\n\n<p>Best regards,<br>\n<strong>Placements Team</strong><br>\n<span style=\"color:#888;\">Scale Virtually</span>\n</p>\n`;\n\n// ---------- OUTPUT ----------\nreturn [{\n  json: {\n    slack: {\n      text: `New STP Request \u2014 ${role}`,\n      channelId: \"C09ESC12MA5\",\n      blocks: messageBlocks,\n      unfurl_links: false,\n      unfurl_media: false\n    },\n    emailSubject: `New STP Request \u2014 ${role}`,\n    emailBody\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        -560
+      ],
+      "id": "5c97bf9b-c113-4d53-ae55-4a16a3bd16ce",
+      "name": "Javascript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ========== Extract Fields from Webhook ==========\nconst rec = $input.first().json.body.records[0]; // webhook payload root\n\nfunction clean(s){ return String(s || \"\").trim(); }\n\nconst role = clean(rec.role?.[0] || \"Unspecified Role\");\nconst client = clean(rec.clients?.[0] || \"Unknown Client\");\nconst jdLink = clean(rec.jd_profile?.[0] || \"\");\nconst employmentType = clean(rec.employment_type || \"N/A\");\nconst targetStartDate = clean(rec.target_start_date || \"N/A\");\nconst company = clean(rec.company?.[0] || \"N/A\");\nconst rate = rec.final_client_rate ? `$${rec.final_client_rate}/hr` : \"N/A\";\nconst hardRequirement = clean(rec.hard_requirement || \"N/A\");\nconst stpCode = clean(rec.stp_code || \"N/A\");\n\n// ========== Build HTML Body ==========\nconst emailBody = `\n<div style=\"font-family: Arial, sans-serif; color: #333;\">\n  <p>Hello TA Team,</p>\n\n  <table style=\"width:65%; max-width:700px; margin:0 0 20px 0; border-collapse:collapse; font-size:14px;\">\n    <tr>\n      <th colspan=\"2\" style=\"background:#333; color:#fff; text-align:left; padding:10px;\">PLACEMENTS DETAILS</th>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px; width:35%;\"><strong>Role</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${role}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Client</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${client}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Company</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${company}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Employment Type</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${employmentType}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Client Rate</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${rate}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Target Start Date</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${targetStartDate}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Hard Requirement</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${hardRequirement}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>JD + Client Profile</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">\n        ${jdLink ? `<a href=\"${jdLink}\" target=\"_blank\" style=\"color:#0066cc;\">${jdLink}</a>` : \"Link unavailable\"}\n      </td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>STP Code</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${stpCode}</td>\n    </tr>\n  </table>\n\n  <p style=\"width:65%; margin:10px 0;\">Please use the reference code <strong>${stpCode}</strong> for easy tracking and documentation.</p>\n  <p style=\"width:65%; margin:10px 0;\">Should you have any questions or need additional details, feel free to reach out at your convenience.</p>\n  <p style=\"width:65%; margin:10px 0;\">Thank you!</p>\n\n  <p style=\"width:65%; margin:10px 0;\">\n    Best regards,<br>\n    <strong>Placements Team</strong><br>\n    <span style=\"color:#888;\">Scale Virtually</span>\n  </p>\n</div>\n`;\n\n// ========== Output ==========\nreturn [{\n  json: {\n    emailBody\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        -416
+      ],
+      "id": "e4e4b989-534d-4bce-8171-8a259607bde6",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "/***** Slack Composer \u2014 Airtable \u2192 Slack (STP Request Notification) *****/\n\nconst CHANNEL_ID = \"C09ESC12MA5\";   // your Slack channel ID\nconst TZ = \"Asia/Manila\";\nconst rec = $input.first().json.body.records[0]; // webhook payload root\n\nfunction clean(s){ return String(s || \"\").trim(); }\nfunction cap(s, n=1200){ return s.length > n ? s.slice(0,n-1)+\"\u2026\" : s; }\n\n// Extract fields from webhook payload\nconst role = clean(rec.role?.[0] || \"Unspecified Role\");\nconst client = clean(rec.clients?.[0] || \"Unknown Client\");\nconst jdLink = clean(rec.jd_profile?.[0] || \"\");\nconst employmentType = clean(rec.employment_type || \"N/A\");\nconst targetStartDate = clean(rec.target_start_date || \"N/A\");\nconst company = clean(rec.company?.[0] || \"N/A\");\nconst rate = rec.final_client_rate ? `$${rec.final_client_rate}` : \"N/A\";\nconst hardRequirement = clean(rec.hard_requirement || \"N/A\");\nconst stpCode = clean(rec.stp_code || \"N/A\");\n\n// \u2705 FIX: Changed 'rec.required_mva' to 'rec.requiredMva' to match your specific payload\nconst requiredMva = Array.isArray(rec.requiredMva) \n  ? clean(rec.requiredMva[0]) \n  : clean(rec.requiredMva || \"N/A\");\n\nconst messageBlocks = [];\n\n// Header\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `*New STP Request \u2014 ${role}*` }\n});\nmessageBlocks.push({ type: \"divider\" });\n\n// Main content\nconst jdText = jdLink ? `here is the link to the *<${jdLink}|JD>.*` : `no JD link available.`;\nmessageBlocks.push({\n  type: \"section\",\n  text: {\n    type: \"mrkdwn\",\n    text: `Hi <!here>,\\n\\nA new sourcing request has been submitted for *${role}* with *${client}*.\\nFor your reference, ${jdText}`\n  }\n});\n\nmessageBlocks.push({\n  type: \"section\",\n  fields: [\n    { type: \"mrkdwn\", text: `*Client:* ${client}` },\n    { type: \"mrkdwn\", text: `*Company:* ${company}` },\n    { type: \"mrkdwn\", text: `*Employment Type:* ${employmentType}` },\n    { type: \"mrkdwn\", text: `*Rate:* ${rate}/hr` },\n    // \u2705 Merged \"Required MVA\" here with a newline to squeeze it right under Target Date\n    { type: \"mrkdwn\", text: `*Target Start Date:* ${targetStartDate}\\n*Required MVA:* ${requiredMva}` },\n    { type: \"mrkdwn\", text: `*Hard Requirement:* ${hardRequirement}` },\n  ]\n});\nmessageBlocks.push({ type: \"divider\" });\n\n// Footer with STP Code reference\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `Please use the reference code *${stpCode}* for tracking.\\nThank you!` }\n});\n\n/* ---------- Output ---------- */\nreturn [{\n  json: {\n    slack: {\n      text: `New STP Request \u2014 ${role}`,\n      channelId: CHANNEL_ID,\n      blocks: messageBlocks,\n      unfurl_links: false,\n      unfurl_media: false\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -176
+      ],
+      "id": "8079a097-4424-4af3-9ace-03e3f6ccfcbb",
+      "name": "Slack message builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      emailBody: `\n<div style=\"font-family: Arial, sans-serif; padding:30px;\">\n\n  <div style=\"\n      max-width:700px;\n      margin:0 auto;\n      background:#ffffff;\n      border:1px solid #ddd;\n      border-radius:8px;\n      padding:20px 30px;\n      box-shadow:0 2px 6px rgba(0,0,0,0.1);\n    \">\n\n   <h2 style=\"\n    margin-top:0;\n    background:#F17D19;\n    color:#000000;\n    padding:15px;\n    border-radius:6px;\n    font-size:18px;\n    letter-spacing:0.5px;\n  \">\n  STP REQUEST DETAILS\n</h2>\n\n\n    <p style=\"font-size:14px; color:#333;\">Hello TA Team,</p>\n\n    <table style=\"width:100%; border-collapse:collapse; font-size:14px;\">\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; width:35%; font-weight:bold;\">Role</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].role[0]}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Client</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].clients[0]}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Company</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].company[0]}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Employment Type</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].employment_type}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Client Rate</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].final_client_rate}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Target Start Date</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].target_start_date}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Required MVA</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].requiredMva || \"N/A\"}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Hard Requirement</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].hard_requirement}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">JD + Client Profile</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">\n          <a href=\"${$input.first().json.body.records[0].jd_profile[0]}\" target=\"_blank\">View Document</a>\n        </td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">STP Code</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\"><strong>${$input.first().json.body.records[0].stp_code}</strong></td>\n      </tr>\n    </table>\n\n    <p style=\"margin-top:20px; font-size:13px; color:#555;\">\n      Please use the reference code above for easy tracking and documentation.\n    </p>\n\n    <p style=\"margin-top:10px; font-size:13px; color:#555;\">\n      Should you have any questions or need additional details, feel free to reach out at your convenience.\n    </p>\n\n    <p style=\"font-size:13px; color:#555;\">\n      Thank you!<br>\n      <strong>Placements Team</strong><br>\n      Scale Virtually\n    </p>\n\n  </div>\n</div>\n      `\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        160
+      ],
+      "id": "a589611e-7343-4042-bf2a-f30626a4c129",
+      "name": "Email Builder"
+    },
+    {
+      "parameters": {
+        "sendTo": "=pj@scalevirtually.com",
+        "subject": "=New STP Request - {{ $('Webhook').item.json.body.records[0].role[0] }} for {{ $('Webhook').item.json.body.records[0].clients[0] }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        656,
+        320
+      ],
+      "id": "343f5208-4986-4565-a5cf-411e095b6ec8",
+      "name": "test",
+      "webhookId": "3c5ad135-e060-4354-9c75-90f1ad13dcad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "=talentacquisitions@scalevirtually.com, hr@scalevirtually.com, placements@scalevirtually.com\n",
+        "subject": "=New STP Request - {{ $('Webhook').item.json.body.records[0].role[0] }} for {{ $('Webhook').item.json.body.records[0].clients[0] }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        112
+      ],
+      "id": "4190b48d-2416-4f20-a996-f04dfbebf2fe",
+      "name": "Send Email",
+      "webhookId": "3c5ad135-e060-4354-9c75-90f1ad13dcad",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Slack message builder",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Javascript": {
+      "main": [
+        []
+      ]
+    },
+    "HTML": {
+      "main": [
+        []
+      ]
+    },
+    "Slack message builder": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Builder": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "3f302a93-92ed-4f0f-af03-0af61c03a79d",
+  "activeVersionId": "3f302a93-92ed-4f0f-af03-0af61c03a79d",
+  "versionCounter": 176,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-06T17:23:20.592Z",
+      "createdAt": "2025-11-06T17:23:20.592Z",
+      "role": "workflow:owner",
+      "workflowId": "73V7uKlClDHrHaFU",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:17:53.685Z",
+    "createdAt": "2026-07-04T13:17:53.685Z",
+    "versionId": "3f302a93-92ed-4f0f-af03-0af61c03a79d",
+    "workflowId": "73V7uKlClDHrHaFU",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "d067fa64-198d-4c6b-a73c-3100b8b91f98",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "0fda083e-7508-442a-bf3c-93216016ab9e",
+        "name": "Webhook",
+        "webhookId": "d067fa64-198d-4c6b-a73c-3100b8b91f98"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "6b946f2f-8da7-4d12-9b17-299a056251a3",
+                "name": "channelId",
+                "value": "={{ $json.slack.channelId }}",
+                "type": "string"
+              },
+              {
+                "id": "d7359940-d34e-4131-bb80-e19972b4ff35",
+                "name": "text",
+                "value": "={{ $json.slack.text }}",
+                "type": "string"
+              },
+              {
+                "id": "f48e4a5c-c0ad-47ce-b4b3-9712aee0bb6f",
+                "name": "blocks",
+                "value": "={{ $json.slack.blocks }}",
+                "type": "array"
+              },
+              {
+                "id": "70d622a8-6cc7-44cf-b17d-f423e6862719",
+                "name": "unfurl_links",
+                "value": false,
+                "type": "boolean"
+              },
+              {
+                "id": "678e3831-4b8c-4052-b551-a249204c04b4",
+                "name": "unfurl_media",
+                "value": false,
+                "type": "boolean"
+              },
+              {
+                "id": "d1409c13-0fc8-4580-8546-a5624af39d4d",
+                "name": "debug_blocks",
+                "value": "={{ JSON.stringify($json.slack.blocks, null, 2) }}",
+                "type": "string"
+              },
+              {
+                "id": "b3d60490-03f7-4229-85fd-991029232bfa",
+                "name": "peek_block0",
+                "value": "`{{ JSON.stringify(($json.slack.blocks",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          672,
+          -176
+        ],
+        "id": "b4838827-8512-4408-a154-c0ef3ae8bc70",
+        "name": "Edit Fields"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C05FPQSFU92",
+            "mode": "id"
+          },
+          "messageType": "block",
+          "blocksUi": "={{ JSON.stringify({ blocks: $json.blocks, unfurl_links: $json.unfurl_links, unfurl_media: $json.unfurl_media }) }}\n",
+          "text": "={{ $json.text }}\n",
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          896,
+          -176
+        ],
+        "id": "32d9a294-56d2-4ba3-9f2d-a0505631caa1",
+        "name": "Send a message",
+        "webhookId": "bd5ea639-9e60-494d-9823-237b1fdd97ef",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "content": "### STP REQUESTS AUTOMATION\n\nWhat this does:\n- Triggers whenever a new **STP Request record** is created in Airtable\n- Pulls request details\n- Formats the data into a **notification message**\n- Sends the notification via:\n  - **Email** (structured digest)\n  - **Slack** (quick snapshot)\n\nRuns: On new STP Request record creation\n",
+          "height": 320,
+          "width": 416
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "position": [
+          -80,
+          -560
+        ],
+        "typeVersion": 1,
+        "id": "a0a55ef2-8bbc-44fc-8cc6-aea6af16aecd",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "jsCode": "/***** Code Node \u2014 Format Slack + Email Messages for STP Requests *****/\n\nconst rec = $input.first().json.body.records[0]; // webhook payload root\n\nfunction clean(s){ return String(s || \"\").trim(); }\n\n// Extract fields from webhook payload\nconst role = clean(rec.role?.[0] || \"Unspecified Role\");\nconst client = clean(rec.clients?.[0] || \"Unknown Client\");\nconst jdLink = clean(rec.jd_profile?.[0] || \"\");\nconst employmentType = clean(rec.employment_type || \"N/A\");\nconst targetStartDate = clean(rec.target_start_date || \"N/A\");\nconst company = clean(rec.company?.[0] || \"N/A\");\nconst rate = rec.final_client_rate ? `$${rec.final_client_rate}/hr` : \"N/A\";\nconst hardRequirement = clean(rec.hard_requirement || \"N/A\");\nconst stpCode = clean(rec.stp_code || \"N/A\");\n\n// ---------- SLACK BLOCKS ----------\nconst messageBlocks = [];\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `*New STP Request \u2014 ${role}*` }\n});\nmessageBlocks.push({ type: \"divider\" });\n\nconst jdText = jdLink ? `here is the link to the *<${jdLink}|JD>.*` : `no JD link available.`;\nmessageBlocks.push({\n  type: \"section\",\n  text: {\n    type: \"mrkdwn\",\n    text: `Hi <!here>,\\n\\nA new sourcing request has been submitted for *${role}* with *${client}*.\\nFor your reference, ${jdText}`\n  }\n});\n\nmessageBlocks.push({\n  type: \"section\",\n  fields: [\n    { type: \"mrkdwn\", text: `*Client:* ${client}` },\n    { type: \"mrkdwn\", text: `*Company:* ${company}` },\n    { type: \"mrkdwn\", text: `*Employment Type:* ${employmentType}` },\n    { type: \"mrkdwn\", text: `*Rate:* ${rate}` },\n    { type: \"mrkdwn\", text: `*Target Start Date:* ${targetStartDate}` },\n    { type: \"mrkdwn\", text: `*Hard Requirement:* ${hardRequirement}` },\n  ]\n});\nmessageBlocks.push({ type: \"divider\" });\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `Please use the reference code *${stpCode}* for tracking.\\nThank you!` }\n});\n\n// ---------- EMAIL BODY ----------\nconst jdLinkHTML = jdLink\n  ? `<a href=\"${jdLink}\" target=\"_blank\">Job Description</a>`\n  : `Job Description (link unavailable)`;\n\nconst emailBody = `\n<p>Hi TA,</p>\n\n<p>\nWe would like to formally request assistance in sourcing a\n<strong>${role}</strong> for <strong>${client}</strong>.\n</p>\n\n<p>\nFor your reference and review, here is the link to the ${jdLinkHTML}.\n</p>\n\n<table style=\"border-collapse:collapse; margin-top:10px; margin-bottom:10px;\">\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Employment Type:</strong></td>\n    <td style=\"padding:3px 0;\">${employmentType}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Company:</strong></td>\n    <td style=\"padding:3px 0;\">${company}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Client Rate:</strong></td>\n    <td style=\"padding:3px 0;\">${rate}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Start Date:</strong></td>\n    <td style=\"padding:3px 0;\">${targetStartDate}</td>\n  </tr>\n  <tr>\n    <td style=\"padding:3px 16px 3px 0; vertical-align:top; white-space:nowrap;\"><strong>Hard Requirement:</strong></td>\n    <td style=\"padding:3px 0;\">${hardRequirement}</td>\n  </tr>\n</table>\n\n<p>Please use the reference code <strong>${stpCode}</strong> for easy tracking and documentation.</p>\n\n<p>\nShould you have any questions or need additional details, feel free to reach out at your convenience.\n</p>\n\n<p>Thank you!</p>\n\n<p>Best regards,<br>\n<strong>Placements Team</strong><br>\n<span style=\"color:#888;\">Scale Virtually</span>\n</p>\n`;\n\n// ---------- OUTPUT ----------\nreturn [{\n  json: {\n    slack: {\n      text: `New STP Request \u2014 ${role}`,\n      channelId: \"C09ESC12MA5\",\n      blocks: messageBlocks,\n      unfurl_links: false,\n      unfurl_media: false\n    },\n    emailSubject: `New STP Request \u2014 ${role}`,\n    emailBody\n  }\n}];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          368,
+          -560
+        ],
+        "id": "5c97bf9b-c113-4d53-ae55-4a16a3bd16ce",
+        "name": "Javascript"
+      },
+      {
+        "parameters": {
+          "jsCode": "// ========== Extract Fields from Webhook ==========\nconst rec = $input.first().json.body.records[0]; // webhook payload root\n\nfunction clean(s){ return String(s || \"\").trim(); }\n\nconst role = clean(rec.role?.[0] || \"Unspecified Role\");\nconst client = clean(rec.clients?.[0] || \"Unknown Client\");\nconst jdLink = clean(rec.jd_profile?.[0] || \"\");\nconst employmentType = clean(rec.employment_type || \"N/A\");\nconst targetStartDate = clean(rec.target_start_date || \"N/A\");\nconst company = clean(rec.company?.[0] || \"N/A\");\nconst rate = rec.final_client_rate ? `$${rec.final_client_rate}/hr` : \"N/A\";\nconst hardRequirement = clean(rec.hard_requirement || \"N/A\");\nconst stpCode = clean(rec.stp_code || \"N/A\");\n\n// ========== Build HTML Body ==========\nconst emailBody = `\n<div style=\"font-family: Arial, sans-serif; color: #333;\">\n  <p>Hello TA Team,</p>\n\n  <table style=\"width:65%; max-width:700px; margin:0 0 20px 0; border-collapse:collapse; font-size:14px;\">\n    <tr>\n      <th colspan=\"2\" style=\"background:#333; color:#fff; text-align:left; padding:10px;\">PLACEMENTS DETAILS</th>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px; width:35%;\"><strong>Role</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${role}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Client</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${client}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Company</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${company}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Employment Type</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${employmentType}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Client Rate</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${rate}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Target Start Date</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${targetStartDate}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>Hard Requirement</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${hardRequirement}</td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>JD + Client Profile</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">\n        ${jdLink ? `<a href=\"${jdLink}\" target=\"_blank\" style=\"color:#0066cc;\">${jdLink}</a>` : \"Link unavailable\"}\n      </td>\n    </tr>\n    <tr>\n      <td style=\"border:1px solid #ccc; padding:8px;\"><strong>STP Code</strong></td>\n      <td style=\"border:1px solid #ccc; padding:8px;\">${stpCode}</td>\n    </tr>\n  </table>\n\n  <p style=\"width:65%; margin:10px 0;\">Please use the reference code <strong>${stpCode}</strong> for easy tracking and documentation.</p>\n  <p style=\"width:65%; margin:10px 0;\">Should you have any questions or need additional details, feel free to reach out at your convenience.</p>\n  <p style=\"width:65%; margin:10px 0;\">Thank you!</p>\n\n  <p style=\"width:65%; margin:10px 0;\">\n    Best regards,<br>\n    <strong>Placements Team</strong><br>\n    <span style=\"color:#888;\">Scale Virtually</span>\n  </p>\n</div>\n`;\n\n// ========== Output ==========\nreturn [{\n  json: {\n    emailBody\n  }\n}];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          368,
+          -416
+        ],
+        "id": "e4e4b989-534d-4bce-8171-8a259607bde6",
+        "name": "HTML"
+      },
+      {
+        "parameters": {
+          "jsCode": "/***** Slack Composer \u2014 Airtable \u2192 Slack (STP Request Notification) *****/\n\nconst CHANNEL_ID = \"C09ESC12MA5\";   // your Slack channel ID\nconst TZ = \"Asia/Manila\";\nconst rec = $input.first().json.body.records[0]; // webhook payload root\n\nfunction clean(s){ return String(s || \"\").trim(); }\nfunction cap(s, n=1200){ return s.length > n ? s.slice(0,n-1)+\"\u2026\" : s; }\n\n// Extract fields from webhook payload\nconst role = clean(rec.role?.[0] || \"Unspecified Role\");\nconst client = clean(rec.clients?.[0] || \"Unknown Client\");\nconst jdLink = clean(rec.jd_profile?.[0] || \"\");\nconst employmentType = clean(rec.employment_type || \"N/A\");\nconst targetStartDate = clean(rec.target_start_date || \"N/A\");\nconst company = clean(rec.company?.[0] || \"N/A\");\nconst rate = rec.final_client_rate ? `$${rec.final_client_rate}` : \"N/A\";\nconst hardRequirement = clean(rec.hard_requirement || \"N/A\");\nconst stpCode = clean(rec.stp_code || \"N/A\");\n\n// \u2705 FIX: Changed 'rec.required_mva' to 'rec.requiredMva' to match your specific payload\nconst requiredMva = Array.isArray(rec.requiredMva) \n  ? clean(rec.requiredMva[0]) \n  : clean(rec.requiredMva || \"N/A\");\n\nconst messageBlocks = [];\n\n// Header\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `*New STP Request \u2014 ${role}*` }\n});\nmessageBlocks.push({ type: \"divider\" });\n\n// Main content\nconst jdText = jdLink ? `here is the link to the *<${jdLink}|JD>.*` : `no JD link available.`;\nmessageBlocks.push({\n  type: \"section\",\n  text: {\n    type: \"mrkdwn\",\n    text: `Hi <!here>,\\n\\nA new sourcing request has been submitted for *${role}* with *${client}*.\\nFor your reference, ${jdText}`\n  }\n});\n\nmessageBlocks.push({\n  type: \"section\",\n  fields: [\n    { type: \"mrkdwn\", text: `*Client:* ${client}` },\n    { type: \"mrkdwn\", text: `*Company:* ${company}` },\n    { type: \"mrkdwn\", text: `*Employment Type:* ${employmentType}` },\n    { type: \"mrkdwn\", text: `*Rate:* ${rate}/hr` },\n    // \u2705 Merged \"Required MVA\" here with a newline to squeeze it right under Target Date\n    { type: \"mrkdwn\", text: `*Target Start Date:* ${targetStartDate}\\n*Required MVA:* ${requiredMva}` },\n    { type: \"mrkdwn\", text: `*Hard Requirement:* ${hardRequirement}` },\n  ]\n});\nmessageBlocks.push({ type: \"divider\" });\n\n// Footer with STP Code reference\nmessageBlocks.push({\n  type: \"section\",\n  text: { type: \"mrkdwn\", text: `Please use the reference code *${stpCode}* for tracking.\\nThank you!` }\n});\n\n/* ---------- Output ---------- */\nreturn [{\n  json: {\n    slack: {\n      text: `New STP Request \u2014 ${role}`,\n      channelId: CHANNEL_ID,\n      blocks: messageBlocks,\n      unfurl_links: false,\n      unfurl_media: false\n    }\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          416,
+          -176
+        ],
+        "id": "8079a097-4424-4af3-9ace-03e3f6ccfcbb",
+        "name": "Slack message builder"
+      },
+      {
+        "parameters": {
+          "jsCode": "return [\n  {\n    json: {\n      emailBody: `\n<div style=\"font-family: Arial, sans-serif; padding:30px;\">\n\n  <div style=\"\n      max-width:700px;\n      margin:0 auto;\n      background:#ffffff;\n      border:1px solid #ddd;\n      border-radius:8px;\n      padding:20px 30px;\n      box-shadow:0 2px 6px rgba(0,0,0,0.1);\n    \">\n\n   <h2 style=\"\n    margin-top:0;\n    background:#F17D19;\n    color:#000000;\n    padding:15px;\n    border-radius:6px;\n    font-size:18px;\n    letter-spacing:0.5px;\n  \">\n  STP REQUEST DETAILS\n</h2>\n\n\n    <p style=\"font-size:14px; color:#333;\">Hello TA Team,</p>\n\n    <table style=\"width:100%; border-collapse:collapse; font-size:14px;\">\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; width:35%; font-weight:bold;\">Role</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].role[0]}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Client</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].clients[0]}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Company</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].company[0]}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Employment Type</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].employment_type}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Client Rate</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].final_client_rate}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Target Start Date</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].target_start_date}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Required MVA</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].requiredMva || \"N/A\"}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">Hard Requirement</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">${$input.first().json.body.records[0].hard_requirement}</td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">JD + Client Profile</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\">\n          <a href=\"${$input.first().json.body.records[0].jd_profile[0]}\" target=\"_blank\">View Document</a>\n        </td>\n      </tr>\n      <tr>\n        <td style=\"border:1px solid #ccc; padding:8px; font-weight:bold;\">STP Code</td>\n        <td style=\"border:1px solid #ccc; padding:8px;\"><strong>${$input.first().json.body.records[0].stp_code}</strong></td>\n      </tr>\n    </table>\n\n    <p style=\"margin-top:20px; font-size:13px; color:#555;\">\n      Please use the reference code above for easy tracking and documentation.\n    </p>\n\n    <p style=\"margin-top:10px; font-size:13px; color:#555;\">\n      Should you have any questions or need additional details, feel free to reach out at your convenience.\n    </p>\n\n    <p style=\"font-size:13px; color:#555;\">\n      Thank you!<br>\n      <strong>Placements Team</strong><br>\n      Scale Virtually\n    </p>\n\n  </div>\n</div>\n      `\n    }\n  }\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          432,
+          160
+        ],
+        "id": "a589611e-7343-4042-bf2a-f30626a4c129",
+        "name": "Email Builder"
+      },
+      {
+        "parameters": {
+          "sendTo": "=pj@scalevirtually.com",
+          "subject": "=New STP Request - {{ $('Webhook').item.json.body.records[0].role[0] }} for {{ $('Webhook').item.json.body.records[0].clients[0] }}",
+          "message": "={{ $json.emailBody }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          656,
+          320
+        ],
+        "id": "343f5208-4986-4565-a5cf-411e095b6ec8",
+        "name": "test",
+        "webhookId": "3c5ad135-e060-4354-9c75-90f1ad13dcad",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "=talentacquisitions@scalevirtually.com, hr@scalevirtually.com, placements@scalevirtually.com\n",
+          "subject": "=New STP Request - {{ $('Webhook').item.json.body.records[0].role[0] }} for {{ $('Webhook').item.json.body.records[0].clients[0] }}",
+          "message": "={{ $json.emailBody }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          720,
+          112
+        ],
+        "id": "4190b48d-2416-4f20-a996-f04dfbebf2fe",
+        "name": "Send Email",
+        "webhookId": "3c5ad135-e060-4354-9c75-90f1ad13dcad",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Slack message builder",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Email Builder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Javascript": {
+        "main": [
+          []
+        ]
+      },
+      "HTML": {
+        "main": [
+          []
+        ]
+      },
+      "Slack message builder": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email Builder": {
+        "main": [
+          [
+            {
+              "node": "Send Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

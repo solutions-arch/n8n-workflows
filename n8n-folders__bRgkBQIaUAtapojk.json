@@ -1,0 +1,282 @@
+{
+  "updatedAt": "2026-05-14T18:11:48.937Z",
+  "createdAt": "2026-05-14T17:46:52.541Z",
+  "id": "bRgkBQIaUAtapojk",
+  "name": "N8N Folders",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://svsolutionarchitects.app.n8n.cloud/api/v1/projects/MnrYTtvkn4gmLPx6/folders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "30d2fcfc-f91b-43a4-b077-be530ae6e542",
+      "name": "n8n | List Workflows",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "=https://svsolutionarchitects.app.n8n.cloud/api/v1/projects/MnrYTtvkn4gmLPx6/folders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "cursor",
+                    "value": "={{ $response.body.nextCursor }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.nextCursor }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        656,
+        0
+      ],
+      "id": "2152ec16-026a-4347-8572-22946e713c2b",
+      "name": "n8n | List Executions",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Workflow Execution Rows with Workflow Names\n// Schema-safe for public.workflow_executions\n// Filters executions that started within the past 7 hours.\n// Reads time_saved_minutes from n8n workflow settings.\n\nconst workflowsNodeName = 'n8n | List Workflows';\nconst executionsNodeName = 'n8n | List Executions';\n\nconst LOOKBACK_HOURS = 7;\n\nconst cutoffDate = new Date(Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000);\n\nconst workflowItems = $(workflowsNodeName).all();\nconst executionItems = $(executionsNodeName).all();\n\nfunction flattenData(items) {\n  return items.flatMap(item => {\n    if (Array.isArray(item.json.data)) return item.json.data;\n    return [item.json];\n  });\n}\n\nfunction toIso(value) {\n  if (!value) return null;\n  const date = new Date(value);\n  return isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction getDurationSeconds(startedAt, stoppedAt) {\n  if (!startedAt || !stoppedAt) return null;\n  const start = new Date(startedAt);\n  const stop = new Date(stoppedAt);\n  if (isNaN(start.getTime()) || isNaN(stop.getTime())) return null;\n  return Number(((stop.getTime() - start.getTime()) / 1000).toFixed(2));\n}\n\nfunction deriveStatus(execution) {\n  if (execution.status) return execution.status;\n  if (execution.stoppedAt && execution.finished === true) return 'success';\n  if (execution.stoppedAt && execution.finished === false) return 'error';\n  if (!execution.stoppedAt && execution.startedAt) return 'running';\n  if (execution.waitTill) return 'waiting';\n  return null;\n}\n\nconst workflows = flattenData(workflowItems);\nconst executions = flattenData(executionItems);\n\n// Build workflow_id \u2192 workflow_name + time_saved_minutes lookup\nconst workflowLookup = {};\n\nfor (const workflow of workflows) {\n  const workflowId =\n    workflow.id ||\n    workflow.workflow_id ||\n    workflow.workflowId ||\n    null;\n\n  if (!workflowId) continue;\n\n  workflowLookup[workflowId] = {\n    workflow_name:\n      workflow.name ||\n      workflow.workflow_name ||\n      null,\n    time_saved_minutes: workflow.settings?.timeSavedPerExecution ?? 0,\n  };\n}\n\nconst filteredExecutions = executions.filter(execution => {\n  if (!execution.id) return false;\n\n  const startedAtRaw =\n    execution.startedAt ||\n    execution.started_at ||\n    execution.createdAt ||\n    execution.created_at ||\n    null;\n\n  if (!startedAtRaw) return false;\n\n  const startedAtDate = new Date(startedAtRaw);\n  if (isNaN(startedAtDate.getTime())) return false;\n\n  return startedAtDate >= cutoffDate;\n});\n\nreturn filteredExecutions.map(execution => {\n  const workflowId =\n    execution.workflowId ||\n    execution.workflow_id ||\n    execution.workflow?.id ||\n    null;\n\n  const workflowMetadata = workflowLookup[workflowId] || {};\n\n  const startedAt = toIso(\n    execution.startedAt ||\n    execution.started_at ||\n    execution.createdAt ||\n    execution.created_at\n  );\n\n  const stoppedAt = toIso(\n    execution.stoppedAt ||\n    execution.stopped_at\n  );\n\n  return {\n    json: {\n      execution_id: String(execution.id),\n\n      workflow_id: workflowId,\n\n      workflow_name:\n        execution.workflowName ||\n        execution.workflow_name ||\n        execution.workflow?.name ||\n        workflowMetadata.workflow_name ||\n        null,\n\n      status: deriveStatus(execution),\n\n      mode:\n        execution.mode ||\n        null,\n\n      started_at: startedAt,\n\n      stopped_at: stoppedAt,\n\n      wait_till:\n        toIso(execution.waitTill || execution.wait_till),\n\n      duration_seconds:\n        getDurationSeconds(startedAt, stoppedAt),\n\n      retry_of:\n        execution.retryOf ||\n        execution.retry_of ||\n        null,\n\n      retry_success_id:\n        execution.retrySuccessId ||\n        execution.retry_success_id ||\n        null,\n\n      error_message:\n        execution.error?.message ||\n        execution.errorMessage ||\n        execution.error_message ||\n        null,\n\n      // Time-saved reporting fields\n      time_saved_minutes: workflowMetadata.time_saved_minutes ?? 0,\n      time_saved_source: 'workflow_settings',\n      time_saved_reason: 'Estimated time saved from n8n workflow settings',\n\n      synced_at: new Date().toISOString(),\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "528fa1e6-c371-434f-9ec6-3139fdbf8850",
+      "name": "Normalize Execution Rows",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://qaamdjkwixpgauftmiir.supabase.co/rest/v1/rpc/upsert_execution_if_not_manual",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_secret_WQkqPkbYivqHEXO9hTIPFQ_siZwVJMZ"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_secret_WQkqPkbYivqHEXO9hTIPFQ_siZwVJMZ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_execution_id\": \"{{ $json.execution_id }}\",\n  \"p_workflow_id\": \"{{ $json.workflow_id }}\",\n  \"p_workflow_name\": \"{{ $json.workflow_name }}\",\n  \"p_status\": \"{{ $json.status }}\",\n  \"p_mode\": \"{{ $json.mode }}\",\n  \"p_started_at\": \"{{ $json.started_at }}\",\n  \"p_stopped_at\": \"{{ $json.stopped_at }}\",\n  \"p_wait_till\": \"{{ $json.wait_till }}\",\n  \"p_duration_seconds\": \"{{ $json.duration_seconds }}\",\n  \"p_retry_of\": \"{{ $json.retry_of }}\",\n  \"p_retry_success_id\": \"{{ $json.retry_success_id }}\",\n  \"p_error_message\": \"{{ $json.error_message }}\",\n  \"p_synced_at\": \"{{ $json.synced_at }}\",\n  \"p_time_saved_minutes\": \"{{ $json.time_saved_minutes }}\",\n  \"p_time_saved_source\": \"{{ $json.time_saved_source }}\",\n  \"p_time_saved_reason\": \"{{ $json.time_saved_reason }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "6ad17a80-61fc-48e1-b967-217c0fce0ea3",
+      "name": "Supabase | Upsert Workflow_Executions"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 2,8-17,22 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "72c68301-69cd-4f5f-82d7-057449c1c86a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        432,
+        0
+      ],
+      "id": "93194e3a-9940-431b-8c3c-384bbac4e256",
+      "name": "Split Out"
+    }
+  ],
+  "connections": {
+    "n8n | List Workflows": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n | List Executions": {
+      "main": [
+        [
+          {
+            "node": "Normalize Execution Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Execution Rows": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Upsert Workflow_Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "n8n | List Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "n8n | List Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "277d5f26-b1fc-4c01-9758-66bad2c1f27a",
+  "activeVersionId": null,
+  "versionCounter": 4,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-14T17:46:52.546Z",
+      "createdAt": "2026-05-14T17:46:52.546Z",
+      "role": "workflow:owner",
+      "workflowId": "bRgkBQIaUAtapojk",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

@@ -1,0 +1,356 @@
+{
+  "updatedAt": "2026-07-04T13:12:42.175Z",
+  "createdAt": "2026-02-23T14:15:25.097Z",
+  "id": "DDkeMZUd1g9Fr5WH",
+  "name": "[AT] STP Completed Notifier",
+  "description": "Sends a Slack notification to close an STP requirement once its status changes to STP - Completed and a client-selected VA is identified.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b1d7b786-63fd-453f-81e3-b4be1d869836",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cae479d7-7a79-4c21-8848-95462502fc99",
+      "name": "Webhook",
+      "webhookId": "b1d7b786-63fd-453f-81e3-b4be1d869836"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "16c45ee7-db74-4acc-b388-0644f7004ef8",
+              "leftValue": "={{ $json.body.requisitionStatus }}",
+              "rightValue": "STP - Completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "38aa5790-87ee-4069-81e1-7ed680883dd3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json.body ?? $json;\n\n// Extract values safely\nconst stpCode = data.stpCode ?? \"-\";\n\nconst activeVA =\n  data.activeVA?.name ??\n  data.activeVA ??\n  \"-\";\n\nconst status =\n  data.requisitionStatus?.name ??\n  data.requisitionStatus ??\n  \"-\";\n\n// Optional: failsafe (only allow Completed)\nconst normalizedStatus = (status || \"\").toLowerCase().trim();\nconst isCompleted =\n  normalizedStatus === \"stp - completed\" ||\n  normalizedStatus.includes(\"completed\");\n\n// Build message only if completed\nlet slackMessage = null;\n\nif (isCompleted) {\n  slackMessage =\n    `Hi <!channel>, requesting to close the requirement *${stpCode}*. ` +\n    `The client selected *${activeVA}*.\\n\\n` +\n    `Thank you.`;\n}\n\nreturn [\n  {\n    json: {\n      stpCode,\n      activeVA,\n      status,\n      isCompleted,\n      slackMessage,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -112
+      ],
+      "id": "00846230-05c8-4224-8748-a8234e42b207",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#placements-talent-acquisitions",
+          "mode": "name"
+        },
+        "text": "={{ $json.slackMessage }}",
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        656,
+        -112
+      ],
+      "id": "6c90d427-e3a5-4117-85a2-c5b268d9d905",
+      "name": "Send a message",
+      "webhookId": "b248ca08-bba7-4c03-b663-9370606b33e0",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "bd110762-5921-4bdd-8785-badab6973b79",
+  "activeVersionId": "bd110762-5921-4bdd-8785-badab6973b79",
+  "versionCounter": 151,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-23T14:15:25.102Z",
+      "createdAt": "2026-02-23T14:15:25.102Z",
+      "role": "workflow:owner",
+      "workflowId": "DDkeMZUd1g9Fr5WH",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:12:42.176Z",
+    "createdAt": "2026-07-04T13:12:42.176Z",
+    "versionId": "bd110762-5921-4bdd-8785-badab6973b79",
+    "workflowId": "DDkeMZUd1g9Fr5WH",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "b1d7b786-63fd-453f-81e3-b4be1d869836",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "cae479d7-7a79-4c21-8848-95462502fc99",
+        "name": "Webhook",
+        "webhookId": "b1d7b786-63fd-453f-81e3-b4be1d869836"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "16c45ee7-db74-4acc-b388-0644f7004ef8",
+                "leftValue": "={{ $json.body.requisitionStatus }}",
+                "rightValue": "STP - Completed",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          208,
+          0
+        ],
+        "id": "38aa5790-87ee-4069-81e1-7ed680883dd3",
+        "name": "If"
+      },
+      {
+        "parameters": {
+          "jsCode": "const data = $json.body ?? $json;\n\n// Extract values safely\nconst stpCode = data.stpCode ?? \"-\";\n\nconst activeVA =\n  data.activeVA?.name ??\n  data.activeVA ??\n  \"-\";\n\nconst status =\n  data.requisitionStatus?.name ??\n  data.requisitionStatus ??\n  \"-\";\n\n// Optional: failsafe (only allow Completed)\nconst normalizedStatus = (status || \"\").toLowerCase().trim();\nconst isCompleted =\n  normalizedStatus === \"stp - completed\" ||\n  normalizedStatus.includes(\"completed\");\n\n// Build message only if completed\nlet slackMessage = null;\n\nif (isCompleted) {\n  slackMessage =\n    `Hi <!channel>, requesting to close the requirement *${stpCode}*. ` +\n    `The client selected *${activeVA}*.\\n\\n` +\n    `Thank you.`;\n}\n\nreturn [\n  {\n    json: {\n      stpCode,\n      activeVA,\n      status,\n      isCompleted,\n      slackMessage,\n    },\n  },\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          -112
+        ],
+        "id": "00846230-05c8-4224-8748-a8234e42b207",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "#placements-talent-acquisitions",
+            "mode": "name"
+          },
+          "text": "={{ $json.slackMessage }}",
+          "otherOptions": {
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          656,
+          -112
+        ],
+        "id": "6c90d427-e3a5-4117-85a2-c5b268d9d905",
+        "name": "Send a message",
+        "webhookId": "b248ca08-bba7-4c03-b663-9370606b33e0",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

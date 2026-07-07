@@ -1,0 +1,704 @@
+{
+  "updatedAt": "2026-05-01T15:19:31.720Z",
+  "createdAt": "2025-11-07T16:32:55.374Z",
+  "id": "LnbNKygcXe933gk0",
+  "name": "PEC Meeting Reminder",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $json.reminderAt }}"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        -96
+      ],
+      "id": "b5c040e5-5b2d-49c8-ba99-62bc7a388791",
+      "name": "Wait",
+      "webhookId": "caf99bd0-d627-4fca-9187-1b5edabda029"
+    },
+    {
+      "parameters": {
+        "content": "## Action\n\n### Waits for the specific day at 8 AM to check whether the triggering event is an update or create.\n\n### Wait Configuration: {{ $json.reminderAt }}\n\n",
+        "height": 352,
+        "width": 432
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -304
+      ],
+      "id": "ad624426-7547-441e-9175-bf458aa5b2f9",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Action\n\n### Cleans the fetched email, parses the agendas, and outputs it in a list-format.",
+        "height": 512,
+        "width": 352
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        -368
+      ],
+      "id": "3ee3b22e-a9d3-4247-b6ad-a95a87cb5f0c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Trigger\n\n### Fetches calendar invites that are either created or updated",
+        "height": 560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        -400
+      ],
+      "id": "f0387bef-f25e-48dd-a796-5b8797e7484b",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Output\n\n### Sends the follow-up email as a reply to the calendar invitation notification.\n\n{{ \n  $json.attendees\n    .filter(a => a.responseStatus !== 'declined' && !a.email.endsWith('group.calendar.google.com'))\n    .map(a => a.email)\n    .join(',')\n}}\n",
+        "height": 512,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -448
+      ],
+      "id": "5c6431d6-4bac-48a4-864d-975035c4c2ab",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "calendarId": {
+          "__rl": true,
+          "value": "c_rkrfeakm0pd201pgk2poknjs8c@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Process Engineering Team @ Scale Virtually"
+        },
+        "triggerOn": "eventUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        0
+      ],
+      "id": "3b711b97-33fd-4ab9-95b3-787d3d266789",
+      "name": "Calendar Update",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "ZkZyQXzWq6VvBnRc",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "calendarId": {
+          "__rl": true,
+          "value": "c_rkrfeakm0pd201pgk2poknjs8c@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Process Engineering Team @ Scale Virtually"
+        },
+        "triggerOn": "eventCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        -192
+      ],
+      "id": "c26a185e-68f7-49a0-b63b-817bb843adf0",
+      "name": "Calendar Create",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "ZkZyQXzWq6VvBnRc",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function node (NOT Function Item)\n// Input: items[0].json = your event object (normalized or raw)\n\n// --- Helpers ---\nfunction escapeHtml(value) {\n  return String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\n// Try to build an agenda array from event.agenda or rawDescription/description\nfunction parseAgenda(event) {\n  // 1) If agenda is already filled, use it\n  if (Array.isArray(event.agenda) && event.agenda.length > 0) {\n    return event.agenda;\n  }\n\n  const raw = String(event.rawDescription || event.description || '').trim();\n  if (!raw) return [];\n\n  const items = [];\n\n  // 2) Parse <li>...</li> from HTML\n  const liRegex = /<li[^>]*>(.*?)<\\/li>/gis;\n  let match;\n  while ((match = liRegex.exec(raw)) !== null) {\n    let text = match[1]\n      .replace(/<br\\s*\\/?>/gi, ' ')   // <br> -> space\n      .replace(/<\\/?[^>]+>/g, '')    // strip any nested tags\n      .trim();\n\n    if (text) items.push(text);\n  }\n\n  if (items.length) return items;\n\n  // 3) Fallback: look for \"Agenda:\" and split lines/bullets\n  const lower = raw.toLowerCase();\n  const idx = lower.indexOf('agenda:');\n  if (idx !== -1) {\n    const after = raw.slice(idx + 'agenda:'.length);\n    const normalized = after.replace(/<br\\s*\\/?>/gi, '\\n');\n\n    normalized\n      .split('\\n')\n      .map(line => line.replace(/^[-\u2022]\\s*/, '').trim())\n      .forEach(line => {\n        if (line) items.push(line);\n      });\n  }\n\n  return items;\n}\n\nconst event = items[0].json;\nconst eventId = event.eventId || event.id;            // support both shapes\nconst eventUpdated = event.updated || event.created;  // best-effort version marker\n\n// --- Resolve start datetime string & timezone ---\nconst startStr =\n  event.start?.dateTime ||    // raw Google Calendar\n  event.start ||              // normalized string\n  null;\n\nif (!startStr) {\n  throw new Error('No start dateTime found on this item.');\n}\n\nconst tz =\n  event.startTimeZone ||\n  event.start?.timeZone ||\n  'UTC';\n\nconst startDate = new Date(startStr);\n\n// --- Build human-friendly schedule line for the email ---\nconst datePartHuman = new Intl.DateTimeFormat('en-US', {\n  weekday: 'long',\n  month: 'long',\n  day: 'numeric',\n  year: 'numeric',\n  timeZone: tz,\n}).format(startDate);\n\nconst timePartHuman = new Intl.DateTimeFormat('en-US', {\n  hour: 'numeric',\n  minute: '2-digit',\n  timeZone: tz,\n  timeZoneName: 'short',\n}).format(startDate);\n\nconst scheduleLine = `${datePartHuman} at ${timePartHuman}`;\n\n// --- Compute reminderAt: same date as start, 08:00:00 with same offset ---\nconst match = startStr.match(\n  /^(\\d{4}-\\d{2}-\\d{2})T.*?(Z|[+-]\\d{2}:\\d{2})$/\n);\n\nif (!match) {\n  throw new Error('startStr is not in expected ISO format: ' + startStr);\n}\n\nconst datePartISO = match[1];   // \"2025-11-17\"\nconst offsetISO   = match[2];   // \"-06:00\" or \"Z\"\n\n// This is what you'll use in the Wait node:\nconst reminderAt = `${datePartISO}T08:00:00${offsetISO}`;\n\n// --- Build the email content ---\n\nconst title = event.title || event.summary || 'Meeting';\nconst zoomLink = event.zoomLink || event.location || '#';\n\n// Build agenda list (from agenda[] or rawDescription)\nconst agendaList = parseAgenda(event);\n\n// Agenda list HTML\nconst agendaItemsHtml = agendaList\n  .map(item => `<li>${escapeHtml(item)}</li>`)\n  .join('');\n\n// Email subject\nconst subject = `Meeting Reminder \u2013 ${title}`;\n\n// HTML email body\nconst html = `\n<!DOCTYPE html>\n<html lang=\"en\">\n  <body style=\"margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;\">\n    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:24px;\">\n          <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"760\" style=\"max-width:760px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;\">\n            <!-- Header -->\n            <tr>\n              <td bgcolor=\"#F17D19\"\n                  style=\"background:#F17D19;color:#ffffff;padding:16px 28px;border-radius:8px 8px 0 0;text-align:center;\">\n                <h1 style=\"margin:0;font-size:20px;font-weight:700;\">Meeting Reminder</h1>\n                <p style=\"margin:4px 0 0;font-size:14px;\">\n                  Scheduled for <strong>${escapeHtml(scheduleLine)}</strong>\n                </p>\n              </td>\n            </tr>\n\n            <!-- Body -->\n            <tr>\n              <td style=\"padding:24px 28px;font-size:14px;line-height:1.6;\">\n                <p style=\"margin:0 0 16px;\">Good day!</p>\n\n                <p style=\"margin:0 0 16px;\">\n                  Hope you're doing well! Just a quick reminder about our meeting,\n                  <strong>${escapeHtml(scheduleLine)}</strong>.\n                  We'll use this time to connect, walk through your questions, and align on next steps.\n                  To help things go smoothly, it would be great if:\n                </p>\n\n                <ul style=\"margin:0 0 16px 20px;padding:0;\">\n                  <li>You can join from a quiet, comfy spot so we can hear each other clearly.</li>\n                  <li>In case you\u2019ll be sharing your screen, kindly give it a quick test beforehand.</li>\n                </ul>\n\n                <p style=\"margin:0 0 8px;font-weight:600;\">Agenda</p>\n                <ul style=\"margin:0 0 16px 20px;padding:0;\">\n                  ${agendaItemsHtml}\n                </ul>\n\n                <p style=\"margin:0 0 16px;\">\n                  Here's the link for your convenience:\n                  <a href=\"${escapeHtml(zoomLink)}\" target=\"_blank\" style=\"color:#2563eb;text-decoration:underline;\">\n                    ${escapeHtml(zoomLink)}\n                  </a>\n                </p>\n\n                <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 24px;\">\n                  <tr>\n                    <td align=\"left\">\n                      <a href=\"${escapeHtml(zoomLink)}\" target=\"_blank\"\n                        style=\"\n                          display:inline-block;\n                          padding:10px 18px;\n                          border-radius:6px;\n                          border:1px solid #2563eb;\n                          text-decoration:none;\n                          font-size:14px;\n                          font-weight:500;\n                          color:#2563eb;\n                          background:#ffffff;\n                        \">\n                        Join the Meeting\n                      </a>\n                    </td>\n                  </tr>\n                </table>\n\n                <p style=\"margin:0;\">We look forward to speaking with you later!</p>\n              </td>\n            </tr>\n\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>\n`;\n\n// Optional plain-text version\nconst text = `\nMeeting Reminder\n\nScheduled for ${scheduleLine}\n\nGood day!\n\nHope you're doing well! Just a quick reminder about our meeting.\nWe'll use this time to connect, walk through your questions, and align on next steps.\n\nAgenda:\n${agendaList.map(a => `- ${a}`).join('\\n')}\n\nJoin the meeting: ${zoomLink}\n\nWe look forward to speaking with you later!\n`.trim();\n\nreturn [\n  {\n    json: {\n      subject,\n      html,\n      text,\n      reminderAt,\n      eventId,       // used after Wait to refetch the event\n      eventUpdated,  // used in IF to block stale reminders\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -96
+      ],
+      "id": "f006cb6b-e455-4deb-9883-101ea946cd21",
+      "name": "Date fetcher"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function node\n// Normalizes Google Calendar event(s) into a cleaner shape\n\nfunction parseSummary(summary) {\n  // Example: \"Initial Process Engineering Call: Kerri Davis [Multiple VAs]\"\n  const result = {\n    title: summary ?? '',\n    meetingType: null,\n    clientName: null,\n    extraLabel: null,\n  };\n\n  if (!summary) return result;\n\n  // Split at the first colon\n  const m = summary.match(/^([^:]+):\\s*(.+)$/);\n  if (m) {\n    result.meetingType = m[1].trim();  // \"Initial Process Engineering Call\"\n    let rest = m[2].trim();            // \"Kerri Davis [Multiple VAs]\"\n\n    const bracket = rest.match(/^(.+?)\\s*\\[(.+?)\\]\\s*$/);\n    if (bracket) {\n      result.clientName = bracket[1].trim();  // \"Kerri Davis\"\n      result.extraLabel = bracket[2].trim();  // \"Multiple VAs\"\n    } else {\n      result.clientName = rest;\n    }\n  }\n\n  return result;\n}\n\nfunction extractZoomLink(event) {\n  const candidates = [];\n\n  if (event.location && /^https?:\\/\\//i.test(event.location)) {\n    candidates.push(event.location);\n  }\n\n  const desc = event.description || '';\n  const urlRegex = /(https?:\\/\\/[^\\s\"<]+)/ig;\n\n  let match;\n  while ((match = urlRegex.exec(desc)) !== null) {\n    candidates.push(match[1]);\n  }\n\n  // Prefer Zoom, fall back to the first URL if any\n  const zoom = candidates.find(u => u.includes('zoom.us')) || candidates[0];\n  return zoom || null;\n}\n\nfunction extractAgenda(description) {\n  if (!description) return [];\n\n  // Convert <br> to newlines, remove tags\n  let text = description\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/p>/gi, '\\n')\n    .replace(/<[^>]+>/g, '')\n    .replace(/\\r/g, '');\n\n  const lines = text\n    .split('\\n')\n    .map(l => l.trim())\n    .filter(Boolean);\n\n  const bullets = [];\n  for (const line of lines) {\n    const m = line.match(/^[-\u2022]\\s*(.+)$/);\n    if (m) {\n      bullets.push(m[1].trim());\n    }\n  }\n\n  return bullets;\n}\n\nconst newItems = [];\n\nfor (const item of items) {\n  const ev = item.json;\n\n  const summaryInfo = parseSummary(ev.summary || '');\n  const agenda      = extractAgenda(ev.description || '');\n  const zoomLink    = extractZoomLink(ev);\n\n  const attendees = (ev.attendees || []).map(a => ({\n    email: a.email,\n    displayName: a.displayName || null,\n    responseStatus: a.responseStatus || null,\n    organizer: !!a.organizer,\n    optional: !!a.optional,\n    self: !!a.self,\n  }));\n\n  newItems.push({\n    json: {\n      // Core IDs / links\n      eventId: ev.id,\n      iCalUID: ev.iCalUID,\n      status: ev.status,\n      htmlLink: ev.htmlLink,\n\n      // Parsed summary\n      title: ev.summary || null,\n      meetingType: summaryInfo.meetingType, // \"Initial Process Engineering Call\"\n      clientName: summaryInfo.clientName,   // \"Kerri Davis\"\n      extraLabel: summaryInfo.extraLabel,   // \"Multiple VAs\"\n\n      // Schedule\n      start: ev.start?.dateTime || ev.start?.date || null,\n      end: ev.end?.dateTime || ev.end?.date || null,\n      startTimeZone: ev.start?.timeZone || null,\n      endTimeZone: ev.end?.timeZone || null,\n\n      // Meeting details\n      zoomLink,\n      agenda,                          // [\"PDEV Methodology Discussion\", \"Short client interview\", ...]\n      rawDescription: ev.description || null,\n      location: ev.location || null,\n\n      // People\n      organizerEmail: ev.organizer?.email || null,\n      creatorEmail: ev.creator?.email || null,\n      attendees,\n    },\n  });\n}\n\nreturn newItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        -192
+      ],
+      "id": "78768e31-b092-4da7-a985-5604aa857f39",
+      "name": "Cleaner1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Function node\n// Use right after the Google Calendar Trigger\n// Normalizes Google Calendar event(s) into a cleaner shape\n\nfunction parseSummary(summary) {\n  // Example:\n  // \"Initial Process Engineering Call: Kerri Davis [Multiple VAs]\"\n  // \"Follow-Up PEC: Bill Murray [PM Handbook Creation]\"\n  const result = {\n    title: summary ?? '',\n    meetingType: null,\n    clientName: null,\n    extraLabel: null,\n  };\n\n  if (!summary) return result;\n\n  // Split at the first colon\n  const m = summary.match(/^([^:]+):\\s*(.+)$/);\n  if (m) {\n    result.meetingType = m[1].trim();  // \"Initial Process Engineering Call\" / \"Follow-Up PEC\"\n    let rest = m[2].trim();            // \"Kerri Davis [Multiple VAs]\" / \"Bill Murray [PM Handbook Creation]\"\n\n    const bracket = rest.match(/^(.+?)\\s*\\[(.+?)\\]\\s*$/);\n    if (bracket) {\n      result.clientName = bracket[1].trim();  // \"Kerri Davis\" / \"Bill Murray\"\n      result.extraLabel = bracket[2].trim();  // \"Multiple VAs\" / \"PM Handbook Creation\"\n    } else {\n      result.clientName = rest;\n    }\n  }\n\n  return result;\n}\n\nfunction extractZoomLink(ev) {\n  const candidates = [];\n\n  if (ev.location && /^https?:\\/\\//i.test(ev.location)) {\n    candidates.push(ev.location);\n  }\n\n  const desc = ev.description || '';\n  const urlRegex = /(https?:\\/\\/[^\\s\"<]+)/ig;\n\n  let match;\n  while ((match = urlRegex.exec(desc)) !== null) {\n    candidates.push(match[1]);\n  }\n\n  // Prefer Zoom, fall back to the first URL if any\n  const zoom = candidates.find(u => u.includes('zoom.us')) || candidates[0];\n  return zoom || null;\n}\n\nfunction extractAgenda(description) {\n  if (!description) return [];\n\n  // Convert <br> to newlines, remove tags\n  let text = description\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/p>/gi, '\\n')\n    .replace(/<[^>]+>/g, '')\n    .replace(/\\r/g, '');\n\n  const lines = text\n    .split('\\n')\n    .map(l => l.trim())\n    .filter(Boolean);\n\n  const bullets = [];\n  for (const line of lines) {\n    const m = line.match(/^[-\u2022]\\s*(.+)$/);\n    if (m) {\n      bullets.push(m[1].trim());\n    }\n  }\n\n  return bullets;\n}\n\nconst newItems = [];\n\nfor (const item of items) {\n  const ev = item.json;\n\n  const summaryInfo = parseSummary(ev.summary || '');\n  const agenda      = extractAgenda(ev.description || '');\n  const zoomLink    = extractZoomLink(ev);\n\n  const attendees = (ev.attendees || []).map(a => ({\n    email: a.email,\n    displayName: a.displayName || null,\n    responseStatus: a.responseStatus || null,\n    organizer: !!a.organizer,\n    optional: !!a.optional,\n    self: !!a.self,\n  }));\n\n  newItems.push({\n    json: {\n      // Core IDs / links\n      eventId: ev.id,\n      iCalUID: ev.iCalUID,\n      status: ev.status,\n      htmlLink: ev.htmlLink,\n\n      // Extra meta from Calendar\n      created: ev.created || null,\n      updated: ev.updated || null,\n      sequence: ev.sequence ?? null,\n      eventType: ev.eventType || null,\n\n      // Parsed summary\n      title: ev.summary || null,\n      meetingType: summaryInfo.meetingType, // e.g. \"Follow-Up PEC\"\n      clientName: summaryInfo.clientName,   // e.g. \"Bill Murray\"\n      extraLabel: summaryInfo.extraLabel,   // e.g. \"PM Handbook Creation\"\n\n      // Schedule\n      start: ev.start?.dateTime || ev.start?.date || null,\n      end: ev.end?.dateTime || ev.end?.date || null,\n      startTimeZone: ev.start?.timeZone || null,\n      endTimeZone: ev.end?.timeZone || null,\n\n      // Meeting details\n      zoomLink,\n      agenda,                          // [\"Our discussion on the Move-in and Move-out process\"]\n      rawDescription: ev.description || null,\n      location: ev.location || null,\n\n      // People\n      organizerEmail: ev.organizer?.email || null,\n      creatorEmail: ev.creator?.email || null,\n      attendees,\n    },\n  });\n}\n\nreturn newItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        0
+      ],
+      "id": "c72251f1-d4b7-4ab1-8a2e-3ee56e3e5901",
+      "name": "Cleaner2"
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com, jianna@scalevirtually.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        976,
+        -96
+      ],
+      "id": "dd4ab45b-f2b1-45a9-b3f4-2bd9e98e0302",
+      "name": "Send Reminder",
+      "webhookId": "f02cc719-7596-4dd2-a76c-e9e02b4dd3de",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "calendar": {
+          "__rl": true,
+          "value": "c_rkrfeakm0pd201pgk2poknjs8c@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Process Engineering Team @ Scale Virtually"
+        },
+        "eventId": "={{ $json.eventId }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        -96
+      ],
+      "id": "0f26478f-a752-4b2a-81f3-18c941cb5ee1",
+      "name": "Fetch Current Event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "ZkZyQXzWq6VvBnRc",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7033aab3-b29b-41e7-85da-58a6672fe2e1",
+              "leftValue": "={{ $node[\"Wait\"].json[\"eventUpdated\"] || '' }}\n",
+              "rightValue": "={{ $json[\"updated\"] || '' }}\n",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "fe5d7e79-ac1b-4041-a43c-7a14c0661ec8",
+              "leftValue": "={{ $json[\"start\"][\"dateTime\"] }}",
+              "rightValue": "={{ $now }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        576,
+        -96
+      ],
+      "id": "b44ac156-61a1-49fc-8b95-57b4393a630a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "## Action\n\n### Checks the calendar if the triggered event is the most recent event. If true, merges the email body and sends the email reminder; If not, ends the workflow.\n",
+        "height": 352,
+        "width": 432
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -304
+      ],
+      "id": "1b9165a3-8406-4872-b99e-192332bca5a0",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        768,
+        -128
+      ],
+      "id": "bd79bbe4-e3fe-43db-9fd0-1296167c9a52",
+      "name": "Merge"
+    }
+  ],
+  "connections": {
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Fetch Current Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Create": {
+      "main": [
+        [
+          {
+            "node": "Cleaner1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Update": {
+      "main": [
+        [
+          {
+            "node": "Cleaner2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date fetcher": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner1": {
+      "main": [
+        [
+          {
+            "node": "Date fetcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner2": {
+      "main": [
+        [
+          {
+            "node": "Date fetcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Current Event": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1762982480,
+        "possibleDuplicates": [
+          "19a79f1cb7df17f1"
+        ]
+      }
+    },
+    "node:Google Calendar Trigger": {
+      "lastTimeChecked": "2025-11-13T22:44:06Z"
+    },
+    "node:Calendar Update": {
+      "lastTimeChecked": "2025-11-24T18:01:57Z"
+    },
+    "node:Calendar Create": {
+      "lastTimeChecked": "2025-11-24T18:01:37Z"
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Calendar Create": [
+      {
+        "json": {
+          "kind": "calendar#event",
+          "etag": "\"3526977842669086\"",
+          "id": "7ptn393umdbhjc05uep5g8t43j",
+          "status": "confirmed",
+          "htmlLink": "https://www.google.com/calendar/event?eid=N3B0bjM5M3VtZGJoamMwNXVlcDVnOHQ0M2ogY19ya3JmZWFrbTBwZDIwMXBnazJwb2tuanM4Y0Bn",
+          "created": "2025-11-18T18:02:00.000Z",
+          "updated": "2025-11-18T18:02:01.334Z",
+          "summary": "[Playbook Update] Matthew McDonnell - EVA",
+          "description": "Agenda:<br><br><ul><li>Current State discussion</li><li>New Workflows</li><li>Timelines<br></li></ul><br>+Coach April (for Visibility)",
+          "location": "https://scalevirtually.zoom.us/my/ajamojica",
+          "creator": {
+            "email": "aja@scalevirtually.com"
+          },
+          "organizer": {
+            "email": "c_rkrfeakm0pd201pgk2poknjs8c@group.calendar.google.com",
+            "displayName": "Process Engineering Team @ Scale Virtually",
+            "self": true
+          },
+          "start": {
+            "dateTime": "2025-11-20T13:00:00-06:00",
+            "timeZone": "America/Chicago"
+          },
+          "end": {
+            "dateTime": "2025-11-20T14:00:00-06:00",
+            "timeZone": "America/Chicago"
+          },
+          "iCalUID": "7ptn393umdbhjc05uep5g8t43j@google.com",
+          "sequence": 0,
+          "attendees": [
+            {
+              "email": "rj@mmseneca.com",
+              "responseStatus": "needsAction"
+            },
+            {
+              "email": "april@scalevirtually.com",
+              "optional": true,
+              "responseStatus": "needsAction"
+            },
+            {
+              "email": "aja@scalevirtually.com",
+              "responseStatus": "needsAction"
+            },
+            {
+              "email": "pdev@scalevirtually.com",
+              "displayName": "Scale Virtually Process Development Team",
+              "responseStatus": "needsAction"
+            }
+          ],
+          "reminders": {
+            "useDefault": true
+          },
+          "eventType": "default"
+        }
+      }
+    ],
+    "Calendar Update": [
+      {
+        "json": {
+          "kind": "calendar#event",
+          "etag": "\"3527330531337342\"",
+          "id": "7ptn393umdbhjc05uep5g8t43j",
+          "status": "confirmed",
+          "htmlLink": "https://www.google.com/calendar/event?eid=N3B0bjM5M3VtZGJoamMwNXVlcDVnOHQ0M2ogY19ya3JmZWFrbTBwZDIwMXBnazJwb2tuanM4Y0Bn",
+          "created": "2025-11-18T18:02:00.000Z",
+          "updated": "2025-11-20T19:01:05.668Z",
+          "summary": "[Playbook Update] Matthew McDonnell - EVA",
+          "description": "Agenda:<br><br><ul><li>Current State discussion</li><li>New Workflows</li><li>Timelines<br></li></ul><br>+Coach April (for Visibility)",
+          "location": "https://scalevirtually.zoom.us/my/ajamojica",
+          "creator": {
+            "email": "aja@scalevirtually.com"
+          },
+          "organizer": {
+            "email": "c_rkrfeakm0pd201pgk2poknjs8c@group.calendar.google.com",
+            "displayName": "Process Engineering Team @ Scale Virtually",
+            "self": true
+          },
+          "start": {
+            "dateTime": "2025-11-20T13:00:00-06:00",
+            "timeZone": "America/Chicago"
+          },
+          "end": {
+            "dateTime": "2025-11-20T14:00:00-06:00",
+            "timeZone": "America/Chicago"
+          },
+          "iCalUID": "7ptn393umdbhjc05uep5g8t43j@google.com",
+          "sequence": 0,
+          "attendees": [
+            {
+              "email": "rj@mmseneca.com",
+              "responseStatus": "accepted"
+            },
+            {
+              "email": "april@scalevirtually.com",
+              "optional": true,
+              "responseStatus": "needsAction"
+            },
+            {
+              "email": "aja@scalevirtually.com",
+              "responseStatus": "accepted"
+            },
+            {
+              "email": "pdev@scalevirtually.com",
+              "displayName": "Scale Virtually Process Development Team",
+              "responseStatus": "needsAction"
+            }
+          ],
+          "reminders": {
+            "useDefault": true
+          },
+          "eventType": "default"
+        }
+      }
+    ],
+    "Fetch Current Event": [
+      {
+        "json": {
+          "id": "7ptn393umdbhjc05uep5g8t43j",
+          "summary": "[Playbook Update] Matthew McDonnell - EVA",
+          "start": {
+            "dateTime": "2025-11-20T13:00:00-06:00",
+            "timeZone": "America/Chicago"
+          },
+          "end": {
+            "dateTime": "2025-11-20T14:00:00-06:00",
+            "timeZone": "America/Chicago"
+          },
+          "attendees": [
+            {
+              "email": "rj@mmseneca.com",
+              "responseStatus": "accepted"
+            },
+            {
+              "email": "april@scalevirtually.com",
+              "optional": true,
+              "responseStatus": "needsAction"
+            },
+            {
+              "email": "aja@scalevirtually.com",
+              "responseStatus": "accepted"
+            },
+            {
+              "email": "pdev@scalevirtually.com",
+              "displayName": "Scale Virtually Process Development Team",
+              "responseStatus": "needsAction"
+            }
+          ],
+          "creator": {
+            "email": "aja@scalevirtually.com"
+          },
+          "organizer": {
+            "email": "c_rkrfeakm0pd201pgk2poknjs8c@group.calendar.google.com",
+            "displayName": "Process Engineering Team @ Scale Virtually",
+            "self": true
+          },
+          "description": "Agenda:<br><br><ul><li>Current State discussion</li><li>New Workflows</li><li>Timelines<br></li></ul><br>+Coach April (for Visibility)",
+          "location": "https://scalevirtually.zoom.us/my/ajamojica",
+          "created": "2025-11-18T18:02:00.000Z",
+          "updated": "2025-11-20T19:01:05.668Z",
+          "etag": "\"3527330531337342\"",
+          "eventType": "default",
+          "htmlLink": "https://www.google.com/calendar/event?eid=N3B0bjM5M3VtZGJoamMwNXVlcDVnOHQ0M2ogY19ya3JmZWFrbTBwZDIwMXBnazJwb2tuanM4Y0Bn",
+          "iCalUID": "7ptn393umdbhjc05uep5g8t43j@google.com",
+          "kind": "calendar#event",
+          "reminders": {
+            "useDefault": true
+          },
+          "sequence": 0,
+          "status": "confirmed"
+        }
+      }
+    ],
+    "Wait": [
+      {
+        "json": {
+          "subject": "Meeting Reminder \u2013 [Playbook Update] Matthew McDonnell - EVA",
+          "html": "\n<!DOCTYPE html>\n<html lang=\"en\">\n  <body style=\"margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;\">\n    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:24px;\">\n          <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"760\" style=\"max-width:760px;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;\">\n            <!-- Header -->\n            <tr>\n              <td bgcolor=\"#F17D19\"\n                  style=\"background:#F17D19;color:#ffffff;padding:16px 28px;border-radius:8px 8px 0 0;text-align:center;\">\n                <h1 style=\"margin:0;font-size:20px;font-weight:700;\">Meeting Reminder</h1>\n                <p style=\"margin:4px 0 0;font-size:14px;\">\n                  Scheduled for <strong>Thursday, November 20, 2025 at 1:00 PM CST</strong>\n                </p>\n              </td>\n            </tr>\n\n            <!-- Body -->\n            <tr>\n              <td style=\"padding:24px 28px;font-size:14px;line-height:1.6;\">\n                <p style=\"margin:0 0 16px;\">Good day!</p>\n\n                <p style=\"margin:0 0 16px;\">\n                  Hope you're doing well! Just a quick reminder about our meeting,\n                  <strong>Thursday, November 20, 2025 at 1:00 PM CST</strong>.\n                  We'll use this time to connect, walk through your questions, and align on next steps.\n                  To help things go smoothly, it would be great if:\n                </p>\n\n                <ul style=\"margin:0 0 16px 20px;padding:0;\">\n                  <li>You can join from a quiet, comfy spot so we can hear each other clearly.</li>\n                  <li>In case you\u2019ll be sharing your screen, kindly give it a quick test beforehand.</li>\n                </ul>\n\n                <p style=\"margin:0 0 8px;font-weight:600;\">Agenda</p>\n                <ul style=\"margin:0 0 16px 20px;padding:0;\">\n                  <li>Current State discussion</li><li>New Workflows</li><li>Timelines</li>\n                </ul>\n\n                <p style=\"margin:0 0 16px;\">\n                  Here's the link for your convenience:\n                  <a href=\"https://scalevirtually.zoom.us/my/ajamojica\" target=\"_blank\" style=\"color:#2563eb;text-decoration:underline;\">\n                    https://scalevirtually.zoom.us/my/ajamojica\n                  </a>\n                </p>\n\n                <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 24px;\">\n                  <tr>\n                    <td align=\"left\">\n                      <a href=\"https://scalevirtually.zoom.us/my/ajamojica\" target=\"_blank\"\n                        style=\"\n                          display:inline-block;\n                          padding:10px 18px;\n                          border-radius:6px;\n                          border:1px solid #2563eb;\n                          text-decoration:none;\n                          font-size:14px;\n                          font-weight:500;\n                          color:#2563eb;\n                          background:#ffffff;\n                        \">\n                        Join the Meeting\n                      </a>\n                    </td>\n                  </tr>\n                </table>\n\n                <p style=\"margin:0;\">We look forward to speaking with you later!</p>\n              </td>\n            </tr>\n\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>\n",
+          "text": "Meeting Reminder\n\nScheduled for Thursday, November 20, 2025 at 1:00 PM CST\n\nGood day!\n\nHope you're doing well! Just a quick reminder about our meeting.\nWe'll use this time to connect, walk through your questions, and align on next steps.\n\nAgenda:\n- Current State discussion\n- New Workflows\n- Timelines\n\nJoin the meeting: https://scalevirtually.zoom.us/my/ajamojica\n\nWe look forward to speaking with you later!",
+          "reminderAt": "2025-11-20T08:00:00-06:00",
+          "eventId": "7ptn393umdbhjc05uep5g8t43j",
+          "eventUpdated": "2025-11-20T19:01:05.668Z"
+        }
+      }
+    ]
+  },
+  "versionId": "52836e61-e646-406c-8033-052462ddc950",
+  "activeVersionId": null,
+  "versionCounter": 152,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2025-11-07T16:32:55.378Z",
+      "createdAt": "2025-11-07T16:32:55.378Z",
+      "role": "workflow:owner",
+      "workflowId": "LnbNKygcXe933gk0",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

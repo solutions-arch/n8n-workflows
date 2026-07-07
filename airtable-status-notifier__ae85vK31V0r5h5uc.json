@@ -1,0 +1,242 @@
+{
+  "updatedAt": "2026-04-14T20:07:36.000Z",
+  "createdAt": "2025-10-22T16:41:35.375Z",
+  "id": "ae85vK31V0r5h5uc",
+  "name": "Airtable Status Notifier",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "sender": "noreply@statuspage.io"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "93d65349-2159-4448-85ac-db5ebf79ab70",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "QdsxfF1pgD1hbNDT",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Config you can tweak ===\nconst SENDER = \"noreply@statuspage.io\";   // filter sender (case-insensitive)\nconst SOURCE_LABEL = \"Airtable Status\";   // appears beside the subject\nconst DEFAULT_LINK = \"\";                  // optional \"Open\" button link\n\n// === Helpers ===\nconst clean = (s) => String(s ?? \"\").replace(/\\s+/g, \" \").trim();\n// Slack mrkdwn section text limit ~3000 chars\nconst cap   = (s, n = 3000) => (s.length > n ? s.slice(0, n - 1) + \"\u2026\" : s);\n// Escape only &, <, > for Slack mrkdwn (keep * _ ~ ` for formatting)\nconst esc   = (s) => clean(s).replace(/&/g, \"&amp;\").replace(/</g, \"&lt;\").replace(/>/g, \"&gt;\");\n\n// Decode common HTML entities from email sources before escaping for Slack\nconst decodeEntities = (s) => String(s ?? \"\")\n  .replace(/&#(\\d+);/g, (_, n) => String.fromCharCode(+n))\n  .replace(/&quot;/g, '\"')\n  .replace(/&apos;/g, \"'\")\n  .replace(/&amp;/g, \"&\")\n  .replace(/&lt;/g, \"<\")\n  .replace(/&gt;/g, \">\");\n\nconst section = (mrkdwn) =>\n  ({ type: \"section\", text: { type: \"mrkdwn\", text: cap(mrkdwn, 3000) } });\n\nconst maybeSection = (label, value, { code = false } = {}) => {\n  const v = clean(value);\n  if (!v) return null;\n  const body = code ? \"```\" + v + \"```\" : esc(v);\n  return section(`*${esc(label)}:*\\n${body}`);\n};\n\nconst oneLineList = (label, listOrString) => {\n  const val = Array.isArray(listOrString)\n    ? listOrString.filter(Boolean).map(clean).join(\", \")\n    : clean(listOrString);\n  if (!val) return null;\n  return section(`*${esc(label)}:* ${esc(val)}`);\n};\n\nconst divider = () => ({ type: \"divider\" });\n\nfunction buildBlocks(item = {}) {\n  const {\n    subject = \"\",\n    summary = \"\",\n    decisions = \"\",\n    actions = \"\",\n    meta = {},          // { urgency, sentiment, confidence }\n    link = \"\",\n    source = \"\",\n  } = item;\n\n  const blocks = [];\n\n  // ---- Header (subject bold + optional source label) ----\n  const sourceLabel = clean(source || SOURCE_LABEL);\n  const headerMrkdwn =\n    `*${esc(cap(subject || \"Status update\", 150))}*` +\n    (sourceLabel ? `  \u00b7  _${esc(sourceLabel)}_` : \"\");\n  blocks.push(section(headerMrkdwn));\n\n  // ---- Body sections ----\n  const summarySec = maybeSection(\"Summary\", cap(summary, 1200));\n  if (summarySec) blocks.push(summarySec);\n\n  const decisionsBody = Array.isArray(decisions) ? decisions.join(\"\\n\") : decisions;\n  const decisionsSec = maybeSection(\"Decisions\", decisionsBody);\n  if (decisionsSec) blocks.push(decisionsSec);\n\n  const actionsSec = oneLineList(\"Actions\", actions);\n  if (actionsSec) blocks.push(actionsSec);\n\n  // ---- Meta row (only if urgency not \"low\") ----\n  const urgency = clean(meta.urgency);\n  const sentiment = clean(meta.sentiment);\n  const confidence = clean(meta.confidence);\n  const showMeta = urgency && urgency.toLowerCase() !== \"low\";\n\n  if (showMeta && (urgency || sentiment || confidence)) {\n    blocks.push(divider());\n    const pieces = [\n      urgency ? `*Urgency:* ${esc(urgency)}` : \"\",\n      sentiment ? `*Sentiment:* ${esc(sentiment)}` : \"\",\n      confidence ? `*Confidence:* ${esc(confidence)}` : \"\",\n    ].filter(Boolean);\n    blocks.push(section(pieces.join(\"   \u00b7   \")));\n  }\n\n  // ---- Action button ----\n  const openLink = clean(link) || DEFAULT_LINK;\n  if (openLink) {\n    blocks.push({\n      type: \"actions\",\n      elements: [\n        {\n          type: \"button\",\n          text: { type: \"plain_text\", text: \"Open\", emoji: true },\n          url: openLink,\n        },\n      ],\n    });\n  }\n\n  return blocks;\n}\n\nfunction fromGmailLike(m, senderFilter) {\n  // Accept both Gmail-like and pre-shaped items\n  const from = clean(m?.From || m?.from);\n  const subject = clean(m?.Subject || m?.subject);\n  const summary = clean(m?.snippet || m?.summary);\n  const link = clean(m?.link || m?.permalink || \"\");\n  const source = clean(m?.source || SOURCE_LABEL);\n  const meta = m?.meta || {};           // { urgency, sentiment, confidence }\n  const decisions = m?.decisions || \"\";\n  const actions = m?.actions || \"\";\n\n  // Filter by sender if Gmail-like structure is present\n  if (senderFilter && (m?.From || m?.from)) {\n    if (!from || from.toLowerCase() !== senderFilter.toLowerCase()) return null;\n  }\n\n  return { subject, summary, decisions, actions, link, source, meta };\n}\n\n// === Main (n8n Code node) ===\nconst inputItems = $input.all();\nconst out = [];\n\nfor (const it of inputItems) {\n  const j = it.json;\n\n  // If a node handed us an array in one item, explode it into multiple logical items\n  const arr = Array.isArray(j) ? j : [j];\n\n  for (const raw of arr) {\n    const shaped0 = fromGmailLike(raw, SENDER);\n    if (!shaped0) continue;\n\n    // Decode HTML entities from email sources before building Slack content\n    const shaped = {\n      ...shaped0,\n      subject: decodeEntities(shaped0.subject || \"Status update\"),\n      summary: decodeEntities(shaped0.summary || \"\"),\n      decisions: Array.isArray(shaped0.decisions)\n        ? shaped0.decisions.map(decodeEntities)\n        : decodeEntities(shaped0.decisions || \"\"),\n      actions: Array.isArray(shaped0.actions)\n        ? shaped0.actions.map(decodeEntities)\n        : decodeEntities(shaped0.actions || \"\"),\n    };\n\n    const blocks = buildBlocks(shaped);\n\n    // 1) short text (for Slack \"Notification Text\" when using Blocks)\n    const text = clean(shaped.subject || shaped.summary || \"Status update\");\n\n    // 2) full simple-text body (subject + Summary) for Text-only messages\n    const text_full =\n      `*${clean(shaped.subject || \"Status update\")}*` +\n      (shaped.summary ? `\\n\\n*Summary:*\\n${clean(shaped.summary)}` : \"\");\n\n    // Output for Slack/HTTP nodes\n    out.push({\n      json: {\n        text,        // short fallback (use with Blocks)\n        text_full,   // complete simple text (use when Message Type = Text)\n        blocks,      // Slack blocks array (use when Message Type = Blocks (JSON))\n        // channel: \"C0123456789\", // optional if you drive chat.postMessage via HTTP\n      },\n    });\n  }\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "f9ee27c3-1079-4a71-a7bb-2041d946f429",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "={{ $json.text_full }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "b9aafdfa-f0d5-4228-8731-e820cdd50606",
+      "name": "Send a message",
+      "webhookId": "0778ab7f-ecea-4131-8166-470c6307776d",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "87f77585-8c86-4566-ac0a-b602b565ab03",
+      "name": "HTTP Request"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1773278421,
+        "possibleDuplicates": [
+          "19cdfa1629921cc6"
+        ]
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19a36e11df2c24aa",
+          "threadId": "19a36e11df2c24aa",
+          "snippet": "Investigating - 1 component affected - We are aware of an issue impacting \u201cPush... \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c \u200c",
+          "payload": {
+            "mimeType": "multipart/alternative"
+          },
+          "sizeEstimate": 24118,
+          "historyId": "57421",
+          "internalDate": "1761857313000",
+          "labels": [
+            {
+              "id": "INBOX",
+              "name": "INBOX"
+            },
+            {
+              "id": "IMPORTANT",
+              "name": "IMPORTANT"
+            },
+            {
+              "id": "CATEGORY_UPDATES",
+              "name": "CATEGORY_UPDATES"
+            },
+            {
+              "id": "UNREAD",
+              "name": "UNREAD"
+            }
+          ],
+          "From": "noreply@statuspage.io",
+          "Subject": "Airtable Incident - Temporarily disabled push updates - 30 October 2025",
+          "To": "solutions@scalevirtually.com"
+        }
+      }
+    ]
+  },
+  "versionId": "391ffc86-4572-4782-a64c-a65f80b4a061",
+  "activeVersionId": null,
+  "versionCounter": 88,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-10-22T16:41:35.379Z",
+      "createdAt": "2025-10-22T16:41:35.379Z",
+      "role": "workflow:owner",
+      "workflowId": "ae85vK31V0r5h5uc",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

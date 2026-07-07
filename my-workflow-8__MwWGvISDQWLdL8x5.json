@@ -1,0 +1,148 @@
+{
+  "updatedAt": "2026-02-26T18:48:36.629Z",
+  "createdAt": "2026-02-26T18:48:36.629Z",
+  "id": "MwWGvISDQWLdL8x5",
+  "name": "My workflow 8",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "3c5618be-6950-43d9-bac0-3f63c5b582d1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        -240
+      ],
+      "id": "a2f85979-3418-4e02-87ee-fd8f37bc85d9",
+      "name": "Den",
+      "webhookId": "3c5618be-6950-43d9-bac0-3f63c5b582d1"
+    },
+    {
+      "parameters": {
+        "path": "5bd11b60-6958-4284-8490-e1cfeee4dc9f",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        -64
+      ],
+      "id": "fb8dd97a-34c6-417d-85fb-0354dfda832b",
+      "name": "Joren",
+      "webhookId": "5bd11b60-6958-4284-8490-e1cfeee4dc9f"
+    },
+    {
+      "parameters": {
+        "path": "80c079ed-20aa-42a7-a60d-354012d3f92a",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        112
+      ],
+      "id": "5e9fd18d-373b-41d5-a4ca-83298ec739c7",
+      "name": "Paul",
+      "webhookId": "80c079ed-20aa-42a7-a60d-354012d3f92a"
+    },
+    {
+      "parameters": {
+        "path": "5492c90c-c0e1-42ef-9914-e7c80469070c",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        288
+      ],
+      "id": "fe073570-16ee-4d83-8d3a-216d1866218a",
+      "name": "Sean",
+      "webhookId": "5492c90c-c0e1-42ef-9914-e7c80469070c"
+    },
+    {
+      "parameters": {
+        "path": "103f684c-4d1d-4933-93f2-1375f9e403e5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -272,
+        464
+      ],
+      "id": "50c5cf60-a032-4a69-ba52-e3d258e2c639",
+      "name": "Tyler",
+      "webhookId": "103f684c-4d1d-4933-93f2-1375f9e403e5"
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "903b6247-0449-474d-b939-91c23ea7e660",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-02-26T18:48:36.632Z",
+      "createdAt": "2026-02-26T18:48:36.632Z",
+      "role": "workflow:owner",
+      "workflowId": "MwWGvISDQWLdL8x5",
+      "projectId": "FtQDRp9NTnHC2f4o",
+      "project": {
+        "updatedAt": "2026-04-09T18:34:38.902Z",
+        "createdAt": "2025-09-03T13:17:34.780Z",
+        "id": "FtQDRp9NTnHC2f4o",
+        "name": "Solution Architects <solutions@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-03T13:17:34.780Z",
+            "createdAt": "2025-09-03T13:17:34.780Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "FtQDRp9NTnHC2f4o",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

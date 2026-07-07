@@ -1,0 +1,2279 @@
+{
+  "updatedAt": "2026-07-02T15:30:12.000Z",
+  "createdAt": "2026-07-02T15:30:12.398Z",
+  "id": "B7vGfhPk9KBRi7nA",
+  "name": "SV Workflow C \u2014 AI Screening Scorecard (Rebuild v1, Speechace)",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "workflow-c-recording-event",
+        "options": {}
+      },
+      "id": "f7150462-5c24-4fc5-9843-6711db71e22d",
+      "name": "Recording Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        192
+      ],
+      "webhookId": "30b71d01-a0d7-4a36-ac74-2e0f7247883b"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json.body || $json;\nconst errors = [];\nif (p.schema_version !== '1.0') errors.push('schema_version must be \"1.0\"');\nif (!p.event || !['recording_completed', 'recording_abandoned'].includes(p.event)) errors.push('event must be recording_completed or recording_abandoned');\nif (!p.candidate || !p.candidate.workable_id) errors.push('candidate.workable_id required');\nif (!p.candidate || !p.candidate.role_type) errors.push('candidate.role_type required');\nif (!p.candidate || ![1, 2, 3].includes(p.candidate.tier)) errors.push('candidate.tier must be 1|2|3');\nif (!p.recording || !p.recording.session_id) errors.push('recording.session_id required');\nif (p.event === 'recording_completed' && (!Array.isArray(p.recording?.audio_files) || p.recording.audio_files.length === 0)) {\n  errors.push('recording.audio_files[] required for recording_completed');\n}\nif (errors.length) {\n  throw new Error('Contract 1 validation failed: ' + errors.join('; '));\n}\nreturn [{ json: { ...p, _validated: true } }];"
+      },
+      "id": "01352cb6-f2c6-4df4-9482-7a17dd7fc0c6",
+      "name": "Validate Contract 1 Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?session_id=eq.{{ $json.recording.session_id }}&select=session_id,status,scoring_started_at",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "b1c0fcfb-35c0-45c1-92af-80a20b0d6d5f",
+      "name": "Idempotency Check (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -512,
+        192
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const upstream = $input.first().json;\nconst incoming = $('Validate Contract 1 Payload').item.json;\nlet existing = null;\nif (Array.isArray(upstream)) existing = upstream[0] || null;\nelse if (Array.isArray(upstream.data)) existing = upstream.data[0] || null;\nconst TERMINAL = ['scored', 'disqualified', 'abandoned'];\nif (existing && existing.status && TERMINAL.includes(existing.status)) {\n  return [];\n}\nreturn [{ json: incoming }];"
+      },
+      "id": "2ea65c30-0012-4bb2-bdf8-c64aa70938fe",
+      "name": "Idempotency Decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?session_id=eq.{{ $json.recording.session_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"scoring_in_progress\",\n  \"scoring_started_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "33c55913-8b42-45c4-aff4-d119e6a3c8bc",
+      "name": "Mark Scoring Started (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -160,
+        192
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Validate Contract 1 Payload').item.json }];"
+      },
+      "id": "c7251edc-e190-4068-9a16-dd41ee8ddc8d",
+      "name": "Restore Context (post-Mark-Started)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "isAbandoned",
+              "leftValue": "={{ $json.event }}",
+              "rightValue": "recording_abandoned",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8b645e0b-0128-4666-bfb8-d770ea37374a",
+      "name": "Event Split (abandoned vs completed)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        176,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?session_id=eq.{{ $json.recording.session_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"abandoned\",\n  \"processed_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "32f61eee-36ce-4b26-bff7-b138d5231498",
+      "name": "Mark Status=abandoned (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        480,
+        -224
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Validate Contract 1 Payload').item.json }];"
+      },
+      "id": "4ac407ad-841b-4ab4-acfe-113eb34de310",
+      "name": "Restore Context (post-Mark-Abandoned)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $json.candidate.workable_id }}/comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"comment\": {\n    \"body\": \"AI screening session abandoned. The candidate started but did not submit their recording. Workflow D will follow up with reminders.\"\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ee736ef6-f18d-4450-9c91-5ba86a34f1a7",
+      "name": "Abandoned Comment (Workable)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        832,
+        -224
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ge6KQt8Yw3ll0qku",
+          "name": "Workable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Restore Context (post-Mark-Abandoned)').item.json.candidate.workable_id }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tags\": [\"ai_screening_abandoned\"]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "78aed32e-0c51-403f-94c8-856aed8a27ae",
+      "name": "Tag screening_abandoned (Workable)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1024,
+        -224
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ge6KQt8Yw3ll0qku",
+          "name": "Workable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "241c843c-ba4f-44d6-9c5c-ea84b378934b",
+      "name": "Speechace Loop (per audio_file)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/storage/v1/object/sign/interview-recordings/{{ $json.path || $json.audio_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"expiresIn\": 600\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "711ddd53-8d4f-4543-8bbf-cb72bd079c90",
+      "name": "Get Audio Signed URL (Supabase Storage)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        944,
+        720
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.signedURL ? \"https://gcjvkdniphsctckipsay.supabase.co/storage/v1\" + $json.signedURL : ($json.audio_url || $json.url) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "6d107c68-7a25-4634-8c25-c1307ab670f5",
+      "name": "Fetch Audio Binary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1216,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.speechace.co/api/scoring/speech/v9/json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "dialect",
+              "value": "en-us"
+            },
+            {
+              "name": "user_id",
+              "value": "sv-screen-bot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "user_audio_file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "f1e9bff4-a1a5-4ad1-b708-19745c7108a4",
+      "name": "Speechace Multipart POST",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1456,
+        720
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst round1 = (n) => typeof n === 'number' ? Math.round(n * 10) / 10 : 0;\nconst toFive = (s100) => Math.max(0, Math.min(5, (s100 || 0) / 20));\nconst toCefr = (s) => s >= 90 ? 'C1' : s >= 80 ? 'B2+' : s >= 70 ? 'B2' : s >= 60 ? 'B1+' : s >= 50 ? 'B1' : 'A2+';\nconst pron = [], flu = [], gra = [], voc = [], coh = [];\nconst transcripts = [];\nconst flags = [];\nlet failures = 0;\nfor (const item of items) {\n  const sp = item.json?.speech_score || item.json || {};\n  if (!sp || sp.status === 'error') { failures++; continue; }\n  const ss = sp.speechace_score || {};\n  if (typeof ss.pronunciation === 'number') pron.push(ss.pronunciation);\n  if (typeof ss.fluency === 'number') flu.push(ss.fluency);\n  if (typeof ss.grammar === 'number') gra.push(ss.grammar);\n  if (typeof ss.vocab === 'number') voc.push(ss.vocab);\n  if (typeof ss.coherence === 'number') coh.push(ss.coherence);\n  if (sp.text || sp.transcript) transcripts.push(sp.text || sp.transcript);\n}\nif (failures >= 3) flags.push('audio_quality_poor');\nconst avg = (a) => a.length ? a.reduce((x,y)=>x+y, 0) / a.length : 0;\nconst dim = (a) => ({ score: round1(toFive(avg(a))), cefr: toCefr(avg(a)) });\nconst speechace_5dim = {\n  pronunciation: dim(pron),\n  fluency: dim(flu),\n  grammar: dim(gra),\n  vocabulary: dim(voc),\n  coherence: dim(coh),\n};\nconst ctx = $('Validate Contract 1 Payload').item.json;\nconst audio_files = ctx.recording?.audio_files || [];\nconst transcript_map = {};\nfor (let i = 0; i < items.length; i++) {\n  const af = audio_files[i] || {};\n  const qid = (af.question_id || ('q' + (i+1))).toLowerCase();\n  transcript_map[qid] = transcripts[i] || '';\n}\nreturn [{ json: {\n  ...ctx,\n  speechace_5dim,\n  speechace_transcripts: transcript_map,\n  speechace_flags: flags,\n  speechace_failure_count: failures,\n} }];"
+      },
+      "id": "6c9e0c84-3ddd-4cf8-83ec-039da7d22673",
+      "name": "Aggregate Speechace 5-dim",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $json;\nconst t = c.speechace_transcripts || {};\nconst userMessage = [\n  'CANDIDATE_REF:',\n  '- workable_id: ' + (c.candidate?.workable_id || ''),\n  '- session_id: ' + (c.recording?.session_id || ''),\n  '',\n  'ROLE_TYPE: ' + (c.candidate?.role_type || ''),\n  'TIER: ' + (c.candidate?.tier || ''),\n  '',\n  'TRANSCRIPT_Q1:',\n  t.q1 || '',\n  '',\n  'TRANSCRIPT_Q2:',\n  t.q2 || '',\n  '',\n  'TRANSCRIPT_Q3:',\n  t.q3 || '',\n  '',\n  'TRANSCRIPT_Q4:',\n  t.q4 || '',\n  '',\n  'TRANSCRIPT_Q5:',\n  t.q5 || '',\n  '',\n  'TRANSCRIPT_Q6:',\n  t.q6 || '',\n  '',\n  'TRANSCRIPT_Q7:',\n  t.q7 || '',\n].join('\\n');\n\nconst systemPrompt = 'You are an English proficiency assessor for Scale Virtually (SV), evaluating Filipino virtual assistant candidates. Your role: assess Comprehension & Relevance from transcripts alone. Return a single JSON object matching Contract 3 v1.1: schema_version=\"1.1\", model, call_timestamp ISO8601, candidate_ref { workable_id, session_id }, comprehension { cefr, numeric_score, paraphrase_accuracy, instruction_following, relevance }, qualitative { claude_note, strongest_response_q?, weakest_response_q? }, interview_observations (EXACTLY 7 objects, one per question q1..q7 in order, each { question_id, label, observation }), risk_indicators { communication, reliability, customer_facing, decision_making, executive_support } (each Low|Medium|High), flags=[], cost_usd. CEFR: A1|A1+|A2|A2+|B1|B1+|B2|B2+|C1|C2. paraphrase_accuracy: high|partial|missing|off_topic. instruction_following: strong|adequate|weak. relevance: on_topic|partial|off_topic. claude_note <= 60 words. '\n  + 'STRICT CALIBRATION (numeric_score is a ceiling, candidate may score lower): paraphrase_accuracy partial caps numeric_score at 3.5; missing caps at 3.0; off_topic caps at 2.5. An inverted answer (directly contradicts the question intent) sets instruction_following=weak and caps numeric_score at 3.0; two or more inverted answers cap at 2.5. relevance=off_topic caps numeric_score at 3.0. '\n  + 'interview_observations: each observation is ONE plain-English sentence a recruiter can read; for an empty/unusable transcript set observation to exactly \"No usable response detected.\". risk_indicators are advisory recruiter signals ONLY and do NOT change numeric_score, cefr, or verdict; default Low when no evidence of risk, reserve High for clear evidence. '\n  + 'NO preamble, NO markdown, NO code fences.';\n\nreturn [{ json: { ...c, _comp_system_prompt: systemPrompt, _comp_user_message: userMessage } }];"
+      },
+      "id": "f710c435-7130-4ccf-b84e-c51091e75a7e",
+      "name": "Build Comprehension Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 1024,\n  \"temperature\": 0.2,\n  \"system\": {{ JSON.stringify($json._comp_system_prompt) }},\n  \"messages\": [\n    { \"role\": \"user\", \"content\": {{ JSON.stringify($json._comp_user_message) }} }\n  ]\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "5583f13b-0564-4e1c-9bb8-e03a837dabb1",
+      "name": "Claude Comprehension (Anthropic)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1808,
+        304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ge6KQt8Yw3ll0qku",
+          "name": "Workable API"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $json;\nconst txt = (resp.content && resp.content[0] && resp.content[0].text) ? resp.content[0].text : '{}';\n\nlet comp;\ntry {\n  const cleaned = txt.replace(/^\\s*\\u0060\\u0060\\u0060json\\s*/i, '').replace(/\\s*\\u0060\\u0060\\u0060\\s*$/i, '').trim();\n  comp = JSON.parse(cleaned);\n} catch (e) {\n  comp = {\n    schema_version: '1.1',\n    model: 'claude-sonnet-4-6',\n    call_timestamp: new Date().toISOString(),\n    candidate_ref: { workable_id: '', session_id: '' },\n    comprehension: { cefr: 'B1', numeric_score: 3.0, paraphrase_accuracy: 'partial', instruction_following: 'adequate', relevance: 'partial' },\n    qualitative: { claude_note: 'Comprehension parse failed; B1/3.0 fallback.' },\n    interview_observations: [],\n    risk_indicators: null,\n    flags: ['comprehension_parse_fallback'],\n    cost_usd: 0,\n  };\n}\n\ncomp.model = 'claude-sonnet-4-6';\ncomp.call_timestamp = new Date().toISOString();\ncomp.schema_version = '1.1';\n\nconst ctx = $('Aggregate SpeechSuper 5-dim').item.json;\nconst sp = ctx.speechace_5dim;\nconst tier = ctx.candidate.tier;\n\nconst weights = { pronunciation: 0.25, comprehension: 0.20, fluency: 0.20, grammar: 0.15, coherence: 0.10, vocabulary: 0.10 };\nconst round1 = (n) => Math.round(n * 10) / 10;\n\nconst dimEntry = (raw_0_5, cefr, weight) => ({\n  score: round1(raw_0_5 * weight * 6),\n  cefr,\n  weight,\n  max: round1(weight * 30),\n});\n\nconst normalizeCompTo5 = (raw) => {\n  const n = Number(raw) || 0;\n  if (n <= 5) return Math.max(0, n);\n  if (n <= 100) return n / 20;\n  return 5;\n};\nconst compRaw5 = normalizeCompTo5(comp.comprehension?.numeric_score);\n\nconst dims = {\n  pronunciation: dimEntry(sp.pronunciation.score, sp.pronunciation.cefr, weights.pronunciation),\n  comprehension: dimEntry(compRaw5, comp.comprehension?.cefr || 'B1', weights.comprehension),\n  fluency: dimEntry(sp.fluency.score, sp.fluency.cefr, weights.fluency),\n  grammar: dimEntry(sp.grammar.score, sp.grammar.cefr, weights.grammar),\n  coherence: dimEntry(sp.coherence.score, sp.coherence.cefr, weights.coherence),\n  vocabulary: dimEntry(sp.vocabulary.score, sp.vocabulary.cefr, weights.vocabulary),\n};\n\nlet overall = 0;\nfor (const k of Object.keys(dims)) overall += dims[k].score;\noverall = round1(overall);\n\nconst thresholds = { 1: { pass: 22, borderline: 16 }, 2: { pass: 25, borderline: 19 }, 3: { pass: 27, borderline: 21 } };\nconst t = thresholds[tier] || thresholds[1];\nconst verdict = overall >= t.pass ? 'PASS' : overall >= t.borderline ? 'BORDERLINE' : 'FAIL';\n\nconst dimEntries = Object.entries(dims);\ndimEntries.sort((a, b) => (b[1].score / b[1].max) - (a[1].score / a[1].max));\nconst strongest = dimEntries[0][0];\nconst weakest = dimEntries[dimEntries.length - 1][0];\n\nconst recommendation = verdict === 'PASS'\n  ? { action: 'AUTO_ADVANCE', next_stage: 'Preliminary Assessments', rationale_short: 'Advance after 24h recruiter review window.' }\n  : verdict === 'BORDERLINE'\n  ? { action: 'RECRUITER_REVIEW', next_stage: null, rationale_short: 'Held for recruiter review \u2014 BORDERLINE does not auto-advance.' }\n  : { action: 'AUTO_REJECT', next_stage: null, rationale_short: 'Reject after 48h recruiter review window.' };\n\nconst grade = verdict === 'PASS' ? 2 : verdict === 'BORDERLINE' ? 1 : 0;\nconst allFlags = [...(ctx.speechace_flags || []), ...(comp.flags || [])];\n\nconst _rec = ctx.recording || {};\nconst _recSession = _rec.session_id || '';\nconst recording_url = _recSession\n  ? ('https://sv-ats.vercel.app/review/' + encodeURIComponent(_recSession))\n  : null;\n\nconst scorecard = {\n  schema_version: '1.0',\n  generated_at: new Date().toISOString(),\n  workflow_run_id: 'wfc_' + Date.now(),\n  recording_url,\n  candidate: { workable_id: ctx.candidate.workable_id },\n  role: { role_code: ctx.candidate.role_type, tier, tier_label: 'Tier ' + tier },\n  scores: {\n    overall,\n    overall_max: 30,\n    cefr_overall: comp.comprehension.cefr || 'B1',\n    verdict,\n    dimensions: dims,\n  },\n  qualitative: {\n    claude_note: comp.qualitative?.claude_note || '',\n    strongest_dimension: strongest,\n    weakest_dimension: weakest,\n    flags: [...new Set(allFlags)],\n    interview_observations: Array.isArray(comp.interview_observations) ? comp.interview_observations : [],\n    risk_indicators: comp.risk_indicators || null,\n  },\n  recommendation,\n};\n\nconst first_name = ctx.candidate.firstname || ctx.candidate.first_name || '';\nconst role_label = ctx.candidate.role_label || ctx.candidate.role_type || '';\n\nreturn [{ json: { ...ctx, scorecard, verdict, grade, comprehension: comp, first_name, role_label, candidate_id: ctx.candidate.workable_id } }];"
+      },
+      "id": "7e8ae586-8412-418c-84dd-209460ec42ed",
+      "name": "Parse Comprehension + Aggregate Scorecard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sc = $json.scorecard;\nconst LINE_WIDTH = 60;\nconst DIVIDER = '\u2501'.repeat(56);\nconst VERDICT_ICON = { PASS: '\u2705', BORDERLINE: '\u26a0', FAIL: '\u2717' };\nconst DIMENSION_ORDER = [['pronunciation','Pronunciation'],['comprehension','Comprehension'],['fluency','Fluency'],['grammar','Grammar'],['coherence','Coherence'],['vocabulary','Vocabulary']];\nconst CEFR_BAND = {'C2':'strong','C1':'strong','B2+':'on_target','B2':'on_target','B1+':'below','B1':'below','A2+':'floor','A2':'floor','A1+':'floor','A1':'floor'};\nconst BAND_LABEL = {strong:'\u2713 strong',on_target:'\u2713 on target',below:'\u26a0 below',floor:'\u2717 floor'};\nfunction dimensionDelta(dimKey, dim, strongestKey, weakestKey, verdict) {\n  const band = CEFR_BAND[dim.cefr] || 'floor';\n  const base = BAND_LABEL[band];\n  if (dimKey === strongestKey && verdict !== 'FAIL') return base + ' (top)';\n  if (dimKey === weakestKey) return base + ' (low)';\n  return base;\n}\nfunction wrap(text, width) {\n  const words = (text || '').split(/\\s+/);\n  const lines = []; let cur = '';\n  for (const w of words) {\n    if (!cur) { cur = w; continue; }\n    if ((cur + ' ' + w).length <= width) cur += ' ' + w;\n    else { lines.push(cur); cur = w; }\n  }\n  if (cur) lines.push(cur);\n  return lines;\n}\nfunction wrapWithPrefix(prefix, text, totalWidth) {\n  const firstLineWidth = totalWidth - prefix.length;\n  const words = (text || '').split(/\\s+/);\n  const lines = []; let cur = ''; let first = true;\n  for (const w of words) {\n    const limit = first ? firstLineWidth : totalWidth;\n    if (!cur) cur = w;\n    else if ((cur + ' ' + w).length <= limit) cur += ' ' + w;\n    else { lines.push(first ? prefix + cur : cur); cur = w; first = false; }\n  }\n  if (cur) lines.push(first ? prefix + cur : cur);\n  return lines;\n}\nfunction formatTimestamp(iso) {\n  const d = new Date(iso);\n  const pad = (n) => String(n).padStart(2, '0');\n  return d.getUTCFullYear() + '-' + pad(d.getUTCMonth()+1) + '-' + pad(d.getUTCDate()) + ' ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ' UTC';\n}\nconst lines = [];\nlines.push('\ud83e\udd16 AI SCREENING COMPLETE  \u2022  ' + formatTimestamp(sc.generated_at));\nlines.push('');\nconst icon = VERDICT_ICON[sc.scores.verdict] || '';\nlines.push(icon + ' ' + sc.scores.verdict + ' \u2014 Overall ' + sc.scores.overall.toFixed(1) + ' / ' + sc.scores.overall_max + ' \u00b7 CEFR ' + sc.scores.cefr_overall);\nlines.push('');\nwrapWithPrefix('Recommendation: ', sc.recommendation.rationale_short || '', LINE_WIDTH).forEach(l => lines.push(l));\nlines.push('');\nlines.push(DIVIDER);\nlines.push('');\nlines.push('DIMENSION BREAKDOWN');\nlines.push('');\nconst strongest = sc.qualitative.strongest_dimension;\nconst weakest = sc.qualitative.weakest_dimension;\nfor (const [key, label] of DIMENSION_ORDER) {\n  const d = sc.scores.dimensions[key];\n  if (!d) continue;\n  lines.push(label + ': ' + d.score.toFixed(1) + ' / ' + d.max.toFixed(1) + ' \u00b7 ' + d.cefr + ' \u00b7 ' + dimensionDelta(key, d, strongest, weakest, sc.scores.verdict));\n}\nlines.push('');\nlines.push('NARRATIVE');\nlines.push('');\nwrap(sc.qualitative.claude_note || '', LINE_WIDTH).forEach(l => lines.push(l));\nlines.push('');\nconst observations = sc.qualitative.interview_observations;\nif (Array.isArray(observations) && observations.length > 0) {\n  lines.push('INTERVIEW OBSERVATIONS');\n  lines.push('');\n  observations.forEach(o => {\n    const qid = (o.question_id || '').toUpperCase();\n    const head = qid ? (qid + ' \u2014 ' + o.label + ': ') : (o.label + ': ');\n    wrapWithPrefix(head, o.observation || '', LINE_WIDTH).forEach(l => lines.push(l));\n  });\n  lines.push('');\n}\nconst risk = sc.qualitative.risk_indicators;\nif (risk && typeof risk === 'object') {\n  const RISK_ORDER = [['communication','Communication Risk'],['reliability','Reliability Risk'],['customer_facing','Customer-Facing Risk'],['decision_making','Decision-Making Risk'],['executive_support','Executive Support Risk']];\n  lines.push('RISK INDICATORS');\n  lines.push('');\n  for (const [key, label] of RISK_ORDER) {\n    if (risk[key]) lines.push(label + ': ' + risk[key]);\n  }\n  lines.push('');\n}\nif (sc.qualitative.flags && sc.qualitative.flags.length > 0) {\n  lines.push('NOTES');\n  lines.push('');\n  sc.qualitative.flags.forEach(f => lines.push('\u26a0 ' + f));\n  lines.push('');\n}\nif (sc.recording_url) {\n  lines.push('RECORDING');\n  lines.push('');\n  lines.push(sc.recording_url);\n  lines.push('');\n}\nlines.push('SYSTEM ACTION');\nlines.push('');\nif (sc.recommendation.action === 'AUTO_ADVANCE') {\n  lines.push('Held 24h for recruiter review, then auto-advances to: ' + sc.recommendation.next_stage);\n} else if (sc.recommendation.action === 'AUTO_REJECT') {\n  lines.push('Held 48h for recruiter review, then auto-rejected.');\n} else {\n  lines.push('Held in Interview stage for recruiter review.');\n  lines.push('No auto-advance or auto-reject.');\n}\nlines.push('');\nlines.push(DIVIDER);\nlines.push('Generated by SV AI Screening v2.0');\nlines.push('Run ID: ' + sc.workflow_run_id);\nconst rendered = lines.join('\\n');\nreturn [{ json: { ...$json, rendered_scorecard_string: rendered } }];"
+      },
+      "id": "bcaafb47-ea17-424a-8517-2e8d1e881f9e",
+      "name": "Render Scorecard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sc = $json.scorecard;\nconst dims = sc.scores.dimensions;\nconst trunc = (s, n) => !s ? '' : (s.length <= n ? s : s.slice(0, n-1).trimEnd() + '\u2026');\nconst fmt = (n) => typeof n === 'number' ? n.toFixed(1) : '';\nconst recUrl = 'https://sv-ats.vercel.app/review/' + encodeURIComponent($json.recording?.session_id || '');\nconst row = {\n  'Candidate ID': sc.candidate.workable_id || '',\n  'Job ID': $json.candidate?.job_id || '',\n  'Role Type': sc.role.role_code || '',\n  'Tier': String(sc.role.tier || ''),\n  'Interview Date': sc.generated_at || '',\n  'Overall Score (/30)': fmt(sc.scores.overall),\n  'Verdict': sc.scores.verdict || '',\n  'CEFR': sc.scores.cefr_overall || '',\n  'Pronunciation': fmt(dims.pronunciation?.score),\n  'Fluency': fmt(dims.fluency?.score),\n  'Grammar': fmt(dims.grammar?.score),\n  'Vocabulary': fmt(dims.vocabulary?.score),\n  'Coherence': fmt(dims.coherence?.score),\n  'Comprehension': fmt(dims.comprehension?.score),\n  'Strongest Q': sc.qualitative?.strongest_dimension || '',\n  'Weakest Q': sc.qualitative?.weakest_dimension || '',\n  'Flags': Array.isArray(sc.qualitative?.flags) ? sc.qualitative.flags.join(', ') : '',\n  'Claude Note (truncated)': trunc(sc.qualitative?.claude_note || '', 300),\n  'Scorecard URL': recUrl,\n};\nreturn [{ json: { ...$json, ...row } }];"
+      },
+      "id": "7b9fd022-9c70-4ec8-993a-3e7a6f62d78b",
+      "name": "Build Sheet Row (19 cols)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sc = $json.scorecard;\nconst completenessOk = !($json.speechace_flags || []).includes('audio_quality_poor');\nconst answeredCount = Object.values($json.speechace_transcripts || {}).filter(t => t && t.trim().length > 5).length;\nconst totalQuestions = ($json.recording?.audio_files || []).length || 7;\nconst missingCount = totalQuestions - answeredCount;\nconst incomplete = missingCount >= 2;\nreturn [{ json: { ...$json, incomplete, missingCount, answeredCount, completenessOk } }];"
+      },
+      "id": "38403b15-9d83-47e4-834a-0198f1964081",
+      "name": "Completeness Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "isIncomplete",
+              "leftValue": "={{ $json.incomplete }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c572681a-02f7-4b7c-a2bf-840665d6435f",
+      "name": "Incomplete Hold?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2976,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.verdict }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "PASS"
+            },
+            {
+              "value2": "BORDERLINE"
+            },
+            {
+              "value2": "FAIL"
+            }
+          ]
+        }
+      },
+      "id": "a1a2cc9a-a03c-4a9c-acb7-b5b4d2ee0fc4",
+      "name": "Verdict Switch (PASS/BORDERLINE/FAIL)",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [
+        2976,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/ratings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"scale\": \"thumbs\",\n  \"grade\": 2,\n  \"comment\": \"AI Screening \u2014 PASS\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0c2611f3-b974-45e3-9df6-dbf7440a2491",
+      "name": "PASS \u2014 Add Rating thumbs=2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3584,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"comment\": {\n    \"body\": {{ JSON.stringify($('Build Sheet Row (19 cols)').item.json.rendered_scorecard_string) }}\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "8c89c432-2bf1-4950-851d-f1d307e10807",
+      "name": "PASS \u2014 Add Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3776,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/hitl_reviews",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": \"{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}\",\n  \"session_id\": \"{{ $('Build Sheet Row (19 cols)').item.json.recording.session_id }}\",\n  \"trigger_reason\": \"pass_review_window\",\n  \"original_verdict\": \"PASS\",\n  \"decision\": \"no_action_yet\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "7a71875c-9816-486b-b55b-cb473da3a177",
+      "name": "PASS \u2014 Write HITL Review Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3984,
+        304
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "amount": 24
+      },
+      "id": "2cd6a82b-c0c8-41b9-90fa-7515d25ffd9a",
+      "name": "PASS \u2014 24h HITL Hold",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        4176,
+        304
+      ],
+      "webhookId": "pass-hold-wait-wh-uuid-001"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/move",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"target_stage\": \"preliminary-assessments\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ae47c14a-0d66-466e-b19c-5a7ff8724769",
+      "name": "PASS \u2014 Move to Preliminary Assessments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4352,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1QLiaiWLUzu_yN1ke80dcU29Ok7xMw3ckWJ-ZQYdgTGc",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scorecard",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Candidate ID"
+          ]
+        },
+        "options": {}
+      },
+      "id": "5db4b347-dc3c-41a8-88ae-eeb5c75b0c16",
+      "name": "PASS \u2014 Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        4544,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?session_id=eq.{{ $('Build Sheet Row (19 cols)').item.json.recording.session_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"scored\",\n  \"verdict\": \"PASS\",\n  \"overall_score\": {{ $('Build Sheet Row (19 cols)').item.json.scorecard.scores.overall }},\n  \"processed_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b6019e43-7e3a-4f24-b047-c33e4b189aae",
+      "name": "PASS \u2014 Mark Scored (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4736,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/ratings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"scale\": \"thumbs\",\n  \"grade\": 1,\n  \"comment\": \"AI Screening \u2014 BORDERLINE (held for recruiter review)\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "948ab3f3-d3e0-4c99-bdcc-c093e2ecb6b4",
+      "name": "BORDERLINE \u2014 Add Rating thumbs=1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3584,
+        704
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"comment\": {\n    \"body\": {{ JSON.stringify($('Build Sheet Row (19 cols)').item.json.rendered_scorecard_string) }}\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b3767dfb-1026-4ec7-8a1c-b307b172177c",
+      "name": "BORDERLINE \u2014 Add Comment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3776,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tags\": [\"ai_screening_borderline_review\"]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "1599198c-e2f9-4743-8136-28fe1ba25a90",
+      "name": "BORDERLINE \u2014 Tag held-for-review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3968,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/hitl_reviews",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": \"{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}\",\n  \"session_id\": \"{{ $('Build Sheet Row (19 cols)').item.json.recording.session_id }}\",\n  \"trigger_reason\": \"borderline_verdict\",\n  \"original_verdict\": \"BORDERLINE\",\n  \"decision\": \"no_action_yet\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "046094c4-73d0-4bb1-bbb3-07553ade0c77",
+      "name": "BORDERLINE \u2014 Write HITL Review Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4144,
+        704
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1QLiaiWLUzu_yN1ke80dcU29Ok7xMw3ckWJ-ZQYdgTGc",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scorecard",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Candidate ID"
+          ]
+        },
+        "options": {}
+      },
+      "id": "2fef17ca-7359-43bf-816e-c4b71054a75a",
+      "name": "BORDERLINE \u2014 Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        4320,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?session_id=eq.{{ $('Build Sheet Row (19 cols)').item.json.recording.session_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"held_review\",\n  \"verdict\": \"BORDERLINE\",\n  \"overall_score\": {{ $('Build Sheet Row (19 cols)').item.json.scorecard.scores.overall }},\n  \"processed_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "046bda5c-e996-4fc5-83de-e037af7f2c27",
+      "name": "BORDERLINE \u2014 Mark Held for Review (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4512,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/ratings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"scale\": \"thumbs\",\n  \"grade\": 0,\n  \"comment\": \"AI Screening \u2014 FAIL\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b390542e-d558-46a9-8b65-3ad74eae5a43",
+      "name": "FAIL \u2014 Add Rating thumbs=0",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3584,
+        1104
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Build Sheet Row (19 cols)').item.json;\nconst dqRationale = '\\n\\n\u2014 DQ rationale: AI screening determined English proficiency and job fit below the threshold for this role tier. This decision was based on the AI-scored recording alone and does not reflect overall potential. Candidate may re-apply for future roles.';\nconst body = (ctx.rendered_scorecard_string || '') + dqRationale;\nreturn [{ json: { ...ctx, fail_comment_body: body, fail_comment_body_json_str: JSON.stringify(body) } }];"
+      },
+      "id": "adb786d0-5a80-45c0-b93e-e032d0166be6",
+      "name": "FAIL \u2014 Build Comment + DQ rationale",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3776,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"comment\": {\n    \"body\": {{ $json.fail_comment_body_json_str }}\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b832cc55-74ab-455b-b4fc-8e510afcfb58",
+      "name": "FAIL \u2014 Add Comment (scorecard + DQ rationale)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3968,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/hitl_reviews",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": \"{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}\",\n  \"session_id\": \"{{ $('Build Sheet Row (19 cols)').item.json.recording.session_id }}\",\n  \"trigger_reason\": \"fail_review_window\",\n  \"original_verdict\": \"FAIL\",\n  \"decision\": \"no_action_yet\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "306eedb1-1bff-46d3-a30e-3d5a6b260216",
+      "name": "FAIL \u2014 Write HITL Review Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4144,
+        1104
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "amount": 48
+      },
+      "id": "dcfccf59-332c-4e4b-bcb8-9215596c215e",
+      "name": "FAIL \u2014 48h HITL Hold",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        4320,
+        1104
+      ],
+      "webhookId": "fail-hold-wait-wh-uuid-002"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Build Sheet Row (19 cols)').item.json.candidate_id }}/disqualify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"disqualify_reason_id\": \"a3cc83\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "9328e180-0c74-4007-8231-0d152d251b2d",
+      "name": "FAIL \u2014 Disqualify (a3cc83 Unsuccessful assessment)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4512,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1QLiaiWLUzu_yN1ke80dcU29Ok7xMw3ckWJ-ZQYdgTGc",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scorecard",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "Candidate ID"
+          ]
+        },
+        "options": {}
+      },
+      "id": "3912c2ed-52b6-40f2-8ffb-e7a7270a427a",
+      "name": "FAIL \u2014 Sheets Append",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        4704,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?session_id=eq.{{ $('Build Sheet Row (19 cols)').item.json.recording.session_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"disqualified\",\n  \"verdict\": \"FAIL\",\n  \"overall_score\": {{ $('Build Sheet Row (19 cols)').item.json.scorecard.scores.overall }},\n  \"processed_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "83fe3579-1697-4afe-ab1f-0832429b4406",
+      "name": "FAIL \u2014 Mark Disqualified (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4896,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Validate Contract 1 Payload').item.json.candidate.workable_id }}/comments",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"member_id\": \"1e62f0\",\n  \"comment\": {\n    \"body\": \"AI screening assessment is incomplete. {{ $json.missingCount }} of {{ $json.answeredCount + $json.missingCount }} question(s) have no usable response. Held for recruiter review \u2014 no auto-scoring applied.\"\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "99f15695-9ec8-42ca-8545-33210cbdf2d5",
+      "name": "REVIEW \u2014 Add Comment (held, incomplete)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3584,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Validate Contract 1 Payload').item.json.candidate.workable_id }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tags\": [\"ai_screening_incomplete\"]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "4886a174-9cf9-43c8-9a65-5a221f748b07",
+      "name": "REVIEW \u2014 Tag ai_screening_incomplete",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3776,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/hitl_reviews",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": \"{{ $('Validate Contract 1 Payload').item.json.candidate.workable_id }}\",\n  \"session_id\": \"{{ $('Validate Contract 1 Payload').item.json.recording.session_id }}\",\n  \"trigger_reason\": \"incomplete_answers\",\n  \"original_verdict\": \"INCOMPLETE\",\n  \"decision\": \"no_action_yet\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "f42296c4-1454-4fae-8070-f53517f99e0b",
+      "name": "REVIEW \u2014 Write HITL Review Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        3968,
+        -96
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?session_id=eq.{{ $('Validate Contract 1 Payload').item.json.recording.session_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"held_review\",\n  \"verdict\": \"INCOMPLETE\",\n  \"processed_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "cd2f3d59-8091-4792-a370-5f9903a0e5e8",
+      "name": "REVIEW \u2014 Mark Held (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        4144,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/execution_context",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"execution_id\": \"{{ $execution.id }}\",\n  \"workflow_label\": \"C\",\n  \"workflow_n8n_id\": \"{{ $workflow.id }}\",\n  \"candidate_id\": {{ JSON.stringify($('Validate Contract 1 Payload').item.json.candidate.workable_id || null) }},\n  \"candidate_email\": null,\n  \"trigger_event\": \"recording_event\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "0dcd6d25-4b83-4e0f-b8bd-37ac059e19d9",
+      "name": "Log Execution Context (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -448,
+        480
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/stage_confirmations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": \"{{ $('Validate Contract 1 Payload').item.json.candidate.workable_id }}\",\n  \"session_id\": \"{{ $('Validate Contract 1 Payload').item.json.recording.session_id }}\",\n  \"stage\": \"ai_interview_complete\",\n  \"sent_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "69e1cd36-b02c-4df5-b0db-0a93ab218ddd",
+      "name": "Log Stage Confirmation (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        32,
+        480
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Validate Contract 1 Payload').item.json;\nreturn [{ json: { error_type: 'speechsuper_error', session_id: ctx.recording?.session_id, candidate_id: ctx.candidate?.workable_id, error_detail: $json.error || $json.message || 'unknown' } }];"
+      },
+      "id": "80d7cef1-b4a1-422c-b6f2-f68d15fc4d2b",
+      "name": "Speechace Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Validate Contract 1 Payload').item.json;\nreturn [{ json: { error_type: 'claude_error', session_id: ctx.recording?.session_id, candidate_id: ctx.candidate?.workable_id, error_detail: $json.error || $json.message || 'unknown' } }];"
+      },
+      "id": "b1bf03f3-ca8b-49b9-bbf9-7ad53855fd77",
+      "name": "Claude Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workflow_c_errors",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"session_id\": {{ JSON.stringify($json.session_id || null) }},\n  \"candidate_id\": {{ JSON.stringify($json.candidate_id || null) }},\n  \"error_type\": {{ JSON.stringify($json.error_type || 'unknown') }},\n  \"error_detail\": {{ JSON.stringify($json.error_detail || '') }}\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "4e964852-6a6e-49cd-8d8a-c2c0253f6f7c",
+      "name": "Insert workflow_c_errors row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2544,
+        672
+      ],
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Recording Event Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Contract 1 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Contract 1 Payload": {
+      "main": [
+        [
+          {
+            "node": "Idempotency Check (Supabase)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Execution Context (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idempotency Check (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Idempotency Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idempotency Decide": {
+      "main": [
+        [
+          {
+            "node": "Mark Scoring Started (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Scoring Started (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Restore Context (post-Mark-Started)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Stage Confirmation (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Context (post-Mark-Started)": {
+      "main": [
+        [
+          {
+            "node": "Event Split (abandoned vs completed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Split (abandoned vs completed)": {
+      "main": [
+        [
+          {
+            "node": "Mark Status=abandoned (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Speechace Loop (per audio_file)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Status=abandoned (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Restore Context (post-Mark-Abandoned)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Context (post-Mark-Abandoned)": {
+      "main": [
+        [
+          {
+            "node": "Abandoned Comment (Workable)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abandoned Comment (Workable)": {
+      "main": [
+        [
+          {
+            "node": "Tag screening_abandoned (Workable)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speechace Loop (per audio_file)": {
+      "main": [
+        [
+          {
+            "node": "Get Audio Signed URL (Supabase Storage)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Aggregate Speechace 5-dim",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Audio Signed URL (Supabase Storage)": {
+      "main": [
+        [
+          {
+            "node": "Fetch Audio Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Audio Binary": {
+      "main": [
+        [
+          {
+            "node": "Speechace Multipart POST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speechace Multipart POST": {
+      "main": [
+        [
+          {
+            "node": "Speechace Loop (per audio_file)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Speechace Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speechace Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Insert workflow_c_errors row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Speechace 5-dim": {
+      "main": [
+        [
+          {
+            "node": "Build Comprehension Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Comprehension Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude Comprehension (Anthropic)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Comprehension (Anthropic)": {
+      "main": [
+        [
+          {
+            "node": "Parse Comprehension + Aggregate Scorecard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Insert workflow_c_errors row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Comprehension + Aggregate Scorecard": {
+      "main": [
+        [
+          {
+            "node": "Render Scorecard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Scorecard": {
+      "main": [
+        [
+          {
+            "node": "Completeness Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completeness Gate": {
+      "main": [
+        [
+          {
+            "node": "Build Sheet Row (19 cols)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Sheet Row (19 cols)": {
+      "main": [
+        [
+          {
+            "node": "Incomplete Hold?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Incomplete Hold?": {
+      "main": [
+        [
+          {
+            "node": "REVIEW \u2014 Add Comment (held, incomplete)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verdict Switch (PASS/BORDERLINE/FAIL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "REVIEW \u2014 Add Comment (held, incomplete)": {
+      "main": [
+        [
+          {
+            "node": "REVIEW \u2014 Tag ai_screening_incomplete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "REVIEW \u2014 Tag ai_screening_incomplete": {
+      "main": [
+        [
+          {
+            "node": "REVIEW \u2014 Write HITL Review Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "REVIEW \u2014 Write HITL Review Row": {
+      "main": [
+        [
+          {
+            "node": "REVIEW \u2014 Mark Held (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verdict Switch (PASS/BORDERLINE/FAIL)": {
+      "main": [
+        [
+          {
+            "node": "PASS \u2014 Add Rating thumbs=2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "BORDERLINE \u2014 Add Rating thumbs=1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FAIL \u2014 Add Rating thumbs=0",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PASS \u2014 Add Rating thumbs=2": {
+      "main": [
+        [
+          {
+            "node": "PASS \u2014 Add Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PASS \u2014 Add Comment": {
+      "main": [
+        [
+          {
+            "node": "PASS \u2014 Write HITL Review Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PASS \u2014 Write HITL Review Row": {
+      "main": [
+        [
+          {
+            "node": "PASS \u2014 24h HITL Hold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PASS \u2014 24h HITL Hold": {
+      "main": [
+        [
+          {
+            "node": "PASS \u2014 Move to Preliminary Assessments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PASS \u2014 Move to Preliminary Assessments": {
+      "main": [
+        [
+          {
+            "node": "PASS \u2014 Sheets Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PASS \u2014 Sheets Append": {
+      "main": [
+        [
+          {
+            "node": "PASS \u2014 Mark Scored (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BORDERLINE \u2014 Add Rating thumbs=1": {
+      "main": [
+        [
+          {
+            "node": "BORDERLINE \u2014 Add Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BORDERLINE \u2014 Add Comment": {
+      "main": [
+        [
+          {
+            "node": "BORDERLINE \u2014 Tag held-for-review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BORDERLINE \u2014 Tag held-for-review": {
+      "main": [
+        [
+          {
+            "node": "BORDERLINE \u2014 Write HITL Review Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BORDERLINE \u2014 Write HITL Review Row": {
+      "main": [
+        [
+          {
+            "node": "BORDERLINE \u2014 Sheets Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BORDERLINE \u2014 Sheets Append": {
+      "main": [
+        [
+          {
+            "node": "BORDERLINE \u2014 Mark Held for Review (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAIL \u2014 Add Rating thumbs=0": {
+      "main": [
+        [
+          {
+            "node": "FAIL \u2014 Build Comment + DQ rationale",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAIL \u2014 Build Comment + DQ rationale": {
+      "main": [
+        [
+          {
+            "node": "FAIL \u2014 Add Comment (scorecard + DQ rationale)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAIL \u2014 Add Comment (scorecard + DQ rationale)": {
+      "main": [
+        [
+          {
+            "node": "FAIL \u2014 Write HITL Review Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAIL \u2014 Write HITL Review Row": {
+      "main": [
+        [
+          {
+            "node": "FAIL \u2014 48h HITL Hold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAIL \u2014 48h HITL Hold": {
+      "main": [
+        [
+          {
+            "node": "FAIL \u2014 Disqualify (a3cc83 Unsuccessful assessment)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAIL \u2014 Disqualify (a3cc83 Unsuccessful assessment)": {
+      "main": [
+        [
+          {
+            "node": "FAIL \u2014 Sheets Append",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FAIL \u2014 Sheets Append": {
+      "main": [
+        [
+          {
+            "node": "FAIL \u2014 Mark Disqualified (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "51bbe58b-ddf2-4101-98df-ea226bd1e430",
+  "activeVersionId": null,
+  "versionCounter": 2,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-07-02T15:30:12.406Z",
+      "createdAt": "2026-07-02T15:30:12.406Z",
+      "role": "workflow:owner",
+      "workflowId": "B7vGfhPk9KBRi7nA",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

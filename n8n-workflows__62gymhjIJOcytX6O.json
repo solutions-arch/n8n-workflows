@@ -1,0 +1,958 @@
+{
+  "updatedAt": "2026-07-04T13:04:41.995Z",
+  "createdAt": "2026-04-28T19:35:09.174Z",
+  "id": "62gymhjIJOcytX6O",
+  "name": "N8N Workflows",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows/{{ $json.workflow_id }}/{{ $json.version_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1264,
+        -480
+      ],
+      "id": "0c8f00a2-a49b-4ba1-9bd8-e2dea3975054",
+      "name": "Get Workflow Version Details",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "function toIso(value) {\n  if (!value) return null;\n  const date = new Date(value);\n  return isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction normalizeAuthor(author) {\n  if (!author) return null;\n  if (typeof author === 'string') return author.trim() || null;\n  if (Array.isArray(author)) {\n    return author.map(a => normalizeAuthor(a)).filter(Boolean).join(', ') || null;\n  }\n  if (typeof author === 'object') {\n    return author.email || author.name || author.username || author.id || null;\n  }\n  return null;\n}\n\nfunction normalizeTags(raw) {\n  if (!Array.isArray(raw)) return null;\n  const result = raw\n    .map(t => (typeof t === 'string' ? t.trim() : (t.name || t.id || '')))\n    .filter(Boolean);\n  return result.length > 0 ? result : null;\n}\n\nreturn $input.all().map(item => {\n  const v = item.json;\n\n  return {\n    json: {\n      workflow_id:      v.workflow_id || v.workflowId || v.id || null,\n      workflow_name:    v.workflow_name || v.name || null,\n      active:           v.active ?? null,\n      archived:         v.isArchived ?? v.archived ?? null,\n      owner_project_id: v.owner_project_id || v.ownerProjectId || v.projectId || null,\n\n      version_id:       v.version_id || v.versionId || v.id || null,\n\n      last_modified_by: normalizeAuthor(\n        v.version_author || v.versionAuthor ||\n        v.author || v.createdBy || v.updatedBy || null\n      ),\n\n      version_created_at:  toIso(v.version_created_at  || v.versionCreatedAt  || v.createdAt),\n      workflow_created_at: toIso(v.workflow_created_at  || v.createdAt),\n      workflow_updated_at: toIso(v.workflow_updated_at  || v.updatedAt),\n\n      description: v.description || null,\n      tags:        normalizeTags(v.tags),\n      synced_at:   new Date().toISOString(),\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        -544
+      ],
+      "id": "1014b502-3dd4-4469-aefe-8e0a493e3773",
+      "name": "Build Workflow Audit Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.all();\n\nconst workflows = input.flatMap(item => {\n  const json = item.json;\n  if (Array.isArray(json.data)) return json.data;\n  return [json];\n});\n\nfunction toIso(value) {\n  if (!value) return null;\n  const date = new Date(value);\n  return isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction normalizeTags(raw) {\n  if (!Array.isArray(raw)) return null;\n  const result = raw\n    .map(t => (typeof t === 'string' ? t.trim() : (t.name || t.id || '')))\n    .filter(Boolean);\n  return result.length > 0 ? result : null;\n}\n\nconst rows = workflows\n  .filter(wf => wf.id || wf.workflow_id)\n  .map(wf => {\n    const activeVersion =\n      wf.activeVersion ||\n      wf.version ||\n      wf.latestVersion ||\n      {};\n\n    const versionAuthor =\n      wf.version_author ||\n      wf.versionAuthor ||\n      wf.lastModifiedBy ||\n      wf.updatedBy ||\n      activeVersion.author ||\n      {};\n\n    const ownerProject =\n      wf.project ||\n      wf.homeProject ||\n      wf.ownerProject ||\n      wf.shared?.find?.(s =>\n        String(s.role || '').toLowerCase().includes('owner')\n      )?.project ||\n      {};\n\n    return {\n      workflow_id: wf.id || wf.workflow_id,\n      workflow_name: wf.name || wf.workflow_name || '(Untitled workflow)',\n\n      active: wf.active ?? null,\n      archived: wf.archived ?? null,\n\n      owner_project_id:\n        wf.owner_project_id ||\n        wf.ownerProjectId ||\n        wf.projectId ||\n        ownerProject.id ||\n        null,\n\n      version_id:\n        wf.versionId ||\n        wf.version_id ||\n        activeVersion.id ||\n        null,\n\n      last_modified_by:\n        typeof versionAuthor === 'string'\n          ? versionAuthor\n          : versionAuthor.email ||\n            versionAuthor.name ||\n            wf.last_modified_by ||\n            null,\n\n      version_created_at:\n        toIso(\n          wf.version_created_at ||\n          wf.versionCreatedAt ||\n          activeVersion.createdAt ||\n          wf.updatedAt\n        ),\n\n      workflow_created_at:\n        toIso(wf.createdAt || wf.workflow_created_at),\n\n      workflow_updated_at:\n        toIso(wf.updatedAt || wf.workflow_updated_at),\n\n      // \u2500\u2500 NEW FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n      description:\n        wf.description ||\n        wf.meta?.description ||\n        null,\n\n      tags: normalizeTags(wf.tags),\n      // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n      synced_at: new Date().toISOString(),\n    };\n  });\n\nreturn [\n  {\n    json: {\n      rows,\n      count: rows.length,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -480
+      ],
+      "id": "f4782522-9fe5-4acc-b728-ebb6019ca123",
+      "name": "Build Supabase Workflow Rows"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "rows",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -480
+      ],
+      "id": "3ca4ab9d-942e-4653-9a0a-983222132569",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://qaamdjkwixpgauftmiir.supabase.co/rest/v1/workflows?on_conflict=workflow_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_secret_WQkqPkbYivqHEXO9hTIPFQ_siZwVJMZ"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_secret_WQkqPkbYivqHEXO9hTIPFQ_siZwVJMZ"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Build Workflow Audit Report').item.json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2144,
+        -480
+      ],
+      "id": "d6b06407-57b7-4677-b3da-bc0d2f14e6bc",
+      "name": "Supabase | Upsert Workflows"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 17 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        -480
+      ],
+      "id": "2ed93972-45d6-4913-b1fb-0987dfa10d44",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows?limit=250",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -304,
+        -480
+      ],
+      "id": "61dea76c-990f-4232-bab2-15b6d38cf585",
+      "name": "n8n | List Workflows",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        368,
+        -480
+      ],
+      "id": "138efa4f-0e33-4970-8672-79189b733989",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "url": "=https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows/{{ $json.workflow_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        592,
+        -544
+      ],
+      "id": "4d7ed12f-9f7a-4fe4-87a9-7aadea4b9c07",
+      "name": "Get Workflow Full Details"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        -480
+      ],
+      "id": "f9de3ae1-852b-4c74-b6df-951f68cedbf7",
+      "name": "Wait",
+      "webhookId": "3cfd5321-7053-4536-8c68-85f3643e2304"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const wf = item.json;\n\n  return {\n    json: {\n      workflow_id:         wf.id || wf.workflow_id || null,\n      version_id:          wf.versionId || wf.version_id || null,\n      workflow_name:       wf.name || wf.workflow_name || null,  // \u2190 ADD\n      active:              wf.active ?? null,                    // \u2190 ADD\n      archived:            wf.archived ?? null,                  // \u2190 ADD\n      owner_project_id:    wf.projectId || wf.ownerProjectId || wf.homeProject?.id || wf.project?.id || null, // \u2190 ADD\n      workflow_created_at: wf.createdAt || null,                 // \u2190 ADD\n      workflow_updated_at: wf.updatedAt || null,                 // \u2190 ADD\n      description:         wf.meta?.description || wf.description || null,\n      tags: (() => {\n        const raw = wf.tags;\n        if (!Array.isArray(raw)) return null;\n        const result = raw\n          .map(t => (typeof t === 'string' ? t.trim() : (t.name || t.id || '')))\n          .filter(Boolean);\n        return result.length > 0 ? result : null;\n      })(),\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -544
+      ],
+      "id": "16479f2a-b7cb-4f86-ad7a-55ffc259dc27",
+      "name": "Extract Description + Tags"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1488,
+        -544
+      ],
+      "id": "190e6af5-597b-483c-9432-dc73928e7514",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const wf = item.json;\n  \n  if (!wf.active) continue;\n\n  const name = wf.name || wf.workflow_name || 'untitled';\n  const slug = name\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, '-')\n    .replace(/^-|-$/g, '');\n\n  const exportPayload = {\n    name: wf.name,\n    nodes: wf.nodes || [],\n    connections: wf.connections || {},\n    settings: wf.settings || {},\n    pinData: wf.pinData || {},\n    active: wf.active,\n    tags: wf.tags || [],\n    id: wf.id,\n    meta: wf.meta || {}\n  };\n\n  results.push({\n    json: {\n      path: `workflows/${slug}.json`,\n      fileContent: JSON.stringify(exportPayload, null, 2),\n      message: `sync: ${name} (${new Date().toISOString()})`,\n      workflow_id: wf.id\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        -320
+      ],
+      "id": "45afa135-8cbc-4652-a112-002e7e5b8eef",
+      "name": "Format for GitHub"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "edit",
+        "owner": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        -320
+      ],
+      "id": "ecdd6607-f0ff-4c5a-b6ff-66d5e35c0bdc",
+      "name": "Edit a file",
+      "webhookId": "3c39593b-f223-47fc-9dd1-861e37701379",
+      "credentials": {
+        "githubOAuth2Api": {
+          "id": "czuPbHAI39gWKj97",
+          "name": "Solutions-Arch"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Get Workflow Version Details": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Build Workflow Audit Report": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Upsert Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Supabase Workflow Rows": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "n8n | List Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n | List Workflows": {
+      "main": [
+        [
+          {
+            "node": "Build Supabase Workflow Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Get Workflow Full Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Upsert Workflows": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Workflow Full Details": {
+      "main": [
+        [
+          {
+            "node": "Extract Description + Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Workflow Version Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Description + Tags": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Build Workflow Audit Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for GitHub": {
+      "main": [
+        [
+          {
+            "node": "Edit a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "timezone": "America/Chicago",
+    "errorWorkflow": "rGzixtwYBsqnFWBo",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "3787678f-2885-410d-ae46-c4bac8755f65",
+  "activeVersionId": "3787678f-2885-410d-ae46-c4bac8755f65",
+  "versionCounter": 183,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-04-28T19:35:09.226Z",
+      "createdAt": "2026-04-28T19:35:09.226Z",
+      "role": "workflow:owner",
+      "workflowId": "62gymhjIJOcytX6O",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T02:39:48.849Z",
+      "createdAt": "2026-04-29T02:39:48.849Z",
+      "id": "PEeL9xSBFkGsagXN",
+      "name": "Development"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:04:41.996Z",
+    "createdAt": "2026-07-04T13:04:41.996Z",
+    "versionId": "3787678f-2885-410d-ae46-c4bac8755f65",
+    "workflowId": "62gymhjIJOcytX6O",
+    "nodes": [
+      {
+        "parameters": {
+          "url": "=https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows/{{ $json.workflow_id }}/{{ $json.version_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-N8N-API-KEY",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          1264,
+          -480
+        ],
+        "id": "0c8f00a2-a49b-4ba1-9bd8-e2dea3975054",
+        "name": "Get Workflow Version Details",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000
+      },
+      {
+        "parameters": {
+          "jsCode": "function toIso(value) {\n  if (!value) return null;\n  const date = new Date(value);\n  return isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction normalizeAuthor(author) {\n  if (!author) return null;\n  if (typeof author === 'string') return author.trim() || null;\n  if (Array.isArray(author)) {\n    return author.map(a => normalizeAuthor(a)).filter(Boolean).join(', ') || null;\n  }\n  if (typeof author === 'object') {\n    return author.email || author.name || author.username || author.id || null;\n  }\n  return null;\n}\n\nfunction normalizeTags(raw) {\n  if (!Array.isArray(raw)) return null;\n  const result = raw\n    .map(t => (typeof t === 'string' ? t.trim() : (t.name || t.id || '')))\n    .filter(Boolean);\n  return result.length > 0 ? result : null;\n}\n\nreturn $input.all().map(item => {\n  const v = item.json;\n\n  return {\n    json: {\n      workflow_id:      v.workflow_id || v.workflowId || v.id || null,\n      workflow_name:    v.workflow_name || v.name || null,\n      active:           v.active ?? null,\n      archived:         v.isArchived ?? v.archived ?? null,\n      owner_project_id: v.owner_project_id || v.ownerProjectId || v.projectId || null,\n\n      version_id:       v.version_id || v.versionId || v.id || null,\n\n      last_modified_by: normalizeAuthor(\n        v.version_author || v.versionAuthor ||\n        v.author || v.createdBy || v.updatedBy || null\n      ),\n\n      version_created_at:  toIso(v.version_created_at  || v.versionCreatedAt  || v.createdAt),\n      workflow_created_at: toIso(v.workflow_created_at  || v.createdAt),\n      workflow_updated_at: toIso(v.workflow_updated_at  || v.updatedAt),\n\n      description: v.description || null,\n      tags:        normalizeTags(v.tags),\n      synced_at:   new Date().toISOString(),\n    }\n  };\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1712,
+          -544
+        ],
+        "id": "1014b502-3dd4-4469-aefe-8e0a493e3773",
+        "name": "Build Workflow Audit Report"
+      },
+      {
+        "parameters": {
+          "jsCode": "const input = $input.all();\n\nconst workflows = input.flatMap(item => {\n  const json = item.json;\n  if (Array.isArray(json.data)) return json.data;\n  return [json];\n});\n\nfunction toIso(value) {\n  if (!value) return null;\n  const date = new Date(value);\n  return isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction normalizeTags(raw) {\n  if (!Array.isArray(raw)) return null;\n  const result = raw\n    .map(t => (typeof t === 'string' ? t.trim() : (t.name || t.id || '')))\n    .filter(Boolean);\n  return result.length > 0 ? result : null;\n}\n\nconst rows = workflows\n  .filter(wf => wf.id || wf.workflow_id)\n  .map(wf => {\n    const activeVersion =\n      wf.activeVersion ||\n      wf.version ||\n      wf.latestVersion ||\n      {};\n\n    const versionAuthor =\n      wf.version_author ||\n      wf.versionAuthor ||\n      wf.lastModifiedBy ||\n      wf.updatedBy ||\n      activeVersion.author ||\n      {};\n\n    const ownerProject =\n      wf.project ||\n      wf.homeProject ||\n      wf.ownerProject ||\n      wf.shared?.find?.(s =>\n        String(s.role || '').toLowerCase().includes('owner')\n      )?.project ||\n      {};\n\n    return {\n      workflow_id: wf.id || wf.workflow_id,\n      workflow_name: wf.name || wf.workflow_name || '(Untitled workflow)',\n\n      active: wf.active ?? null,\n      archived: wf.archived ?? null,\n\n      owner_project_id:\n        wf.owner_project_id ||\n        wf.ownerProjectId ||\n        wf.projectId ||\n        ownerProject.id ||\n        null,\n\n      version_id:\n        wf.versionId ||\n        wf.version_id ||\n        activeVersion.id ||\n        null,\n\n      last_modified_by:\n        typeof versionAuthor === 'string'\n          ? versionAuthor\n          : versionAuthor.email ||\n            versionAuthor.name ||\n            wf.last_modified_by ||\n            null,\n\n      version_created_at:\n        toIso(\n          wf.version_created_at ||\n          wf.versionCreatedAt ||\n          activeVersion.createdAt ||\n          wf.updatedAt\n        ),\n\n      workflow_created_at:\n        toIso(wf.createdAt || wf.workflow_created_at),\n\n      workflow_updated_at:\n        toIso(wf.updatedAt || wf.workflow_updated_at),\n\n      // \u2500\u2500 NEW FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n      description:\n        wf.description ||\n        wf.meta?.description ||\n        null,\n\n      tags: normalizeTags(wf.tags),\n      // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n      synced_at: new Date().toISOString(),\n    };\n  });\n\nreturn [\n  {\n    json: {\n      rows,\n      count: rows.length,\n    },\n  },\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -80,
+          -480
+        ],
+        "id": "f4782522-9fe5-4acc-b728-ebb6019ca123",
+        "name": "Build Supabase Workflow Rows"
+      },
+      {
+        "parameters": {
+          "fieldToSplitOut": "rows",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [
+          144,
+          -480
+        ],
+        "id": "3ca4ab9d-942e-4653-9a0a-983222132569",
+        "name": "Split Out"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://qaamdjkwixpgauftmiir.supabase.co/rest/v1/workflows?on_conflict=workflow_id",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apikey",
+                "value": "sb_secret_WQkqPkbYivqHEXO9hTIPFQ_siZwVJMZ"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer sb_secret_WQkqPkbYivqHEXO9hTIPFQ_siZwVJMZ"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Prefer",
+                "value": "resolution=merge-duplicates,return=minimal"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $('Build Workflow Audit Report').item.json }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          2144,
+          -480
+        ],
+        "id": "d6b06407-57b7-4677-b3da-bc0d2f14e6bc",
+        "name": "Supabase | Upsert Workflows"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 2 17 * * 1-5"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -528,
+          -480
+        ],
+        "id": "2ed93972-45d6-4913-b1fb-0987dfa10d44",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "url": "https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows?limit=250",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-N8N-API-KEY",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          -304,
+          -480
+        ],
+        "id": "61dea76c-990f-4232-bab2-15b6d38cf585",
+        "name": "n8n | List Workflows",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000
+      },
+      {
+        "parameters": {
+          "batchSize": 5,
+          "options": {}
+        },
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 3,
+        "position": [
+          368,
+          -480
+        ],
+        "id": "138efa4f-0e33-4970-8672-79189b733989",
+        "name": "Loop Over Items"
+      },
+      {
+        "parameters": {
+          "url": "=https://svsolutionarchitects.app.n8n.cloud/api/v1/workflows/{{ $json.workflow_id }}",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-N8N-API-KEY",
+                "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0ZDA5NTQ5Yy1mMDNlLTQ4MjgtYTc4ZS03OTA1NTJmZWQxOTIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzc3MzgzNTA2fQ.QnXTq60KUT8a0I8ckzsR8NFK1x0CZBPQKjGA3nyvnS0"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          592,
+          -544
+        ],
+        "id": "4d7ed12f-9f7a-4fe4-87a9-7aadea4b9c07",
+        "name": "Get Workflow Full Details"
+      },
+      {
+        "parameters": {
+          "amount": 1,
+          "unit": "minutes"
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          1040,
+          -480
+        ],
+        "id": "f9de3ae1-852b-4c74-b6df-951f68cedbf7",
+        "name": "Wait",
+        "webhookId": "3cfd5321-7053-4536-8c68-85f3643e2304"
+      },
+      {
+        "parameters": {
+          "jsCode": "return $input.all().map(item => {\n  const wf = item.json;\n\n  return {\n    json: {\n      workflow_id:         wf.id || wf.workflow_id || null,\n      version_id:          wf.versionId || wf.version_id || null,\n      workflow_name:       wf.name || wf.workflow_name || null,  // \u2190 ADD\n      active:              wf.active ?? null,                    // \u2190 ADD\n      archived:            wf.archived ?? null,                  // \u2190 ADD\n      owner_project_id:    wf.projectId || wf.ownerProjectId || wf.homeProject?.id || wf.project?.id || null, // \u2190 ADD\n      workflow_created_at: wf.createdAt || null,                 // \u2190 ADD\n      workflow_updated_at: wf.updatedAt || null,                 // \u2190 ADD\n      description:         wf.meta?.description || wf.description || null,\n      tags: (() => {\n        const raw = wf.tags;\n        if (!Array.isArray(raw)) return null;\n        const result = raw\n          .map(t => (typeof t === 'string' ? t.trim() : (t.name || t.id || '')))\n          .filter(Boolean);\n        return result.length > 0 ? result : null;\n      })(),\n    }\n  };\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          816,
+          -544
+        ],
+        "id": "16479f2a-b7cb-4f86-ad7a-55ffc259dc27",
+        "name": "Extract Description + Tags"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineByPosition",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          1488,
+          -544
+        ],
+        "id": "190e6af5-597b-483c-9432-dc73928e7514",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const wf = item.json;\n  \n  if (!wf.active) continue;\n\n  const name = wf.name || wf.workflow_name || 'untitled';\n  const slug = name\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, '-')\n    .replace(/^-|-$/g, '');\n\n  const exportPayload = {\n    name: wf.name,\n    nodes: wf.nodes || [],\n    connections: wf.connections || {},\n    settings: wf.settings || {},\n    pinData: wf.pinData || {},\n    active: wf.active,\n    tags: wf.tags || [],\n    id: wf.id,\n    meta: wf.meta || {}\n  };\n\n  results.push({\n    json: {\n      path: `workflows/${slug}.json`,\n      fileContent: JSON.stringify(exportPayload, null, 2),\n      message: `sync: ${name} (${new Date().toISOString()})`,\n      workflow_id: wf.id\n    }\n  });\n}\n\nreturn results;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          864,
+          -320
+        ],
+        "id": "45afa135-8cbc-4652-a112-002e7e5b8eef",
+        "name": "Format for GitHub"
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "file",
+          "operation": "edit",
+          "owner": {
+            "__rl": true,
+            "mode": "list",
+            "value": ""
+          },
+          "repository": {
+            "__rl": true,
+            "mode": "list",
+            "value": ""
+          }
+        },
+        "type": "n8n-nodes-base.github",
+        "typeVersion": 1.1,
+        "position": [
+          1120,
+          -320
+        ],
+        "id": "ecdd6607-f0ff-4c5a-b6ff-66d5e35c0bdc",
+        "name": "Edit a file",
+        "webhookId": "3c39593b-f223-47fc-9dd1-861e37701379",
+        "credentials": {
+          "githubOAuth2Api": {
+            "id": "czuPbHAI39gWKj97",
+            "name": "Solutions-Arch"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Get Workflow Version Details": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Build Workflow Audit Report": {
+        "main": [
+          [
+            {
+              "node": "Supabase | Upsert Workflows",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build Supabase Workflow Rows": {
+        "main": [
+          [
+            {
+              "node": "Split Out",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Out": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "n8n | List Workflows",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "n8n | List Workflows": {
+        "main": [
+          [
+            {
+              "node": "Build Supabase Workflow Rows",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Loop Over Items": {
+        "main": [
+          [],
+          [
+            {
+              "node": "Get Workflow Full Details",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Supabase | Upsert Workflows": {
+        "main": [
+          [
+            {
+              "node": "Loop Over Items",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Workflow Full Details": {
+        "main": [
+          [
+            {
+              "node": "Extract Description + Tags",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait": {
+        "main": [
+          [
+            {
+              "node": "Get Workflow Version Details",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extract Description + Tags": {
+        "main": [
+          [
+            {
+              "node": "Wait",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "Build Workflow Audit Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format for GitHub": {
+        "main": [
+          [
+            {
+              "node": "Edit a file",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

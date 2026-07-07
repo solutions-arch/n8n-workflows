@@ -1,0 +1,438 @@
+{
+  "updatedAt": "2026-07-04T13:14:17.227Z",
+  "createdAt": "2026-01-30T14:32:01.774Z",
+  "id": "L7nwRD3ubTkJVoiG",
+  "name": "[Scheduled] Limbo Notifier",
+  "description": "Sends a weekly Slack update listing all VAs currently in Limbo, including their latest client and success coach, with next-step links for endorsement back to Placements or resignation processing.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 22
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -144,
+        -16
+      ],
+      "id": "9a215b10-e2e3-4600-85c7-d993dda330de",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl5uteWre548NeMZ",
+          "mode": "list",
+          "cachedResultName": "Virtual Assistants",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl5uteWre548NeMZ"
+        },
+        "filterByFormula": "{VA Status} = \"Limbo\"",
+        "options": {
+          "fields": [
+            "Virtual Assistant",
+            "Latest Client Name",
+            "Success Coach Name"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        48,
+        -16
+      ],
+      "id": "ec467756-b699-4934-953c-ec7e0ff1c292",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Weekly Limbo VA Slack Message\n * - Code-block table layout (approved)\n * - Columns: VA Name | Latest Client | Success Coach\n * - Bench link in the intro\n * - Exits silently if no Limbo VAs\n */\n\nconst endorsementFormLink =\n  \"https://airtable.com/apptuAm73VyH7pcHA/pagLsst36e94acbZ5/form\";\n\nconst benchLink =\n  \"https://airtable.com/apptuAm73VyH7pcHA/shryEyngjQ0EsKuBf\";\n\nconst records = items.map(i => i.json);\n\n// Exit silently if no Limbo VAs\nif (records.length === 0) return [];\n\n// Helper for safe strings\nconst s = (v) => (v === undefined || v === null ? \"\" : String(v)).trim();\n\n// Build rows\nconst rows = records\n  .map(r => ({\n    name: s(r[\"Virtual Assistant\"]) || \"\u2014\",\n    client: s(r[\"Latest Client Name\"]) || \"\u2014\",\n    coach: s(r[\"Success Coach Name\"]) || \"\u2014\"\n  }))\n  .sort((a, b) => a.name.localeCompare(b.name));\n\n// Column widths (tuned for readability)\nconst W_NAME = 26;\nconst W_CLIENT = 22;\nconst W_COACH = 20;\n\nconst pad = (text, width) => {\n  const t = s(text);\n  return t.length > width\n    ? t.slice(0, width - 1) + \"\u2026\"\n    : t.padEnd(width, \" \");\n};\n\n// Build table\nconst header =\n  `${pad(\"VA Name\", W_NAME)} | ${pad(\"Latest Client\", W_CLIENT)} | ${pad(\"Success Coach\", W_COACH)}`;\n\nconst sep =\n  `${\"-\".repeat(W_NAME)}-|-${\"-\".repeat(W_CLIENT)}-|-${\"-\".repeat(W_COACH)}`;\n\nconst lines = rows.map(r =>\n  `${pad(r.name, W_NAME)} | ${pad(r.client, W_CLIENT)} | ${pad(r.coach, W_COACH)}`\n);\n\n// Wrap in Slack code block\nconst tableBlock = [\"```\", header, sep, ...lines, \"```\"].join(\"\\n\");\n\n// Slack blocks\nconst blocks = [\n  {\n    type: \"section\",\n    text: {\n      type: \"mrkdwn\",\n      text:\n`Hi Coaches, here are the Virtual Assistants currently still in *Limbo*.\nSee them <${benchLink}|here> along with the Bench VAs.`\n    }\n  },\n  {\n    type: \"section\",\n    text: {\n      type: \"mrkdwn\",\n      text: tableBlock\n    }\n  },\n  { type: \"divider\" },\n  {\n    type: \"section\",\n    text: {\n      type: \"mrkdwn\",\n      text:\n`*Next steps:*\n\u2022 If a VA is ready for endorsement back to Placements, please submit the request <${endorsementFormLink}|here>.\n\u2022 If a VA is for resignation, please reply directly in this thread and proceed with the full system sweep and all remaining required tasks. Once completed, the VA will be tagged as *Inactive*.\n\nThank you.`\n    }\n  }\n];\n\nreturn [{ json: { blocks } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        -16
+      ],
+      "id": "438a8f6f-5574-4360-9488-6f5b398944a3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json; charset=utf-8"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "C053KLFLVFU"
+            },
+            {
+              "name": "blocks",
+              "value": "={{$json.blocks}}"
+            },
+            {
+              "name": "text",
+              "value": "Weekly Limbo VA Update"
+            },
+            {
+              "name": "unfurl_links",
+              "value": "false"
+            },
+            {
+              "name": "unfurl_media",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        464,
+        -16
+      ],
+      "id": "191f0056-5ed8-4554-8d42-3f122304d392",
+      "name": "HTTP Request"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "25d88849-1fed-4266-9ba7-e1659f868627",
+  "activeVersionId": "25d88849-1fed-4266-9ba7-e1659f868627",
+  "versionCounter": 159,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-01-30T14:32:01.784Z",
+      "createdAt": "2026-01-30T14:32:01.784Z",
+      "role": "workflow:owner",
+      "workflowId": "L7nwRD3ubTkJVoiG",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:14:17.227Z",
+    "createdAt": "2026-07-04T13:14:17.227Z",
+    "versionId": "25d88849-1fed-4266-9ba7-e1659f868627",
+    "workflowId": "L7nwRD3ubTkJVoiG",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  5
+                ],
+                "triggerAtHour": 22
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -144,
+          -16
+        ],
+        "id": "9a215b10-e2e3-4600-85c7-d993dda330de",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tbl5uteWre548NeMZ",
+            "mode": "list",
+            "cachedResultName": "Virtual Assistants",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl5uteWre548NeMZ"
+          },
+          "filterByFormula": "{VA Status} = \"Limbo\"",
+          "options": {
+            "fields": [
+              "Virtual Assistant",
+              "Latest Client Name",
+              "Success Coach Name"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          48,
+          -16
+        ],
+        "id": "ec467756-b699-4934-953c-ec7e0ff1c292",
+        "name": "Search records",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "/**\n * Weekly Limbo VA Slack Message\n * - Code-block table layout (approved)\n * - Columns: VA Name | Latest Client | Success Coach\n * - Bench link in the intro\n * - Exits silently if no Limbo VAs\n */\n\nconst endorsementFormLink =\n  \"https://airtable.com/apptuAm73VyH7pcHA/pagLsst36e94acbZ5/form\";\n\nconst benchLink =\n  \"https://airtable.com/apptuAm73VyH7pcHA/shryEyngjQ0EsKuBf\";\n\nconst records = items.map(i => i.json);\n\n// Exit silently if no Limbo VAs\nif (records.length === 0) return [];\n\n// Helper for safe strings\nconst s = (v) => (v === undefined || v === null ? \"\" : String(v)).trim();\n\n// Build rows\nconst rows = records\n  .map(r => ({\n    name: s(r[\"Virtual Assistant\"]) || \"\u2014\",\n    client: s(r[\"Latest Client Name\"]) || \"\u2014\",\n    coach: s(r[\"Success Coach Name\"]) || \"\u2014\"\n  }))\n  .sort((a, b) => a.name.localeCompare(b.name));\n\n// Column widths (tuned for readability)\nconst W_NAME = 26;\nconst W_CLIENT = 22;\nconst W_COACH = 20;\n\nconst pad = (text, width) => {\n  const t = s(text);\n  return t.length > width\n    ? t.slice(0, width - 1) + \"\u2026\"\n    : t.padEnd(width, \" \");\n};\n\n// Build table\nconst header =\n  `${pad(\"VA Name\", W_NAME)} | ${pad(\"Latest Client\", W_CLIENT)} | ${pad(\"Success Coach\", W_COACH)}`;\n\nconst sep =\n  `${\"-\".repeat(W_NAME)}-|-${\"-\".repeat(W_CLIENT)}-|-${\"-\".repeat(W_COACH)}`;\n\nconst lines = rows.map(r =>\n  `${pad(r.name, W_NAME)} | ${pad(r.client, W_CLIENT)} | ${pad(r.coach, W_COACH)}`\n);\n\n// Wrap in Slack code block\nconst tableBlock = [\"```\", header, sep, ...lines, \"```\"].join(\"\\n\");\n\n// Slack blocks\nconst blocks = [\n  {\n    type: \"section\",\n    text: {\n      type: \"mrkdwn\",\n      text:\n`Hi Coaches, here are the Virtual Assistants currently still in *Limbo*.\nSee them <${benchLink}|here> along with the Bench VAs.`\n    }\n  },\n  {\n    type: \"section\",\n    text: {\n      type: \"mrkdwn\",\n      text: tableBlock\n    }\n  },\n  { type: \"divider\" },\n  {\n    type: \"section\",\n    text: {\n      type: \"mrkdwn\",\n      text:\n`*Next steps:*\n\u2022 If a VA is ready for endorsement back to Placements, please submit the request <${endorsementFormLink}|here>.\n\u2022 If a VA is for resignation, please reply directly in this thread and proceed with the full system sweep and all remaining required tasks. Once completed, the VA will be tagged as *Inactive*.\n\nThank you.`\n    }\n  }\n];\n\nreturn [{ json: { blocks } }];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          256,
+          -16
+        ],
+        "id": "438a8f6f-5574-4360-9488-6f5b398944a3",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.postMessage",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer xoxb-3756807352897-9474092049751-GVheJUYKGY7sv8u23vfyhVNi"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "channel",
+                "value": "C053KLFLVFU"
+              },
+              {
+                "name": "blocks",
+                "value": "={{$json.blocks}}"
+              },
+              {
+                "name": "text",
+                "value": "Weekly Limbo VA Update"
+              },
+              {
+                "name": "unfurl_links",
+                "value": "false"
+              },
+              {
+                "name": "unfurl_media",
+                "value": "false"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          464,
+          -16
+        ],
+        "id": "191f0056-5ed8-4554-8d42-3f122304d392",
+        "name": "HTTP Request"
+      }
+    ],
+    "connections": {
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Search records",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search records": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

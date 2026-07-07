@@ -1,0 +1,1072 @@
+{
+  "updatedAt": "2026-02-20T23:04:01.000Z",
+  "createdAt": "2026-02-20T22:33:47.637Z",
+  "id": "6C9dhGvF9xoINpwE",
+  "name": "Valley Roundtable",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c7d5bd15-f206-48cd-917b-e02f0b63010f",
+              "leftValue": "={{ $json.body.data.campaign.name }}",
+              "rightValue": "ROUNDTABLE INVITE - REAL ESTATE - 500k+ REV",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c763e756-dc33-4652-9a21-e9a026eedc52",
+              "leftValue": "={{ $json.body.data.campaign.name }}",
+              "rightValue": "ROUNDTABLE INVITE - FEB 25 - REAL ESTATE",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "01fc378a-6b81-4b66-8e96-c2c9d872624e",
+              "leftValue": "={{ $json.body.data.campaign.name }}",
+              "rightValue": "ROUNDTABLE INVITE - FEB 25 - REAL ESTATE (PT 2)",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        256,
+        0
+      ],
+      "id": "b682e6a3-065b-4b9b-b8ca-bf85cb47b833",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "9287c3f2-5d77-4c8a-94a5-7cdc8462665f",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        0
+      ],
+      "id": "d20b02b3-957c-4a05-b694-be4187c8d90b",
+      "name": "Webhook: Ember",
+      "webhookId": "9287c3f2-5d77-4c8a-94a5-7cdc8462665f"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        208
+      ],
+      "id": "e5c08ea7-a873-4aed-87d5-f5572d62698b",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.data.reply.text_body }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert email reply classifier specializing in roundtable event invitations.\n\nAnalyze the email reply and return ONLY this exact format, nothing else:\n\nclassification: [Positive/False Positive/Negative]\nactual_reply: [extracted reply text]\nreasoning: [one sentence]\nred_flags: [concerns or None]\n\nCLASSIFICATION RULES:\n- Positive: Genuine interest, confirmed attendance, or asking for more details before committing\n- False Positive: Seems positive but sarcastic, contradictory, or confused about their role (e.g. asking about speaking fees, \"sure but I won't show up\")\n- Negative: Clear rejection, unsubscribe request, or out-of-office with no actual reply\n\nEXTRACTING ACTUAL REPLY \u2014 strip out everything below, keep only the prospect's words:\n- Email signatures (name, title, phone, address, company)\n- Quoted thread (everything after \"-----Original Message-----\" or \"On [date]... wrote:\")\n- Lines starting with \">\"\n- Unsubscribe links\n- \"Sent from my iPhone/Outlook\" footers"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        640,
+        0
+      ],
+      "id": "a1e17807-58e7-4a83-9d03-d8d903c5a1ec",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"classification\": {\n    \"type\": \"string\",\n    \"description\": \"Positive, False Positive, or Negative\"\n  },\n  \"actual_reply\": {\n    \"type\": \"string\",\n    \"description\": \"The prospect's exact words only, no signatures or quoted thread\"\n  },\n  \"reasoning\": {\n    \"type\": \"string\",\n    \"description\": \"One sentence explanation of the classification\"\n  },\n  \"red_flags\": {\n    \"type\": \"string\",\n    \"description\": \"Any concerns based on the reply, or None\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        848,
+        208
+      ],
+      "id": "439f8f7d-5c5c-4e4c-9df4-b7c296484140",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7d6025bb-9bb2-4988-8bd3-6e168ee51330"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8c163c6b-364e-402c-b895-a4d8dd513084",
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "False Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "False Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fb3f1ecd-969c-4a1b-8c9f-aafb75cd5f33",
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "Negative",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Negative"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        992,
+        -16
+      ],
+      "id": "faa2594b-6f72-483b-8700-4f8684f9c2fc",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+            "Tool": "Ember",
+            "Status": "Interested (Warm)",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+            "Date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+            "Company Name": "={{ $('Webhook: Ember').item.json.body.data.lead.company }}",
+            "Email": "={{ $('Filter').item.json.body.data.lead.email }}",
+            "Call Notes": "=",
+            "Replies": "={{ $json.output.actual_reply.description }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        -272
+      ],
+      "id": "c4fd3ee1-12d3-4013-9988-f747cb103e22",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+        "format": "=MM/dd/yyyy hh:mm a",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        -272
+      ],
+      "id": "300e499f-7971-4331-9e89-170d4e586222",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ADVRXNH2R",
+          "mode": "id"
+        },
+        "text": "=* New Positive Lead* \n*Source:* Ember \n*Name:* {{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}\n*Message:* {{ $('Switch').item.json.output.actual_reply.description }}\n*Reasoning:* {{ $('Switch').item.json.output.reasoning.description }}\n*Date:* {{ $json.formattedDate }}",
+        "otherOptions": {},
+        "path": "d8a93bec-6492-429a-86c1-cbcb3ad6d0e2"
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1680,
+        -272
+      ],
+      "id": "539ef978-c955-4df3-a518-4d008796aaa8",
+      "name": "Send a message",
+      "webhookId": "d8a93bec-6492-429a-86c1-cbcb3ad6d0e2",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+            "Tool": "Ember",
+            "Status": "Manual Review",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+            "Date": "={{ $('Webhook: Ember').item.json.body.data.reply.date_received }}",
+            "Company Name": "={{ $('Webhook: Ember').item.json.body.data.lead.company }}",
+            "Email": "={{ $('Filter').item.json.body.data.lead.email }}",
+            "Call Notes": "=",
+            "Replies": "={{ $json.output.actual_reply.description }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "db165af3-b115-4b41-acff-5797eda5bfcf",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1870085706,
+          "mode": "list",
+          "cachedResultName": "Not interested",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=1870085706"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Replies": "={{ $('AI Agent').item.json.output.actual_reply.description }}",
+            "Prospect Name": "={{ $('Webhook: Ember').item.json.body.data.lead.first_name }} {{ $('Webhook: Ember').item.json.body.data.lead.last_name }}",
+            "Status": "Declined Invite",
+            "Tool": "Ember",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook: Ember').item.json.body.data.sender_email.email }}",
+            "Date": "={{ $('Filter').item.json.body.data.reply.date_received }}",
+            "Company Name": "={{ $('Filter').item.json.body.data.lead.company }}",
+            "Email": "={{ $('Filter').item.json.body.data.lead.email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1280,
+        240
+      ],
+      "id": "3668c545-5b8c-4edf-a86e-60dea4426297",
+      "name": "Append row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: Ember": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook: Ember": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "GuzzleHttp/7",
+            "content-length": "11622",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "65.109.69.87",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "FI",
+            "cf-ray": "9d0fb538270d9be8-FRA",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "65.109.69.87, 172.70.251.193",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-qvbjs",
+            "x-is-trusted": "yes",
+            "x-real-ip": "65.109.69.87"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": {
+              "type": "LEAD_REPLIED",
+              "name": "Lead Replied",
+              "instance_url": "https://dedi.emailbison.com",
+              "workspace_id": 1,
+              "workspace_name": "Cody's Team"
+            },
+            "data": {
+              "reply": {
+                "id": 2,
+                "uuid": "4659268b-a861-4583-a6ea-3bc772084621",
+                "email_subject": "Re: test subject",
+                "interested": false,
+                "automated_reply": false,
+                "html_body": "<div dir=\"ltr\">im very interested</div><br><div class=\"gmail_quote\"><div dir=\"ltr\" class=\"gmail_attr\">On Fri, Aug 2, 2024 at 2:08\u202fAM Cody &lt;<a href=\"mailto:cody@emailguardalpha.com\">cody@emailguardalpha.com</a>&gt; wrote:<br></div><blockquote class=\"gmail_quote\" style=\"margin:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\"><div>test</div><div style=\"margin-top:10px;margin-bottom:10px\">To unsubscribe, please click <a href=\"https://trial.sasmail.io/t/u/9caaea06-9b87-47be-bfa9-5d7ab0bc665a\" target=\"_blank\">here</a></div><img src=\"https://trial.sasmail.io/t/o/9caaea06-9b87-47be-bfa9-5d7ab0bc665a\">\r\n\r\n</blockquote></div>",
+                "text_body": "im not interested\r\n\r\nOn Fri, Aug 2, 2024 at 2:08\u202fAM Cody <cody@emailguardalpha.com> wrote:\r\n\r\n> test\r\n> To unsubscribe, please click here\r\n> <https://trial.sasmail.io/t/u/9caaea06-9b87-47be-bfa9-5d7ab0bc665a>\r\n>",
+                "raw_body": "--000000000000d9c7cc061ead2c78\r\nContent-Type: text/plain; charset=\"UTF-8\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\nim very interested\r\n\r\nOn Fri, Aug 2, 2024 at 2:08=E2=80=AFAM Cody <cody@emailguardalpha.com> wrot=\r\ne:\r\n\r\n> test\r\n> To unsubscribe, please click here\r\n> <https://trial.sasmail.io/t/u/9caaea06-9b87-47be-bfa9-5d7ab0bc665a>\r\n>\r\n\r\n--000000000000d9c7cc061ead2c78\r\nContent-Type: text/html; charset=\"UTF-8\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n<div dir=3D\"ltr\">im very interested</div><br><div class=3D\"gmail_quote\"><di=\r\nv dir=3D\"ltr\" class=3D\"gmail_attr\">On Fri, Aug 2, 2024 at 2:08=E2=80=AFAM C=\r\nody &lt;<a href=3D\"mailto:cody@emailguardalpha.com\">cody@emailguardalpha.co=\r\nm</a>&gt; wrote:<br></div><blockquote class=3D\"gmail_quote\" style=3D\"margin=\r\n:0px 0px 0px 0.8ex;border-left:1px solid rgb(204,204,204);padding-left:1ex\"=\r\n><div>test</div><div style=3D\"margin-top:10px;margin-bottom:10px\">To unsubs=\r\ncribe, please click <a href=3D\"https://trial.sasmail.io/t/u/9caaea06-9b87-4=\r\n7be-bfa9-5d7ab0bc665a\" target=3D\"_blank\">here</a></div><img src=3D\"https://=\r\ntrial.sasmail.io/t/o/9caaea06-9b87-47be-bfa9-5d7ab0bc665a\">\r\n\r\n</blockquote></div>\r\n\r\n--000000000000d9c7cc061ead2c78--\r\n",
+                "headers": "RGVsaXZlcmVkLVRvOiBjb2R5QGVtYWlsZ3VhcmRhbHBoYS5jb20NClJlY2VpdmVkOiBieSAyMDAyOmEwNTo2MjE0OjE3MDpiMDo2YjU6ZmE4OTpiODYxIHdpdGggU01UUCBpZCB5MTZjc3AxNDgxMjIxcXZzOw0KIFRodSwgMSBBdWcgMjAyNCAyMzowOTo1MSAtMDcwMCAoUERUKQ0KWC1SZWNlaXZlZDogYnkgMjAwMjphMDU6NjgwODoxM2NkOmIwOjNkYjozMzRjOjk3Njggd2l0aCBTTVRQIGlkDQogNTYxNDYyMjgxMmY0Ny0zZGI1NTdmZTY3Ym1yMjkxNzIzNGI2ZS4xLjE3MjI1Nzg5OTE3NjA7IFRodSwgMDEgQXVnIDIwMjQNCiAyMzowOTo1MSAtMDcwMCAoUERUKQ0KQVJDLVNlYWw6IGk9MTsgYT1yc2Etc2hhMjU2OyB0PTE3MjI1Nzg5OTE7IGN2PW5vbmU7IGQ9Z29vZ2xlLmNvbTsNCiBzPWFyYy0yMDE2MDgxNjsNCiBiPXpzaXJPREVDNmo5ZWxnWitSMmxWQTJ0WUFCbnVNN3E1ak0rTDhzemdnMHlScGt4MjBrd1ZvNG04a3dIYVc5QlVOVQ0KIFJaSnc3anM0WlluNTg0enQxSHFnNG12NllweTU2Nzk3SGdXNHVIUllSVEh1UGJJa284VW16YmpVMURyNTNqQnVlWitzDQogcVdlalRFQnRVeHEzVE94Y0NocWprd1dpOHhTZ2tyU3YwYzYwRFBkL3Vtbjlya05KdWFzYUxGRmtzVWV0c1VMNWV5N3UNCiAxTkljTEtNSUpWNVIyMnNZMnhTaGs3TUpTdXl6QjFWOTg1UDZKckhsaW5OT3lwa2J4ZlJvb2VBMVhMYjFVV3VLM09hdA0KIFdHMVFjam1ZUk8xZEUzUkFlcVRwWFdVRG15cC9TYlE5SXpLUGZLR2JablBKS3g5TFV6UUhZQ0tTaEpCelVXbXg5WWxLIFZxQkE9PQ0KQVJDLU1lc3NhZ2UtU2lnbmF0dXJlOiBpPTE7IGE9cnNhLXNoYTI1NjsgYz1yZWxheGVkL3JlbGF4ZWQ7IGQ9Z29vZ2xlLmNvbTsNCiBzPWFyYy0yMDE2MDgxNjsNCiBoPXRvOnN1YmplY3Q6bWVzc2FnZS1pZDpkYXRlOmZyb206aW4tcmVwbHktdG86cmVmZXJlbmNlczptaW1lLXZlcnNpb24NCiA6ZGtpbS1zaWduYXR1cmU7IGJoPXFUYUdQeFFJT05LYk9aR2J6ckovQ1N0TDN4aFd0UnlRWXBOVnd4RTNPalU9Ow0KIGZoPU5hbzF1ZWZkWUN0UThiZkNRSVJrN2JnTS9qYTBwRkRlMm5EQ3NJSE00Nms9Ow0KIGI9Rms2WDJ1NHorVVlnaWU4MUF6K1JndS9pMmlxTUc0K2VLMjZqOFVyQXRzc0U4QmZIRUJndzhZMU51R1psYVpmaHptDQogNzArQitxcGlsR29hTlBRTWxxV3lJNitrcFluTk1ZdUxQdWlJOFJHYko0ZVJLdkZCYlZzaXhua2NKcjJUWTV6V3Y4VzkNCiBJZ2dhNGVzZXB4NkFYYVBLeHRDMXRmeS9odDl6MVZrNTNnQVZQUHlhZkN1KzFZdDRGZGVrRkdvZWwvNTBZNWduQmVCUw0KIEQ5WWhuMlNnTFlJSVQwcThvVWRqcUwzWUxwRWFmOWRwK3lwWWxZdnRwRVR5SnJPOGtuR0o4RFJHdkZldE9iZEVMQ0k3DQogZmwvQ0NmTm83NHFEcUZYQUYvSTNPSjRwK1NWb2pHOFM4cHVHQno2WVBCa2pOd0tVQUdYWThuWTU5K243M0s3ZlRRdEQgTUR0Zz09Ow0KIGRhcmE9Z29vZ2xlLmNvbQ0KQVJDLUF1dGhlbnRpY2F0aW9uLVJlc3VsdHM6IGk9MTsgbXguZ29vZ2xlLmNvbTsgZGtpbT1wYXNzDQogaGVhZGVyLmk9QGVtYWlsZ3VhcmQtaW8uMjAyMzA2MDEuZ2FwcHNzbXRwLmNvbSBoZWFkZXIucz0yMDIzMDYwMQ0KIGhlYWRlci5iPSJDek9tRXJVLyI7IHNwZj1wYXNzIChnb29nbGUuY29tOiBkb21haW4gb2YgaGFzc2FuQGVtYWlsZ3VhcmQuaW8NCiBkZXNpZ25hdGVzIDIwOS44NS4yMjAuNDEgYXMgcGVybWl0dGVkIHNlbmRlcikNCiBzbXRwLm1haWxmcm9tPWhhc3NhbkBlbWFpbGd1YXJkLmlvOyBkbWFyYz1wYXNzIChwPU5PTkUgc3A9Tk9ORSBkaXM9Tk9ORSkNCiBoZWFkZXIuZnJvbT1lbWFpbGd1YXJkLmlvOyBkYXJhPXBhc3MgaGVhZGVyLmk9QGVtYWlsZ3VhcmRhbHBoYS5jb20NClJldHVybi1QYXRoOiA8aGFzc2FuQGVtYWlsZ3VhcmQuaW8+DQpSZWNlaXZlZDogZnJvbSBtYWlsLXNvci1mNDEuZ29vZ2xlLmNvbSAobWFpbC1zb3ItZjQxLmdvb2dsZS5jb20uDQogWzIwOS44NS4yMjAuNDFdKSBieSBteC5nb29nbGUuY29tIHdpdGggU01UUFMgaWQNCiA1NjE0NjIyODEyZjQ3LTNkYjU2M2U3ZWQ2c29yNjE1MTIzYjZlLjE4LjIwMjQuMDguMDEuMjMuMDkuNTEgZm9yDQogPGNvZHlAZW1haWxndWFyZGFscGhhLmNvbT4gKEdvb2dsZSBUcmFuc3BvcnQgU2VjdXJpdHkpOyBUaHUsIDAxIEF1ZyAyMDI0DQogMjM6MDk6NTEgLTA3MDAgKFBEVCkNClJlY2VpdmVkLVNQRjogcGFzcyAoZ29vZ2xlLmNvbTogZG9tYWluIG9mIGhhc3NhbkBlbWFpbGd1YXJkLmlvIGRlc2lnbmF0ZXMNCiAyMDkuODUuMjIwLjQxIGFzIHBlcm1pdHRlZCBzZW5kZXIpIGNsaWVudC1pcD0yMDkuODUuMjIwLjQxOw0KQXV0aGVudGljYXRpb24tUmVzdWx0czogbXguZ29vZ2xlLmNvbTsgZGtpbT1wYXNzDQogaGVhZGVyLmk9QGVtYWlsZ3VhcmQtaW8uMjAyMzA2MDEuZ2FwcHNzbXRwLmNvbSBoZWFkZXIucz0yMDIzMDYwMQ0KIGhlYWRlci5iPSJDek9tRXJVLyI7IHNwZj1wYXNzIChnb29nbGUuY29tOiBkb21haW4gb2YgaGFzc2FuQGVtYWlsZ3VhcmQuaW8NCiBkZXNpZ25hdGVzIDIwOS44NS4yMjAuNDEgYXMgcGVybWl0dGVkIHNlbmRlcikNCiBzbXRwLm1haWxmcm9tPWhhc3NhbkBlbWFpbGd1YXJkLmlvOyBkbWFyYz1wYXNzIChwPU5PTkUgc3A9Tk9ORSBkaXM9Tk9ORSkNCiBoZWFkZXIuZnJvbT1lbWFpbGd1YXJkLmlvOyBkYXJhPXBhc3MgaGVhZGVyLmk9QGVtYWlsZ3VhcmRhbHBoYS5jb20NCkRLSU0tU2lnbmF0dXJlOiB2PTE7IGE9cnNhLXNoYTI1NjsgYz1yZWxheGVkL3JlbGF4ZWQ7DQogZD1lbWFpbGd1YXJkLWlvLjIwMjMwNjAxLmdhcHBzc210cC5jb207IHM9MjAyMzA2MDE7IHQ9MTcyMjU3ODk5MTsNCiB4PTE3MjMxODM3OTE7IGRhcm49ZW1haWxndWFyZGFscGhhLmNvbTsNCiBoPXRvOnN1YmplY3Q6bWVzc2FnZS1pZDpkYXRlOmZyb206aW4tcmVwbHktdG86cmVmZXJlbmNlczptaW1lLXZlcnNpb24NCiA6ZnJvbTp0bzpjYzpzdWJqZWN0OmRhdGU6bWVzc2FnZS1pZDpyZXBseS10bzsNCiBiaD1xVGFHUHhRSU9OS2JPWkdienJKL0NTdEwzeGhXdFJ5UVlwTlZ3eEUzT2pVPTsNCiBiPUN6T21FclUvVVhobmtXa2l2V0lrdEEvV2FwNmJGNHZ5dHFOVHNjK2NMZmw5a0tING5GUE5xMVBCVzYydmtJM1hjeQ0KIFJ6U1l5aEZKaDU3UjJsbEk0b2xLdzFFaVg2dUVTU214d1E4TTJ2VFdzc1hGc2c5TnRkWkdYb0FlKzd4TTZaay9WRGFoDQogYzNiT1ZUbWR2cG5hOFJIZiswZ1RWY2J4Wm4yNXVNVU1xa0dVeWVKSDFGZWErY2pqNEhQS2dRNmgyVS9zNGFKaFZ6RlANCiBXNnBHUlJHRTYrWkhYUklPVjRxeDdZUVVWbGRiclg0UXpDbTBOTFM2YUw5KzNqL0JwYnVSdHhrdlppM2p1TDJtSmVNdQ0KIC84cFRYbjdpbVhHa0VMOWxKblc3NWcvSDVJL3Zod0hTUWw1ZWNlYzFnemtwLzZiUDd2TjI0NHhSRUloWHhmM1NuYklNIEF4Z3c9PQ0KWC1Hb29nbGUtREtJTS1TaWduYXR1cmU6IHY9MTsgYT1yc2Etc2hhMjU2OyBjPXJlbGF4ZWQvcmVsYXhlZDsgZD0xZTEwMC5uZXQ7DQogcz0yMDIzMDYwMTsgdD0xNzIyNTc4OTkxOyB4PTE3MjMxODM3OTE7DQogaD10bzpzdWJqZWN0Om1lc3NhZ2UtaWQ6ZGF0ZTpmcm9tOmluLXJlcGx5LXRvOnJlZmVyZW5jZXM6bWltZS12ZXJzaW9uDQogOngtZ20tbWVzc2FnZS1zdGF0ZTpmcm9tOnRvOmNjOnN1YmplY3Q6ZGF0ZTptZXNzYWdlLWlkOnJlcGx5LXRvOw0KIGJoPXFUYUdQeFFJT05LYk9aR2J6ckovQ1N0TDN4aFd0UnlRWXBOVnd4RTNPalU9Ow0KIGI9cEpoL2hzT1JaekIvVzRiSzRqWGVRUkIyaWsvcDRpSU1WUlZjVW1rWmVoY3FjbE4vYzV3T00vKzRCMjFuaXNjNUZXDQogaDJvcEp3VU1iSkZRbkJMbVQ5eElkVVFMNEhGVko2bU81NFBzMDRTclYySHk4bk9LS1pnU3VwMWRrd3dWRWt5dExSVi8NCiBWSEdyR3VRTlJqbHFLSDcxaStwd3FyTG9aMWF0Ty9hSmhMUitodnNIRzFQOCtKTkRxY21nS2I1KzhWQzJmdlI1K3h0Ug0KIGxad24zdWUxYU0zemNWQUhESUtHeDM2QTJZUkRpeFNxQkR0aFBUWmNNOHhGUkpYU1hmd3ZBSTA2S1o0TlBLajBka05hDQogNzI0WmNTUm9PRmVHVWpmVDJVQ01wcDhZNFV6S0RTeS9OOHU0RGhCRVF5d1VpSkVNUEMyYmw2RmpicXFKZnpGTE0rUXcgRk5pZz09DQpYLUdtLU1lc3NhZ2UtU3RhdGU6IEFPSnUwWXd4eGRMM3RrWVNtcGUydm1RVDNQVjdRYkRPR2hBcWV4WTdSYXdIdGtMK09TM2x6TTZTDQogZ245eVl2T0FsN1JUWENTeld5THozQU5HL1dhaDdXNVozOXdKVHdvRFVCWHovaFVWWFRqK0NJV3BKVDJLTG5DYXVYWlBhOWpJUFpmDQogakwrc05ZNVIyazlMcVY5RytVcTZzRDF6MncxdVRESTdYc3JWNE1LZjgyZlluM1M2clR3cz0NClgtR29vZ2xlLVNtdHAtU291cmNlOiBBR0hUK0lIb1VJbFJRZW5CR3BlL3NPVGE3WC91MFhRa0ZnNmh3WDdLaHFLMithcTloWUs1TUhYVlhoTjlhb1FzZ2E5Q09aQ3BuODhGem16Q0NQQ0ZWUWJpZmNBPQ0KWC1SZWNlaXZlZDogYnkgMjAwMjphMDU6Njg3MDphMTFiOmIwOjI2MDplZDIwOmRjOGYgd2l0aCBTTVRQIGlkDQogNTg2ZTUxYTYwZmFiZi0yNjg5MWE4OTdlMW1yMzEyNTg5NGZhYy4zLjE3MjI1Nzg5OTA4OTg7IFRodSwgMDEgQXVnIDIwMjQNCiAyMzowOTo1MCAtMDcwMCAoUERUKQ0KTUlNRS1WZXJzaW9uOiAxLjANClJlZmVyZW5jZXM6IDw5Y2FhZWEwNi05Yjg3LTQ3YmUtYmZhOS01ZDdhYjBiYzY2NWFAZW1haWxndWFyZGFscGhhLmNvbT4NCiA8OWNhYWVhMDYtOWI4Ny00N2JlLWJmYTktNWQ3YWIwYmM2NjVhQGVtYWlsZ3VhcmRhbHBoYS5jb20+DQpJbi1SZXBseS1UbzogPDljYWFlYTA2LTliODctNDdiZS1iZmE5LTVkN2FiMGJjNjY1YUBlbWFpbGd1YXJkYWxwaGEuY29tPg0KRnJvbTogSGFzc2FuIEtoYW4gPGhhc3NhbkBlbWFpbGd1YXJkLmlvPg0KRGF0ZTogRnJpLCAyIEF1ZyAyMDI0IDAyOjA5OjQwIC0wNDAwDQpNZXNzYWdlLUlEOiA8Q0FIQzJ6Q0ZBcUtyeTQxcjQtdmNLQ1A0V3ZhRndwOEJHMTdlUTlQSEt3a2dzZXhjYm13QG1haWwuZ21haWwuY29tPg0KU3ViamVjdDogUmU6IGZpcnN0IGJpZyBib3kgYmFkDQpUbzogQ29keSA8Y29keUBlbWFpbGd1YXJkYWxwaGEuY29tPg0KQ29udGVudC1UeXBlOiBtdWx0aXBhcnQvYWx0ZXJuYXRpdmU7IGJvdW5kYXJ5PSIwMDAwMDAwMDAwMDBkOWM3Y2MwNjFlYWQyYzc4Ig0KDQo=",
+                "date_received": "2024-08-02T02:09:40.000000Z",
+                "from_name": "Cody Smith",
+                "from_email_address": "cody@emailguard.io",
+                "primary_to_email_address": "cody@emailguardalpha.com",
+                "to": null,
+                "cc": null,
+                "bcc": null,
+                "parent_id": null,
+                "type": "Tracked Reply",
+                "folder": "Inbox",
+                "raw_message_id": "<8be8h930-b391-9381-c328-2902b4826r83@emailguard.io>",
+                "created_at": "2024-08-02T06:10:05.000000Z",
+                "updated_at": "2024-08-02T06:10:05.000000Z",
+                "attachments": [
+                  {
+                    "id": 2,
+                    "uuid": "9f2b92cf-2d84-4637-9612-20ea343b166f",
+                    "reply_id": 2,
+                    "file_name": "sample_file.pdf",
+                    "download_url": "http://bisondownloads.test/reply-attachments/9f2b92cf-2d84-4637-9612-20ea343b166f/download%7D?signature=571041e2d67669d76721da7d4eaf3af2b99943ddc67f4530f0567eb813818154",
+                    "created_at": "2025-06-16T17:29:14.000000Z",
+                    "updated_at": "2025-06-16T17:29:14.000000Z"
+                  }
+                ]
+              },
+              "campaign_event": {
+                "id": 6,
+                "type": "replied",
+                "created_at_local": "2024-08-02T06:09:35.000000Z",
+                "local_timezone": "America/New_York",
+                "created_at": "2024-08-02T06:09:35.000000Z"
+              },
+              "lead": {
+                "id": 1,
+                "email": "cody@emailguard.io",
+                "first_name": "Cody",
+                "last_name": "Smith",
+                "status": "unverified",
+                "title": "CEO",
+                "company": "EmailGuard Inc.",
+                "custom_variables": [
+                  {
+                    "name": "phone number",
+                    "value": "19999999999"
+                  },
+                  {
+                    "name": "personalized line",
+                    "value": "Noticed that EmailGuard is doing very well in the health monitoring space"
+                  }
+                ],
+                "emails_sent": 2,
+                "opens": 0,
+                "unique_opens": 0,
+                "replies": 1,
+                "unique_replies": 1,
+                "bounces": 0
+              },
+              "campaign": {
+                "id": 2,
+                "name": "ROUNDTABLE INVITE - REAL ESTATE - 500k+ REV"
+              },
+              "scheduled_email": {
+                "id": 4,
+                "sequence_step_id": 2,
+                "sequence_step_order": 1,
+                "sequence_step_variant": 2,
+                "status": "sent",
+                "scheduled_date_est": "2024-08-02T15:33:00.000000Z",
+                "scheduled_date_local": "2024-08-02T15:33:00.000000Z",
+                "local_timezone": "America/New_York",
+                "sent_at": "2024-08-02T06:08:38.000000Z",
+                "opens": 1,
+                "replies": 1,
+                "unique_opens": 1,
+                "unique_replies": 1,
+                "interested": null,
+                "raw_message_id": "<8be8h930-b391-9381-c328-2902b4826r83@emailguardalpha.com>"
+              },
+              "sender_email": {
+                "id": 3,
+                "name": "Cody ",
+                "email": "cody@emailguardalpha.com",
+                "status": "connected",
+                "type": "google_workspace_oauth",
+                "daily_limit": 10,
+                "emails_sent": 1,
+                "replied": 1,
+                "opened": 1,
+                "unsubscribed": 0,
+                "bounced": 0,
+                "unique_replies": 1,
+                "unique_opens": 1,
+                "total_leads_contacted": 1,
+                "interested": 0,
+                "created_at": "2024-08-02T06:06:40.000000Z",
+                "updated_at": "2024-08-02T06:10:05.000000Z"
+              }
+            }
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook-test/5c8a9812-2e51-4e30-bbe6-084ef31c0024",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "versionId": "70621370-7eac-4c60-bc0b-e7ba3b929af0",
+  "activeVersionId": null,
+  "versionCounter": 9,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-20T22:33:47.642Z",
+      "createdAt": "2026-02-20T22:33:47.642Z",
+      "role": "workflow:owner",
+      "workflowId": "6C9dhGvF9xoINpwE",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

@@ -1,0 +1,1669 @@
+{
+  "updatedAt": "2026-07-04T12:56:42.211Z",
+  "createdAt": "2026-04-06T18:11:24.548Z",
+  "id": "PZy4PZhhDmZtTBTm",
+  "name": "[Scheduled] Reporting",
+  "description": "",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6c5ce8db-0453-4309-b0bc-003979ef8d79",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 334,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        -128
+      ],
+      "id": "30827281-a802-4ddd-8385-dc02471ef3e8",
+      "name": "Filter Clean Timestamp",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const chicagoTimeZone = 'America/Chicago';\n\n// Use DateTime.now() instead of today() in the Code Node\nconst threshold = DateTime.now().setZone(chicagoTimeZone).startOf('day');\n\nconsole.log('Chicago Threshold:', threshold.toString());\n\n// Filter the incoming items\nreturn items.filter(item => {\n  try {\n    const ts = item.json.Timestamp;\n    \n    if (!ts) return false;\n\n    // Parse the ISO string (e.g., \"2026-04-02T22:46:58.556+08:00\")\n    const itemDate = DateTime.fromISO(ts).setZone(chicagoTimeZone);\n\n    // Keep items where the date is greater than or equal to Chicago's start of day\n    return itemDate >= threshold;\n    \n  } catch (error) {\n    // This prevents one bad row from stopping the whole workflow\n    return false; \n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -128
+      ],
+      "id": "f8663ca5-b212-4d8a-98d8-189ca87ae32e",
+      "name": "Get today's logs",
+      "alwaysOutputData": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all users from the incoming items\nconst users = items.map(item => item.json.User);\n\n// Use a Set to store only unique email addresses\nconst uniqueUsers = new Set(users);\n\n// The number of items in the array is the total number of requests\nconst totalRequests = items.length;\n\n// Return the result as a single object for the next node\nreturn [\n  {\n    json: {\n      unique_user_count: uniqueUsers.size,\n      total_requests: totalRequests,\n      unique_users_list: Array.from(uniqueUsers) // Optional: list of the actual users\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -32
+      ],
+      "id": "30278499-5f1b-4861-b3bb-748749569cb8",
+      "name": "Fetch metadata",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "=<!channel>, to finish up the SV Chatbot daily reporting for *{{ $today.setZone('America/Chicago').toFormat('MMMM d, yyyy') }}*, kindly populate the <https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2/viwoJLvTomAdeUh3F?blocks=hide|SVPC Daily Reporting> from the details found on the <https://app.portkey.ai/organisation/dd09d478-c5a9-4941-85da-e611c55ea530/analytics?apiKeyList=f7e72ae8-9037-454d-9351-097d63386831|Portkey v0.1 dashboard> and the <https://app.portkey.ai/organisation/dd09d478-c5a9-4941-85da-e611c55ea530/analytics?apiKeyList=f3fc99e6-7400-4312-a4f3-38c4f8eacd2b|Portkey v0.2 dashboard>.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1776,
+        -32
+      ],
+      "id": "b56cc4cd-4246-43c0-82d0-bbcbfda2a6e8",
+      "name": "Send Slack reminder",
+      "webhookId": "7585a36c-6f41-4767-8a41-e6ad1df66495",
+      "executeOnce": true,
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        -32
+      ],
+      "id": "610894de-f8a2-42d4-8c75-bc1c9952f936",
+      "name": "Wait",
+      "webhookId": "cd43a837-30a0-4640-bb71-5e38bde01bee"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1vJ-Cmu23sV_hw7HZ9m0uhRGdyBqUV83QwJVLj3B2Ow8",
+          "mode": "list",
+          "cachedResultName": "SV Chatbot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1vJ-Cmu23sV_hw7HZ9m0uhRGdyBqUV83QwJVLj3B2Ow8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Bot Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1vJ-Cmu23sV_hw7HZ9m0uhRGdyBqUV83QwJVLj3B2Ow8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -128
+      ],
+      "id": "f03d8f5c-5f10-44a7-8ff6-17bdb66c5206",
+      "name": "Get logs",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "triggerAtHour": 5,
+              "triggerAtMinute": 55
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -128
+      ],
+      "id": "0726e76e-8ee5-4847-a486-555d473e285b",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3acb94b5-6a39-4b68-9973-72b42a71ef1e",
+              "leftValue": "={{ $json.isEmpty() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -336
+      ],
+      "id": "6de75eb1-45a8-4afd-acd0-66e2f6bcf8c3",
+      "name": "If",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AKHLLU77D",
+          "mode": "id"
+        },
+        "text": "=*\ud83d\udcca SVPC Chatbot Daily Summary | {{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}*\n\n*v0.3*\n\u2022 *Total Requests:* `Ongoing Testing`\n\u2022 *Unique Users:* `Ongoing Testing`\n\u2022 *Token Usage:* `{{ $json.v03.token_usage_count }}`\n\u2022 *Estimated Cost:* `${{ $json.v03.token_usage_cost }}`\n\u2022 *Average # of Tokens per Request:* `{{ // Rounds and formats to \"0.00\"\n($json.v03.token_usage_count / $json.v03.total_requests).toFixed(2)}}`",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2800,
+        -160
+      ],
+      "id": "63796f84-975c-4951-9c20-d2e8069ddda0",
+      "name": "Send daily summary",
+      "webhookId": "786c50f4-ac28-4649-bada-fa63904ae6b5",
+      "executeOnce": true,
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AKHLLU77D",
+          "mode": "id"
+        },
+        "text": "=*\ud83d\udcca SV Chatbot Daily Summary | {{ $today.format('MMMM d, yyyy') }}*\n\nNo activities logged.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1568,
+        -480
+      ],
+      "id": "8765c16c-e22d-44a9-9f04-6e5dbd965ba8",
+      "name": "Send no activities",
+      "webhookId": "786c50f4-ac28-4649-bada-fa63904ae6b5",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "comment",
+        "commentOn": "task",
+        "id": "86b8x28xh",
+        "commentText": "=*\ud83d\udcca SVPC Chatbot Daily Summary | {{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}*\n\n*v0.3*\n\u2022 *Total Requests:* `Ongoing Testing`\n\u2022 *Unique Users:* `Ongoing Testing`\n\u2022 *Token Usage:* `{{ $json.v03.token_usage_count }}`\n\u2022 *Estimated Cost:* `${{ $json.v03.token_usage_cost }}`\n\u2022 *Average # of Tokens per Request:* `{{ // Rounds and formats to \"0.00\"\n($json.v03.token_usage_count / $json.v03.total_requests).toFixed(2)}}`",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        2800,
+        128
+      ],
+      "id": "c64efe3b-dee3-4a07-87fd-d748aa201b6c",
+      "name": "Create a comment",
+      "executeOnce": true,
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "pov43Hd26gF6W6Cp",
+          "name": "ClickUp OAuth2 Sol"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f52738d9-a880-47f2-a47b-3410267f0429",
+              "name": "unique_user_count",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "e5bec142-4da1-4038-919b-cc1ac5a8b121",
+              "name": "total_requests",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "423af58a-2d48-4c68-a3e8-5bc2ca0eec7c",
+              "name": "token_usage_count",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "5959f4e6-f954-4467-aec4-bfdf3083a53f",
+              "name": "token_usage_cost",
+              "value": 0,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        -480
+      ],
+      "id": "1fbd7253-8a21-45af-97dc-c1cbc2652864",
+      "name": "Edit Fields",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblEGEyueFFS5vIe2",
+          "mode": "list",
+          "cachedResultName": "SVPC Daily Reporting",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "unique_user_count": 0,
+            "total_requests": 0,
+            "token_usage_count": 0,
+            "token_usage_cost": 0,
+            "date": "={{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}",
+            "svpc_version": "SVPC 0.1"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "unique_user_count",
+              "displayName": "unique_user_count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "total_requests",
+              "displayName": "total_requests",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "token_usage_count",
+              "displayName": "token_usage_count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "token_usage_cost",
+              "displayName": "token_usage_cost",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "svpc_version",
+              "displayName": "svpc_version",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "SVPC 0.1",
+                  "value": "SVPC 0.1"
+                },
+                {
+                  "name": "SVPC 0.2",
+                  "value": "SVPC 0.2"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        -480
+      ],
+      "id": "b0aa0264-c11a-4eb3-a39f-8710ff3836d8",
+      "name": "Post 0 activities",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblEGEyueFFS5vIe2",
+          "mode": "list",
+          "cachedResultName": "SVPC Daily Reporting",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}",
+            "svpc_version": "SVPC 0.3"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "unique_user_count",
+              "displayName": "unique_user_count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "total_requests",
+              "displayName": "total_requests",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "token_usage_count",
+              "displayName": "token_usage_count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "token_usage_cost",
+              "displayName": "token_usage_cost",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "svpc_version",
+              "displayName": "svpc_version",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "SVPC 0.1",
+                  "value": "SVPC 0.1"
+                },
+                {
+                  "name": "SVPC 0.2",
+                  "value": "SVPC 0.2"
+                },
+                {
+                  "name": "SVPC 0.3",
+                  "value": "SVPC 0.3"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1344,
+        176
+      ],
+      "id": "e70cd6d7-89dc-4414-b50a-ada93be03b48",
+      "name": "Post activities v0.2",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblEGEyueFFS5vIe2",
+          "mode": "list",
+          "cachedResultName": "SVPC Daily Reporting",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2"
+        },
+        "id": "={{ $('Post activities v0.2').item.json.id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2208,
+        96
+      ],
+      "id": "f84aeb09-ed76-484e-a714-57e958b2f8c1",
+      "name": "Get a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// This script runs on the array provided in your prompt\nconst items = $input.all();\n\n// Extract the raw data array\nconst data = items.map(item => item.json);\n\n// Create a structured object for easy access in the next node\nconst result = {\n  v01: data.find(i => i.svpc_version === \"SVPC 0.1\") || {},\n  v02: data.find(i => i.svpc_version === \"SVPC 0.2\") || {},\n  v03: data.find(i => i.svpc_version === \"SVPC 0.3\") || {}\n};\n\nreturn { json: result };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2512,
+        -128
+      ],
+      "id": "e7336ede-da9a-4a9a-9ce8-61b97039a8f9",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "Filter Clean Timestamp": {
+      "main": [
+        [
+          {
+            "node": "Get today's logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get today's logs": {
+      "main": [
+        [
+          {
+            "node": "Fetch metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch metadata": {
+      "main": [
+        [
+          {
+            "node": "Post activities v0.2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack reminder": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get logs": {
+      "main": [
+        [
+          {
+            "node": "Filter Clean Timestamp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Post 0 activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post 0 activities": {
+      "main": [
+        [
+          {
+            "node": "Send no activities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post activities v0.2": {
+      "main": [
+        [
+          {
+            "node": "Send Slack reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a record": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send daily summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "bKnJcx8GpX1kUqTh",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "0d7708c5-56cf-49b1-b402-ddff8409e5eb",
+  "activeVersionId": "0d7708c5-56cf-49b1-b402-ddff8409e5eb",
+  "versionCounter": 213,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-04-06T18:11:24.553Z",
+      "createdAt": "2026-04-06T18:11:24.553Z",
+      "role": "workflow:owner",
+      "workflowId": "PZy4PZhhDmZtTBTm",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T12:56:42.212Z",
+    "createdAt": "2026-07-04T12:56:42.212Z",
+    "versionId": "0d7708c5-56cf-49b1-b402-ddff8409e5eb",
+    "workflowId": "PZy4PZhhDmZtTBTm",
+    "nodes": [
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "loose",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "6c5ce8db-0453-4309-b0bc-003979ef8d79",
+                "leftValue": "={{ $json.row_number }}",
+                "rightValue": 334,
+                "operator": {
+                  "type": "number",
+                  "operation": "gt"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "looseTypeValidation": true,
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          448,
+          -128
+        ],
+        "id": "30827281-a802-4ddd-8385-dc02471ef3e8",
+        "name": "Filter Clean Timestamp",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const chicagoTimeZone = 'America/Chicago';\n\n// Use DateTime.now() instead of today() in the Code Node\nconst threshold = DateTime.now().setZone(chicagoTimeZone).startOf('day');\n\nconsole.log('Chicago Threshold:', threshold.toString());\n\n// Filter the incoming items\nreturn items.filter(item => {\n  try {\n    const ts = item.json.Timestamp;\n    \n    if (!ts) return false;\n\n    // Parse the ISO string (e.g., \"2026-04-02T22:46:58.556+08:00\")\n    const itemDate = DateTime.fromISO(ts).setZone(chicagoTimeZone);\n\n    // Keep items where the date is greater than or equal to Chicago's start of day\n    return itemDate >= threshold;\n    \n  } catch (error) {\n    // This prevents one bad row from stopping the whole workflow\n    return false; \n  }\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          -128
+        ],
+        "id": "f8663ca5-b212-4d8a-98d8-189ca87ae32e",
+        "name": "Get today's logs",
+        "alwaysOutputData": true,
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get all users from the incoming items\nconst users = items.map(item => item.json.User);\n\n// Use a Set to store only unique email addresses\nconst uniqueUsers = new Set(users);\n\n// The number of items in the array is the total number of requests\nconst totalRequests = items.length;\n\n// Return the result as a single object for the next node\nreturn [\n  {\n    json: {\n      unique_user_count: uniqueUsers.size,\n      total_requests: totalRequests,\n      unique_users_list: Array.from(uniqueUsers) // Optional: list of the actual users\n    }\n  }\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1120,
+          -32
+        ],
+        "id": "30278499-5f1b-4861-b3bb-748749569cb8",
+        "name": "Fetch metadata",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C09ESC12MA5",
+            "mode": "id"
+          },
+          "text": "=<!channel>, to finish up the SV Chatbot daily reporting for *{{ $today.setZone('America/Chicago').toFormat('MMMM d, yyyy') }}*, kindly populate the <https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2/viwoJLvTomAdeUh3F?blocks=hide|SVPC Daily Reporting> from the details found on the <https://app.portkey.ai/organisation/dd09d478-c5a9-4941-85da-e611c55ea530/analytics?apiKeyList=f7e72ae8-9037-454d-9351-097d63386831|Portkey v0.1 dashboard> and the <https://app.portkey.ai/organisation/dd09d478-c5a9-4941-85da-e611c55ea530/analytics?apiKeyList=f3fc99e6-7400-4312-a4f3-38c4f8eacd2b|Portkey v0.2 dashboard>.",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true,
+            "unfurl_links": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1776,
+          -32
+        ],
+        "id": "b56cc4cd-4246-43c0-82d0-bbcbfda2a6e8",
+        "name": "Send Slack reminder",
+        "webhookId": "7585a36c-6f41-4767-8a41-e6ad1df66495",
+        "executeOnce": true,
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "unit": "minutes"
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          2000,
+          -32
+        ],
+        "id": "610894de-f8a2-42d4-8c75-bc1c9952f936",
+        "name": "Wait",
+        "webhookId": "cd43a837-30a0-4640-bb71-5e38bde01bee"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1vJ-Cmu23sV_hw7HZ9m0uhRGdyBqUV83QwJVLj3B2Ow8",
+            "mode": "list",
+            "cachedResultName": "SV Chatbot",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1vJ-Cmu23sV_hw7HZ9m0uhRGdyBqUV83QwJVLj3B2Ow8/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Bot Logs",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1vJ-Cmu23sV_hw7HZ9m0uhRGdyBqUV83QwJVLj3B2Ow8/edit#gid=0"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          224,
+          -128
+        ],
+        "id": "f03d8f5c-5f10-44a7-8ff6-17bdb66c5206",
+        "name": "Get logs",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Solutions"
+          }
+        },
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  2,
+                  3,
+                  4,
+                  5,
+                  6
+                ],
+                "triggerAtHour": 5,
+                "triggerAtMinute": 55
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          0,
+          -128
+        ],
+        "id": "0726e76e-8ee5-4847-a486-555d473e285b",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "3acb94b5-6a39-4b68-9973-72b42a71ef1e",
+                "leftValue": "={{ $json.isEmpty() }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          896,
+          -336
+        ],
+        "id": "6de75eb1-45a8-4afd-acd0-66e2f6bcf8c3",
+        "name": "If",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0AKHLLU77D",
+            "mode": "id"
+          },
+          "text": "=*\ud83d\udcca SVPC Chatbot Daily Summary | {{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}*\n\n*v0.3*\n\u2022 *Total Requests:* `Ongoing Testing`\n\u2022 *Unique Users:* `Ongoing Testing`\n\u2022 *Token Usage:* `{{ $json.v03.token_usage_count }}`\n\u2022 *Estimated Cost:* `${{ $json.v03.token_usage_cost }}`\n\u2022 *Average # of Tokens per Request:* `{{ // Rounds and formats to \"0.00\"\n($json.v03.token_usage_count / $json.v03.total_requests).toFixed(2)}}`",
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          2800,
+          -160
+        ],
+        "id": "63796f84-975c-4951-9c20-d2e8069ddda0",
+        "name": "Send daily summary",
+        "webhookId": "786c50f4-ac28-4649-bada-fa63904ae6b5",
+        "executeOnce": true,
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0AKHLLU77D",
+            "mode": "id"
+          },
+          "text": "=*\ud83d\udcca SV Chatbot Daily Summary | {{ $today.format('MMMM d, yyyy') }}*\n\nNo activities logged.",
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1568,
+          -480
+        ],
+        "id": "8765c16c-e22d-44a9-9f04-6e5dbd965ba8",
+        "name": "Send no activities",
+        "webhookId": "786c50f4-ac28-4649-bada-fa63904ae6b5",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "comment",
+          "commentOn": "task",
+          "id": "86b8x28xh",
+          "commentText": "=*\ud83d\udcca SVPC Chatbot Daily Summary | {{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}*\n\n*v0.3*\n\u2022 *Total Requests:* `Ongoing Testing`\n\u2022 *Unique Users:* `Ongoing Testing`\n\u2022 *Token Usage:* `{{ $json.v03.token_usage_count }}`\n\u2022 *Estimated Cost:* `${{ $json.v03.token_usage_cost }}`\n\u2022 *Average # of Tokens per Request:* `{{ // Rounds and formats to \"0.00\"\n($json.v03.token_usage_count / $json.v03.total_requests).toFixed(2)}}`",
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.clickUp",
+        "typeVersion": 1,
+        "position": [
+          2800,
+          128
+        ],
+        "id": "c64efe3b-dee3-4a07-87fd-d748aa201b6c",
+        "name": "Create a comment",
+        "executeOnce": true,
+        "credentials": {
+          "clickUpOAuth2Api": {
+            "id": "pov43Hd26gF6W6Cp",
+            "name": "ClickUp OAuth2 Sol"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "f52738d9-a880-47f2-a47b-3410267f0429",
+                "name": "unique_user_count",
+                "value": 0,
+                "type": "number"
+              },
+              {
+                "id": "e5bec142-4da1-4038-919b-cc1ac5a8b121",
+                "name": "total_requests",
+                "value": 0,
+                "type": "number"
+              },
+              {
+                "id": "423af58a-2d48-4c68-a3e8-5bc2ca0eec7c",
+                "name": "token_usage_count",
+                "value": 0,
+                "type": "number"
+              },
+              {
+                "id": "5959f4e6-f954-4467-aec4-bfdf3083a53f",
+                "name": "token_usage_cost",
+                "value": 0,
+                "type": "number"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          1120,
+          -480
+        ],
+        "id": "1fbd7253-8a21-45af-97dc-c1cbc2652864",
+        "name": "Edit Fields",
+        "disabled": true
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblEGEyueFFS5vIe2",
+            "mode": "list",
+            "cachedResultName": "SVPC Daily Reporting",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "unique_user_count": 0,
+              "total_requests": 0,
+              "token_usage_count": 0,
+              "token_usage_cost": 0,
+              "date": "={{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}",
+              "svpc_version": "SVPC 0.1"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "date",
+                "displayName": "date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "unique_user_count",
+                "displayName": "unique_user_count",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "total_requests",
+                "displayName": "total_requests",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "token_usage_count",
+                "displayName": "token_usage_count",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "token_usage_cost",
+                "displayName": "token_usage_cost",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "svpc_version",
+                "displayName": "svpc_version",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "SVPC 0.1",
+                    "value": "SVPC 0.1"
+                  },
+                  {
+                    "name": "SVPC 0.2",
+                    "value": "SVPC 0.2"
+                  }
+                ],
+                "readOnly": false,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1344,
+          -480
+        ],
+        "id": "b0aa0264-c11a-4eb3-a39f-8710ff3836d8",
+        "name": "Post 0 activities",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblEGEyueFFS5vIe2",
+            "mode": "list",
+            "cachedResultName": "SVPC Daily Reporting",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "date": "={{ $today.setZone('America/Chicago').startOf('day').toFormat('MMMM d, yyyy') }}",
+              "svpc_version": "SVPC 0.3"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "date",
+                "displayName": "date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "unique_user_count",
+                "displayName": "unique_user_count",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "total_requests",
+                "displayName": "total_requests",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "token_usage_count",
+                "displayName": "token_usage_count",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "token_usage_cost",
+                "displayName": "token_usage_cost",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "svpc_version",
+                "displayName": "svpc_version",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "SVPC 0.1",
+                    "value": "SVPC 0.1"
+                  },
+                  {
+                    "name": "SVPC 0.2",
+                    "value": "SVPC 0.2"
+                  },
+                  {
+                    "name": "SVPC 0.3",
+                    "value": "SVPC 0.3"
+                  }
+                ],
+                "readOnly": false,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1344,
+          176
+        ],
+        "id": "e70cd6d7-89dc-4414-b50a-ada93be03b48",
+        "name": "Post activities v0.2",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblEGEyueFFS5vIe2",
+            "mode": "list",
+            "cachedResultName": "SVPC Daily Reporting",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblEGEyueFFS5vIe2"
+          },
+          "id": "={{ $('Post activities v0.2').item.json.id }}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          2208,
+          96
+        ],
+        "id": "f84aeb09-ed76-484e-a714-57e958b2f8c1",
+        "name": "Get a record",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// This script runs on the array provided in your prompt\nconst items = $input.all();\n\n// Extract the raw data array\nconst data = items.map(item => item.json);\n\n// Create a structured object for easy access in the next node\nconst result = {\n  v01: data.find(i => i.svpc_version === \"SVPC 0.1\") || {},\n  v02: data.find(i => i.svpc_version === \"SVPC 0.2\") || {},\n  v03: data.find(i => i.svpc_version === \"SVPC 0.3\") || {}\n};\n\nreturn { json: result };"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2512,
+          -128
+        ],
+        "id": "e7336ede-da9a-4a9a-9ce8-61b97039a8f9",
+        "name": "Code in JavaScript"
+      }
+    ],
+    "connections": {
+      "Filter Clean Timestamp": {
+        "main": [
+          [
+            {
+              "node": "Get today's logs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get today's logs": {
+        "main": [
+          [
+            {
+              "node": "Fetch metadata",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch metadata": {
+        "main": [
+          [
+            {
+              "node": "Post activities v0.2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Slack reminder": {
+        "main": [
+          [
+            {
+              "node": "Wait",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait": {
+        "main": [
+          [
+            {
+              "node": "Get a record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get logs": {
+        "main": [
+          [
+            {
+              "node": "Filter Clean Timestamp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Get logs",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          []
+        ]
+      },
+      "Edit Fields": {
+        "main": [
+          [
+            {
+              "node": "Post 0 activities",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Post 0 activities": {
+        "main": [
+          [
+            {
+              "node": "Send no activities",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Post activities v0.2": {
+        "main": [
+          [
+            {
+              "node": "Send Slack reminder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get a record": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Send daily summary",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Create a comment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

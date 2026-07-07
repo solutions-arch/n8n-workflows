@@ -1,0 +1,2766 @@
+{
+  "updatedAt": "2026-07-04T13:02:41.650Z",
+  "createdAt": "2026-02-20T23:04:19.549Z",
+  "id": "OGD1GvjbBM7wvZqZ",
+  "name": "Valley Roundtable",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1680,
+        240
+      ],
+      "id": "b16905f5-fa8e-45c9-a8ee-c4733a6e5c16",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "eQfzvn3izR7ec2J1",
+          "name": "Solutions Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.message.content }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert email reply classifier specializing in roundtable event invitations.\n\nAnalyze the email reply and return ONLY this exact format, nothing else:\n\nclassification: [Positive/False Positive/Negative]\nactual_reply: [extracted reply text]\nreasoning: [one sentence]\nred_flags: [concerns or None]\n\nCLASSIFICATION RULES:\n- Positive: Genuine interest, confirmed attendance, or asking for more details before committing\n- False Positive: Seems positive but sarcastic, contradictory, or confused about their role (e.g. asking about speaking fees, \"sure but I won't show up\")\n- Negative: Clear rejection, unsubscribe request, or out-of-office with no actual reply\n\nEXTRACTING ACTUAL REPLY \u2014 strip out everything below, keep only the prospect's words:\n- Email signatures (name, title, phone, address, company)\n- Quoted thread (everything after \"-----Original Message-----\" or \"On [date]... wrote:\")\n- Lines starting with \">\"\n- Unsubscribe links\n- \"Sent from my iPhone/Outlook\" footers"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1680,
+        -16
+      ],
+      "id": "8340d8fc-2a32-4053-add4-2aa9e6873507",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"classification\": {\n    \"type\": \"string\",\n    \"description\": \"Positive, False Positive, or Negative\"\n  },\n  \"actual_reply\": {\n    \"type\": \"string\",\n    \"description\": \"The prospect's exact words only, no signatures or quoted thread\"\n  },\n  \"reasoning\": {\n    \"type\": \"string\",\n    \"description\": \"One sentence explanation of the classification\"\n  },\n  \"red_flags\": {\n    \"type\": \"string\",\n    \"description\": \"Any concerns based on the reply, or None\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1920,
+        176
+      ],
+      "id": "a5cdca6f-7249-46a0-9c18-d9810f461a5f",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7d6025bb-9bb2-4988-8bd3-6e168ee51330"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "8c163c6b-364e-402c-b895-a4d8dd513084",
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "False Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "False Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fb3f1ecd-969c-4a1b-8c9f-aafb75cd5f33",
+                    "leftValue": "={{ $json.output.classification.description }}",
+                    "rightValue": "Negative",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Negative"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2032,
+        -32
+      ],
+      "id": "02b6c4a6-d803-416a-9404-14b99aa56540",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+            "Tool": "Valley",
+            "Status": "Interested (Warm)",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+            "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+            "Company Name": "=",
+            "Email": "=",
+            "Call Notes": "=",
+            "Replies": "={{ $('Webhook').item.json.body.message.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2288,
+        -272
+      ],
+      "id": "6b155a6a-4495-4c70-bb81-9da5ac72b225",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $('Webhook').item.json.body.timestamp }}",
+        "format": "=MM/dd/yyyy hh:mm a",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        2496,
+        -272
+      ],
+      "id": "477fa414-333f-4fd5-bf0c-b16994723466",
+      "name": "Date & Time"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ADVRXNH2R",
+          "mode": "id"
+        },
+        "text": "=* New Positive Lead* \n*Source:* Valley \n*Name:* {{ $('Webhook').item.json.body.prospect.name }}\n*Message:* {{ $('Switch').item.json.output.actual_reply.description }}\n*Reasoning:* {{ $('Switch').item.json.output.reasoning.description }}\n*Date:* {{ $json.formattedDate }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2720,
+        -272
+      ],
+      "id": "1f955b98-65b2-4d0c-ace8-01fef0141138",
+      "name": "Send a message",
+      "webhookId": "9c7d12e8-64e5-4fb0-a95a-8d4c41beee3a",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+            "Tool": "Valley",
+            "Status": "Manual Review",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+            "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+            "Company Name": "=",
+            "Email": "=",
+            "Call Notes": "=",
+            "Replies": "={{ $('Webhook').item.json.body.message.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2288,
+        -16
+      ],
+      "id": "4e025f3d-8b1d-4e66-88b4-27f9142d5f9d",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1870085706,
+          "mode": "list",
+          "cachedResultName": "Not interested",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=1870085706"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Replies": "={{ $('Webhook').item.json.body.message.content }}",
+            "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+            "Status": "Declined Invite",
+            "Tool": "Valley",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+            "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+            "Company Name": "=",
+            "Email": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2304,
+        240
+      ],
+      "id": "b325530b-2738-4c70-bae6-4ce46de39665",
+      "name": "Append row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Prospect Name",
+              "lookupValue": "={{ $json.body.prospect.name }}"
+            }
+          ]
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        704,
+        0
+      ],
+      "id": "1cacc0ab-fcb3-41e6-8bf6-20a4ce35153f",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.message.content }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "a989b465-2833-499d-abc1-9b42131c79c9"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Response Exist"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d972d549-c988-4666-bfde-f3549d5849ad",
+                    "leftValue": "={{ $('Webhook').item.json.body.message.content }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notExists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Tag Changed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "6100e066-c7b8-48c4-ade0-60d180613736",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "74ba0c0d-ee91-41b3-8032-c5912fb2a4b4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c7a87f93-c6ba-43af-acd9-978e616d04b0",
+      "name": "Webhook",
+      "webhookId": "74ba0c0d-ee91-41b3-8032-c5912fb2a4b4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c7d5bd15-f206-48cd-917b-e02f0b63010f",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "Connect - Roundtable - Real Estate - 10+",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c763e756-dc33-4652-9a21-e9a026eedc52",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "InMail - Roundtable - Real Estate - 10+",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "01fc378a-6b81-4b66-8e96-c2c9d872624e",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "Connect - Roundtable - Real Estate - Joren",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "34657278-87be-473a-abf1-30622db08191",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "InMail - Roundtable - Real Estate - Joren",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "c5ad621d-0a38-4ab6-8c58-03787c09eadd",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "InMail - Roundtable - Real Estate - Daniel",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "a4ae830e-7c14-4a5a-af14-c4208da8d516",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "Connect - Roundtable - Real Estate - Daniel",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "af50a78d-6b84-4b98-922d-3799281bdae3",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "InMail - Roundtable - Real Estate - Edgar",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "0d940504-7978-40a1-913a-e2a0951deb5f",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "=Connect - Roundtable - Real Estate - Edgar",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "ad97b424-4f89-4fce-84b8-ff92ff0a7709",
+              "leftValue": "={{ $json.body.campaign.name }}",
+              "rightValue": "InMail - Roundtable - Real Estate - Pat",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        256,
+        0
+      ],
+      "id": "d26741da-929c-4b99-851e-73041ab8249c",
+      "name": "Filter Campaign"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7c4cabd4-56c0-4eb9-93e8-49444dea3b4c",
+              "leftValue": "={{ $json.body.interest_level }}",
+              "rightValue": "MIGHT_BE_INTERESTED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c7703803-5ef9-4d37-9612-c6e964d99e73",
+              "leftValue": "={{ $json.body.interest_level }}",
+              "rightValue": "NTERESTED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        464,
+        0
+      ],
+      "id": "ca05561d-015d-4cc5-a6ff-f6e77e4e6088",
+      "name": "Interest Level"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+          "mode": "list",
+          "cachedResultName": "Roundtable Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Roundtable Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+            "Tool": "Valley",
+            "Status": "Interested (Warm)",
+            "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+            "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+            "Company Name": "=",
+            "Email": "=",
+            "Call Notes": "=",
+            "Replies": "={{ $('Webhook').item.json.body.message.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tool",
+              "displayName": "Tool",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Contact/ Email Sender",
+              "displayName": "LinkedIn Contact/ Email Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page / Website",
+              "displayName": "LinkedIn Page / Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replies",
+              "displayName": "Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Notes",
+              "displayName": "Call Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1392,
+        160
+      ],
+      "id": "5ab720d6-f12d-40b9-bfed-d7577fa977d0",
+      "name": "Append row in sheet3",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "839f8175-bff8-4ca2-ab26-549d4f5ab595",
+              "leftValue": "={{ $json['Prospect Name'] ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        0
+      ],
+      "id": "a7b3186b-7a0f-4a34-a006-669311c80761",
+      "name": "Check if Prospect Exist"
+    }
+  ],
+  "connections": {
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Date & Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Check if Prospect Exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Campaign": {
+      "main": [
+        [
+          {
+            "node": "Interest Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interest Level": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Prospect Exist": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "IJnW8xKq7kcp2hBR",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "axios/1.6.7",
+            "content-length": "644",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "165.22.12.231",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9d286f2e0a2a41f9-EWR",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "165.22.12.231, 162.158.159.200",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-bd6m6",
+            "x-is-trusted": "yes",
+            "x-real-ip": "165.22.12.231"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event_type": "PROSPECT_RESPONSE",
+            "timestamp": "2026-02-23T17:27:30.211Z",
+            "user": {
+              "id": "cmg9sqjt1008hcp0ddiqtf4ws",
+              "name": "Patricia Medina",
+              "email": "patismedina@gmail.com"
+            },
+            "prospect": {
+              "id": "test-prospect-id",
+              "name": "Test Prospect Name"
+            },
+            "campaign": {
+              "id": "test-campaign-id",
+              "name": "Connect - Roundtable - Real Estate - 10+"
+            },
+            "workspace_id": "cmij2622p00244u0bakto8mop",
+            "workspace_name": "The Mojave Group",
+            "message": {
+              "content": "This is a test prospect response message.",
+              "sender": "PROSPECT",
+              "timestamp": "2026-02-23T17:27:30.211Z",
+              "message_id": "test-message-id"
+            },
+            "conversation": {
+              "id": "test-conversation-id",
+              "medium": "LINKEDIN_MESSAGE"
+            },
+            "interest_level": "MIGHT_BE_INTERESTED"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook-test/74ba0c0d-ee91-41b3-8032-c5912fb2a4b4",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "versionId": "bbdd0fcc-1d58-43f4-9d41-6ee474a2c175",
+  "activeVersionId": "bbdd0fcc-1d58-43f4-9d41-6ee474a2c175",
+  "versionCounter": 159,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-20T23:04:19.556Z",
+      "createdAt": "2026-02-20T23:04:19.556Z",
+      "role": "workflow:owner",
+      "workflowId": "OGD1GvjbBM7wvZqZ",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:02:41.652Z",
+    "createdAt": "2026-07-04T13:02:41.652Z",
+    "versionId": "bbdd0fcc-1d58-43f4-9d41-6ee474a2c175",
+    "workflowId": "OGD1GvjbBM7wvZqZ",
+    "nodes": [
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "claude-sonnet-4-5-20250929",
+            "cachedResultName": "Claude Sonnet 4.5"
+          },
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+        "typeVersion": 1.3,
+        "position": [
+          1680,
+          240
+        ],
+        "id": "b16905f5-fa8e-45c9-a8ee-c4733a6e5c16",
+        "name": "Anthropic Chat Model",
+        "credentials": {
+          "anthropicApi": {
+            "id": "eQfzvn3izR7ec2J1",
+            "name": "Solutions Anthropic"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "={{ $('Webhook').item.json.body.message.content }}",
+          "hasOutputParser": true,
+          "options": {
+            "systemMessage": "You are an expert email reply classifier specializing in roundtable event invitations.\n\nAnalyze the email reply and return ONLY this exact format, nothing else:\n\nclassification: [Positive/False Positive/Negative]\nactual_reply: [extracted reply text]\nreasoning: [one sentence]\nred_flags: [concerns or None]\n\nCLASSIFICATION RULES:\n- Positive: Genuine interest, confirmed attendance, or asking for more details before committing\n- False Positive: Seems positive but sarcastic, contradictory, or confused about their role (e.g. asking about speaking fees, \"sure but I won't show up\")\n- Negative: Clear rejection, unsubscribe request, or out-of-office with no actual reply\n\nEXTRACTING ACTUAL REPLY \u2014 strip out everything below, keep only the prospect's words:\n- Email signatures (name, title, phone, address, company)\n- Quoted thread (everything after \"-----Original Message-----\" or \"On [date]... wrote:\")\n- Lines starting with \">\"\n- Unsubscribe links\n- \"Sent from my iPhone/Outlook\" footers"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          1680,
+          -16
+        ],
+        "id": "8340d8fc-2a32-4053-add4-2aa9e6873507",
+        "name": "AI Agent"
+      },
+      {
+        "parameters": {
+          "jsonSchemaExample": "{\n  \"classification\": {\n    \"type\": \"string\",\n    \"description\": \"Positive, False Positive, or Negative\"\n  },\n  \"actual_reply\": {\n    \"type\": \"string\",\n    \"description\": \"The prospect's exact words only, no signatures or quoted thread\"\n  },\n  \"reasoning\": {\n    \"type\": \"string\",\n    \"description\": \"One sentence explanation of the classification\"\n  },\n  \"red_flags\": {\n    \"type\": \"string\",\n    \"description\": \"Any concerns based on the reply, or None\"\n  }\n}"
+        },
+        "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+        "typeVersion": 1.3,
+        "position": [
+          1920,
+          176
+        ],
+        "id": "a5cdca6f-7249-46a0-9c18-d9810f461a5f",
+        "name": "Structured Output Parser"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.output.classification.description }}",
+                      "rightValue": "Positive",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "id": "7d6025bb-9bb2-4988-8bd3-6e168ee51330"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Positive"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "8c163c6b-364e-402c-b895-a4d8dd513084",
+                      "leftValue": "={{ $json.output.classification.description }}",
+                      "rightValue": "False Positive",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "False Positive"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "fb3f1ecd-969c-4a1b-8c9f-aafb75cd5f33",
+                      "leftValue": "={{ $json.output.classification.description }}",
+                      "rightValue": "Negative",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Negative"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          2032,
+          -32
+        ],
+        "id": "02b6c4a6-d803-416a-9404-14b99aa56540",
+        "name": "Switch"
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+              "Tool": "Valley",
+              "Status": "Interested (Warm)",
+              "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+              "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+              "Company Name": "=",
+              "Email": "=",
+              "Call Notes": "=",
+              "Replies": "={{ $('Webhook').item.json.body.message.content }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          2288,
+          -272
+        ],
+        "id": "6b155a6a-4495-4c70-bb81-9da5ac72b225",
+        "name": "Append row in sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "formatDate",
+          "date": "={{ $('Webhook').item.json.body.timestamp }}",
+          "format": "=MM/dd/yyyy hh:mm a",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.dateTime",
+        "typeVersion": 2,
+        "position": [
+          2496,
+          -272
+        ],
+        "id": "477fa414-333f-4fd5-bf0c-b16994723466",
+        "name": "Date & Time"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0ADVRXNH2R",
+            "mode": "id"
+          },
+          "text": "=* New Positive Lead* \n*Source:* Valley \n*Name:* {{ $('Webhook').item.json.body.prospect.name }}\n*Message:* {{ $('Switch').item.json.output.actual_reply.description }}\n*Reasoning:* {{ $('Switch').item.json.output.reasoning.description }}\n*Date:* {{ $json.formattedDate }}",
+          "otherOptions": {}
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          2720,
+          -272
+        ],
+        "id": "1f955b98-65b2-4d0c-ace8-01fef0141138",
+        "name": "Send a message",
+        "webhookId": "9c7d12e8-64e5-4fb0-a95a-8d4c41beee3a",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+              "Tool": "Valley",
+              "Status": "Manual Review",
+              "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+              "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+              "Company Name": "=",
+              "Email": "=",
+              "Call Notes": "=",
+              "Replies": "={{ $('Webhook').item.json.body.message.content }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          2288,
+          -16
+        ],
+        "id": "4e025f3d-8b1d-4e66-88b4-27f9142d5f9d",
+        "name": "Append row in sheet1",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1870085706,
+            "mode": "list",
+            "cachedResultName": "Not interested",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=1870085706"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Replies": "={{ $('Webhook').item.json.body.message.content }}",
+              "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+              "Status": "Declined Invite",
+              "Tool": "Valley",
+              "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+              "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+              "Company Name": "=",
+              "Email": "="
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          2304,
+          240
+        ],
+        "id": "b325530b-2738-4c70-bae6-4ce46de39665",
+        "name": "Append row in sheet2",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "Prospect Name",
+                "lookupValue": "={{ $json.body.prospect.name }}"
+              }
+            ]
+          },
+          "combineFilters": "OR",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          704,
+          0
+        ],
+        "id": "1cacc0ab-fcb3-41e6-8bf6-20a4ce35153f",
+        "name": "Get row(s) in sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $('Webhook').item.json.body.message.content }}",
+                      "rightValue": "",
+                      "operator": {
+                        "type": "string",
+                        "operation": "exists",
+                        "singleValue": true
+                      },
+                      "id": "a989b465-2833-499d-abc1-9b42131c79c9"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Response Exist"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "d972d549-c988-4666-bfde-f3549d5849ad",
+                      "leftValue": "={{ $('Webhook').item.json.body.message.content }}",
+                      "rightValue": "",
+                      "operator": {
+                        "type": "string",
+                        "operation": "notExists",
+                        "singleValue": true
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Tag Changed"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          1200,
+          0
+        ],
+        "id": "6100e066-c7b8-48c4-ade0-60d180613736",
+        "name": "Switch1"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "74ba0c0d-ee91-41b3-8032-c5912fb2a4b4",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "c7a87f93-c6ba-43af-acd9-978e616d04b0",
+        "name": "Webhook",
+        "webhookId": "74ba0c0d-ee91-41b3-8032-c5912fb2a4b4"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "c7d5bd15-f206-48cd-917b-e02f0b63010f",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "Connect - Roundtable - Real Estate - 10+",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "c763e756-dc33-4652-9a21-e9a026eedc52",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "InMail - Roundtable - Real Estate - 10+",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "01fc378a-6b81-4b66-8e96-c2c9d872624e",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "Connect - Roundtable - Real Estate - Joren",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "34657278-87be-473a-abf1-30622db08191",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "InMail - Roundtable - Real Estate - Joren",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "c5ad621d-0a38-4ab6-8c58-03787c09eadd",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "InMail - Roundtable - Real Estate - Daniel",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "a4ae830e-7c14-4a5a-af14-c4208da8d516",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "Connect - Roundtable - Real Estate - Daniel",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "af50a78d-6b84-4b98-922d-3799281bdae3",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "InMail - Roundtable - Real Estate - Edgar",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "0d940504-7978-40a1-913a-e2a0951deb5f",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "=Connect - Roundtable - Real Estate - Edgar",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              },
+              {
+                "id": "ad97b424-4f89-4fce-84b8-ff92ff0a7709",
+                "leftValue": "={{ $json.body.campaign.name }}",
+                "rightValue": "InMail - Roundtable - Real Estate - Pat",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          256,
+          0
+        ],
+        "id": "d26741da-929c-4b99-851e-73041ab8249c",
+        "name": "Filter Campaign"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "7c4cabd4-56c0-4eb9-93e8-49444dea3b4c",
+                "leftValue": "={{ $json.body.interest_level }}",
+                "rightValue": "MIGHT_BE_INTERESTED",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              },
+              {
+                "id": "c7703803-5ef9-4d37-9612-c6e964d99e73",
+                "leftValue": "={{ $json.body.interest_level }}",
+                "rightValue": "NTERESTED",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals",
+                  "name": "filter.operator.equals"
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          464,
+          0
+        ],
+        "id": "ca05561d-015d-4cc5-a6ff-f6e77e4e6088",
+        "name": "Interest Level"
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+            "mode": "list",
+            "cachedResultName": "Roundtable Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Roundtable Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('Webhook').item.json.body.prospect.name }}",
+              "Tool": "Valley",
+              "Status": "Interested (Warm)",
+              "LinkedIn Contact/ Email Sender": "={{ $('Webhook').item.json.body.user.email }}",
+              "Date": "={{ $('Webhook').item.json.body.timestamp }}",
+              "Company Name": "=",
+              "Email": "=",
+              "Call Notes": "=",
+              "Replies": "={{ $('Webhook').item.json.body.message.content }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Tool",
+                "displayName": "Tool",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Action",
+                "displayName": "Action",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Contact/ Email Sender",
+                "displayName": "LinkedIn Contact/ Email Sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Company Name",
+                "displayName": "Company Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page / Website",
+                "displayName": "LinkedIn Page / Website",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Replies",
+                "displayName": "Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Call Notes",
+                "displayName": "Call Notes",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1392,
+          160
+        ],
+        "id": "5ab720d6-f12d-40b9-bfed-d7577fa977d0",
+        "name": "Append row in sheet3",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Google Sheets account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "839f8175-bff8-4ca2-ab26-549d4f5ab595",
+                "leftValue": "={{ $json['Prospect Name'] ?? '' }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          960,
+          0
+        ],
+        "id": "a7b3186b-7a0f-4a34-a006-669311c80761",
+        "name": "Check if Prospect Exist"
+      }
+    ],
+    "connections": {
+      "Anthropic Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Structured Output Parser": {
+        "ai_outputParser": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_outputParser",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "Append row in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Append row in sheet1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Append row in sheet2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append row in sheet": {
+        "main": [
+          [
+            {
+              "node": "Date & Time",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Date & Time": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get row(s) in sheet": {
+        "main": [
+          [
+            {
+              "node": "Check if Prospect Exist",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch1": {
+        "main": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Append row in sheet3",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Filter Campaign",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter Campaign": {
+        "main": [
+          [
+            {
+              "node": "Interest Level",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Interest Level": {
+        "main": [
+          [
+            {
+              "node": "Get row(s) in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check if Prospect Exist": {
+        "main": [
+          [
+            {
+              "node": "Switch1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

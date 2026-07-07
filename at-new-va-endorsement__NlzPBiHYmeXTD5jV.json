@@ -1,0 +1,263 @@
+{
+  "updatedAt": "2026-07-04T13:15:32.991Z",
+  "createdAt": "2026-01-22T21:30:28.362Z",
+  "id": "NlzPBiHYmeXTD5jV",
+  "name": "[AT] New VA Endorsement",
+  "description": "Automatically sends email to the relevant teams when a new VA candidate is endorsed for placement, including the candidate\u2019s contact details, rate, resume, intro video, assessment links, and endorsement summary.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "eb99ec35-13c5-49d1-92f3-5f0c1e2ae1a1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -352,
+        -32
+      ],
+      "id": "a70640f3-4a21-478b-8514-42dda0dc0e95",
+      "name": "Webhook",
+      "webhookId": "eb99ec35-13c5-49d1-92f3-5f0c1e2ae1a1"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n\n  const webhookData = $('Webhook').item.json;\n  const body = webhookData.body;\n\n  // \u2500\u2500\u2500 HELPERS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const safeGet = (val) => Array.isArray(val) ? (val[0] || '') : (val || '');\n  const safeGetName = (val) => {\n    if (Array.isArray(val) && val[0]?.name) return val[0].name;\n    if (val?.name) return val.name;\n    return '';\n  };\n  const safeGetEmail = (val) => {\n    if (Array.isArray(val) && val[0]?.email) return val[0].email;\n    if (val?.email) return val.email;\n    return '';\n  };\n\n  // \u2500\u2500\u2500 DETECT BRANCH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const vaSource = safeGetName(body[\"VA Source\"]) || \"Training\";\n  const isSTP = vaSource === \"Straight-To-Placements\";\n\n  // \u2500\u2500\u2500 SHARED FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const vaName            = body[\"Virtual Assistant\"]   || \"Candidate\";\n  const email             = body[\"Personal Email\"]      || \"N/A\";\n  const phone             = body[\"Phone Number\"]        || \"N/A\";\n  const videoLink         = body[\"Intro Video\"]         || \"#\";\n  const resumeLink        = body[\"Resume [Link]\"]       || \"#\";\n  const endorsementSummary= body[\"Endorsement Summary\"] || \"No summary provided.\";\n  const rate              = body[\"SV Base Rate\"]        || \"0\";\n  const discLink          = body[\"DISC [Link]\"];\n  const piBehLink         = body[\"PI - Behavioral [Link]\"];\n  const piCogLink         = body[\"PI - Cognitive [Link]\"];\n\n  // \u2500\u2500\u2500 BRANCH-SPECIFIC FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const stpRequestName    = safeGetName(body[\"TA STP Requests\"]) || \"N/A\";\n  const stpRole           = safeGet(body[\"STP Role\"])            || \"N/A\";\n  const trainingBatch     = body[\"Training Batch #\"]             || \"N/A\";\n  const endorserName      = safeGetName(body[\"VA Endorser\"])     || safeGetName(body[\"Created By 2\"]) || \"N/A\";\n\n  // \u2500\u2500\u2500 REQUESTOR EMAIL (dynamic fallback) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const requestorEmail =\n    safeGetEmail(body[\"Created By\"]) ||\n    safeGetEmail(body[\"Created By 2\"]) ||\n    (isSTP ? \"placements@scalevirtually.com\" : \"training@scalevirtually.com\");\n\n  // \u2500\u2500\u2500 THEME (driven by branch) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const accentColor  = isSTP ? \"#E8833A\" : \"#22C55E\";\n  const emailTitle   = isSTP ? \"STP Endorsement\" : \"Training Endorsement\";\n  const emailSummaryLabelColor = accentColor;\n\n  // \u2500\u2500\u2500 SLACK MESSAGE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const slackMessage = isSTP\n    ? `Hi Placements Team, endorsing a candidate for (${stpRequestName}) who passed the HM Interview. Please see details below -\\n\u2022 ${vaName}\\n\u2022 Rate: $${rate}/hr.\\n\u2022 ${phone} / ${email}\\n\\nLet us, at TA, know if you need anything else. Thanks!`\n    : `Hi Placements Team, endorsing a candidate from ${vaSource} (Batch ${trainingBatch}). Please see details below -\\n\u2022 ${vaName}\\n\u2022 Rate: $${rate}/hr.\\n\u2022 ${phone} / ${email}\\n\\nLet us know if you need anything else. Thanks!`;\n\n  // \u2500\u2500\u2500 DYNAMIC EMAIL SUBJECT (exposed for Gmail node) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const emailSubject = isSTP\n    ? `Profile Endorsement for ${stpRequestName} ${stpRole}: ${vaName}`\n    : `Profile Endorsement for Training Batch ${trainingBatch}: ${vaName}`;\n\n  // \u2500\u2500\u2500 CONDITIONAL LINK ROW BUILDER \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const createLinkRow = (label, url) => {\n    if (!url || url === \"\" || url === \"To follow\" || url === \"Pending\") return \"\";\n    return `\n      <tr>\n        <td class=\"label-col\">${label}:</td>\n        <td class=\"value-col\">\n          <a href=\"${url}\" class=\"link-text\" target=\"_blank\">View Report &rarr;</a>\n        </td>\n      </tr>`;\n  };\n\n  let assessmentRows = \"\";\n  assessmentRows += createLinkRow(\"DISC Profile\", discLink);\n  assessmentRows += createLinkRow(\"PI Behavioral\", piBehLink);\n  assessmentRows += createLinkRow(\"PI Cognitive\", piCogLink);\n\n  // \u2500\u2500\u2500 BRANCH-SPECIFIC TABLE ROWS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const branchRows = isSTP ? `\n    <tr>\n      <td class=\"label-col\">Request Ref:</td>\n      <td class=\"value-col\">${stpRequestName}</td>\n    </tr>\n    <tr>\n      <td class=\"label-col\">Role ID:</td>\n      <td class=\"value-col\">${stpRole}</td>\n    </tr>` : `\n    <tr>\n      <td class=\"label-col\">Source:</td>\n      <td class=\"value-col\">${vaSource}</td>\n    </tr>\n    <tr>\n      <td class=\"label-col\">Batch Number:</td>\n      <td class=\"value-col\">${trainingBatch}</td>\n    </tr>\n    <tr>\n      <td class=\"label-col\">Endorsed By:</td>\n      <td class=\"value-col\">${endorserName}</td>\n    </tr>`;\n\n  // \u2500\u2500\u2500 HTML EMAIL \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body { margin: 0; padding: 0; background-color: #f4f6f8; }\n  body { font-family: Helvetica, Arial, sans-serif; color: #333333; line-height: 1.6; font-size: 14px; }\n  .outer-wrapper { width: 100%; background-color: #f4f6f8; padding: 20px 0; }\n  .container { max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 30px; background-color: #ffffff; }\n  .header-title { color: ${accentColor}; font-size: 20px; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; border-bottom: 2px solid ${accentColor}; padding-bottom: 10px; text-align: center; }\n  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }\n  td { padding: 10px 0; vertical-align: top; font-size: 14px; border-bottom: 1px solid #f0f0f0; }\n  .label-col { width: 30%; font-weight: 700; color: #111827; padding-right: 10px; white-space: nowrap; }\n  .value-col { width: 70%; color: #374151; }\n  .link-text { color: ${accentColor}; font-weight: 600; text-decoration: none; }\n  .footer { margin-top: 30px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 15px; }\n  a { color: #2563EB; text-decoration: none; }\n</style>\n</head>\n<body>\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        <p>Hi Team,</p>\n        <p>Please find the endorsement details for <strong>${vaName}</strong> below.</p>\n        <br>\n        <div class=\"header-title\">${emailTitle}</div>\n        <table role=\"presentation\">\n          <tr>\n            <td colspan=\"2\" class=\"label-col\" style=\"padding-bottom: 5px; color: ${emailSummaryLabelColor};\">ENDORSEMENT SUMMARY:</td>\n          </tr>\n          <tr>\n            <td colspan=\"2\" class=\"value-col\" style=\"background-color: #fafafa; padding: 15px; border-radius: 4px; font-style: italic; border: 1px solid #eee;\">\n              \"${endorsementSummary}\"\n            </td>\n          </tr>\n          <tr><td colspan=\"2\" style=\"height: 15px;\"></td></tr>\n          <tr>\n            <td class=\"label-col\">Candidate Name:</td>\n            <td class=\"value-col\"><strong>${vaName}</strong></td>\n          </tr>\n          ${branchRows}\n          <tr>\n            <td class=\"label-col\">Email:</td>\n            <td class=\"value-col\">${email !== \"N/A\" ? `<a href=\"mailto:${email}\">${email}</a>` : \"N/A\"}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Phone:</td>\n            <td class=\"value-col\">${phone}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Intro Video:</td>\n            <td class=\"value-col\"><a href=\"${videoLink}\" class=\"link-text\" target=\"_blank\">Watch Video &rarr;</a></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Resume:</td>\n            <td class=\"value-col\"><a href=\"${resumeLink}\" class=\"link-text\" target=\"_blank\">View Resume &rarr;</a></td>\n          </tr>\n          ${assessmentRows}\n        </table>\n        <div class=\"footer\">\n          This is an automated email. For concerns, reach out to the requestor: <a href=\"mailto:${requestorEmail}\">${requestorEmail}</a>.\n        </div>\n      </div>\n    </td>\n  </tr>\n</table>\n</body>\n</html>`;\n\n  // \u2500\u2500\u2500 OUTPUTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  item.json.placement_email_html = htmlContent;\n  item.json.slack_message_text   = slackMessage;\n  item.json.email_subject        = emailSubject;\n  item.json.requestor_email      = requestorEmail;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        -32
+      ],
+      "id": "dc0d8aaa-a259-4412-b753-329e5ff4bbdf",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "=talentacquisitions@scalevirtually.com, {{ $json.requestor_email }}",
+        "subject": "={{ $json.email_subject }}",
+        "message": "={{ $json.placement_email_html }}",
+        "options": {
+          "appendAttribution": false,
+          "ccList": "placements@scalevirtually.com, hr@scalevirtually.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        -32
+      ],
+      "id": "5af5e73e-e978-420d-a9a8-6b54320d3540",
+      "name": "Send a message",
+      "webhookId": "29b74b35-0131-4936-843f-d5a716e22edb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "83b20a06-766b-4587-858f-ec5ae18c0ba3",
+  "activeVersionId": "83b20a06-766b-4587-858f-ec5ae18c0ba3",
+  "versionCounter": 167,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-01-22T21:30:28.366Z",
+      "createdAt": "2026-01-22T21:30:28.366Z",
+      "role": "workflow:owner",
+      "workflowId": "NlzPBiHYmeXTD5jV",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:15:32.992Z",
+    "createdAt": "2026-07-04T13:15:32.992Z",
+    "versionId": "83b20a06-766b-4587-858f-ec5ae18c0ba3",
+    "workflowId": "NlzPBiHYmeXTD5jV",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "eb99ec35-13c5-49d1-92f3-5f0c1e2ae1a1",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -352,
+          -32
+        ],
+        "id": "a70640f3-4a21-478b-8514-42dda0dc0e95",
+        "name": "Webhook",
+        "webhookId": "eb99ec35-13c5-49d1-92f3-5f0c1e2ae1a1"
+      },
+      {
+        "parameters": {
+          "jsCode": "for (const item of $input.all()) {\n\n  const webhookData = $('Webhook').item.json;\n  const body = webhookData.body;\n\n  // \u2500\u2500\u2500 HELPERS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const safeGet = (val) => Array.isArray(val) ? (val[0] || '') : (val || '');\n  const safeGetName = (val) => {\n    if (Array.isArray(val) && val[0]?.name) return val[0].name;\n    if (val?.name) return val.name;\n    return '';\n  };\n  const safeGetEmail = (val) => {\n    if (Array.isArray(val) && val[0]?.email) return val[0].email;\n    if (val?.email) return val.email;\n    return '';\n  };\n\n  // \u2500\u2500\u2500 DETECT BRANCH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const vaSource = safeGetName(body[\"VA Source\"]) || \"Training\";\n  const isSTP = vaSource === \"Straight-To-Placements\";\n\n  // \u2500\u2500\u2500 SHARED FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const vaName            = body[\"Virtual Assistant\"]   || \"Candidate\";\n  const email             = body[\"Personal Email\"]      || \"N/A\";\n  const phone             = body[\"Phone Number\"]        || \"N/A\";\n  const videoLink         = body[\"Intro Video\"]         || \"#\";\n  const resumeLink        = body[\"Resume [Link]\"]       || \"#\";\n  const endorsementSummary= body[\"Endorsement Summary\"] || \"No summary provided.\";\n  const rate              = body[\"SV Base Rate\"]        || \"0\";\n  const discLink          = body[\"DISC [Link]\"];\n  const piBehLink         = body[\"PI - Behavioral [Link]\"];\n  const piCogLink         = body[\"PI - Cognitive [Link]\"];\n\n  // \u2500\u2500\u2500 BRANCH-SPECIFIC FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const stpRequestName    = safeGetName(body[\"TA STP Requests\"]) || \"N/A\";\n  const stpRole           = safeGet(body[\"STP Role\"])            || \"N/A\";\n  const trainingBatch     = body[\"Training Batch #\"]             || \"N/A\";\n  const endorserName      = safeGetName(body[\"VA Endorser\"])     || safeGetName(body[\"Created By 2\"]) || \"N/A\";\n\n  // \u2500\u2500\u2500 REQUESTOR EMAIL (dynamic fallback) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const requestorEmail =\n    safeGetEmail(body[\"Created By\"]) ||\n    safeGetEmail(body[\"Created By 2\"]) ||\n    (isSTP ? \"placements@scalevirtually.com\" : \"training@scalevirtually.com\");\n\n  // \u2500\u2500\u2500 THEME (driven by branch) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const accentColor  = isSTP ? \"#E8833A\" : \"#22C55E\";\n  const emailTitle   = isSTP ? \"STP Endorsement\" : \"Training Endorsement\";\n  const emailSummaryLabelColor = accentColor;\n\n  // \u2500\u2500\u2500 SLACK MESSAGE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const slackMessage = isSTP\n    ? `Hi Placements Team, endorsing a candidate for (${stpRequestName}) who passed the HM Interview. Please see details below -\\n\u2022 ${vaName}\\n\u2022 Rate: $${rate}/hr.\\n\u2022 ${phone} / ${email}\\n\\nLet us, at TA, know if you need anything else. Thanks!`\n    : `Hi Placements Team, endorsing a candidate from ${vaSource} (Batch ${trainingBatch}). Please see details below -\\n\u2022 ${vaName}\\n\u2022 Rate: $${rate}/hr.\\n\u2022 ${phone} / ${email}\\n\\nLet us know if you need anything else. Thanks!`;\n\n  // \u2500\u2500\u2500 DYNAMIC EMAIL SUBJECT (exposed for Gmail node) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const emailSubject = isSTP\n    ? `Profile Endorsement for ${stpRequestName} ${stpRole}: ${vaName}`\n    : `Profile Endorsement for Training Batch ${trainingBatch}: ${vaName}`;\n\n  // \u2500\u2500\u2500 CONDITIONAL LINK ROW BUILDER \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const createLinkRow = (label, url) => {\n    if (!url || url === \"\" || url === \"To follow\" || url === \"Pending\") return \"\";\n    return `\n      <tr>\n        <td class=\"label-col\">${label}:</td>\n        <td class=\"value-col\">\n          <a href=\"${url}\" class=\"link-text\" target=\"_blank\">View Report &rarr;</a>\n        </td>\n      </tr>`;\n  };\n\n  let assessmentRows = \"\";\n  assessmentRows += createLinkRow(\"DISC Profile\", discLink);\n  assessmentRows += createLinkRow(\"PI Behavioral\", piBehLink);\n  assessmentRows += createLinkRow(\"PI Cognitive\", piCogLink);\n\n  // \u2500\u2500\u2500 BRANCH-SPECIFIC TABLE ROWS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const branchRows = isSTP ? `\n    <tr>\n      <td class=\"label-col\">Request Ref:</td>\n      <td class=\"value-col\">${stpRequestName}</td>\n    </tr>\n    <tr>\n      <td class=\"label-col\">Role ID:</td>\n      <td class=\"value-col\">${stpRole}</td>\n    </tr>` : `\n    <tr>\n      <td class=\"label-col\">Source:</td>\n      <td class=\"value-col\">${vaSource}</td>\n    </tr>\n    <tr>\n      <td class=\"label-col\">Batch Number:</td>\n      <td class=\"value-col\">${trainingBatch}</td>\n    </tr>\n    <tr>\n      <td class=\"label-col\">Endorsed By:</td>\n      <td class=\"value-col\">${endorserName}</td>\n    </tr>`;\n\n  // \u2500\u2500\u2500 HTML EMAIL \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  const htmlContent = `\n<!DOCTYPE html>\n<html>\n<head>\n<style>\n  html, body { margin: 0; padding: 0; background-color: #f4f6f8; }\n  body { font-family: Helvetica, Arial, sans-serif; color: #333333; line-height: 1.6; font-size: 14px; }\n  .outer-wrapper { width: 100%; background-color: #f4f6f8; padding: 20px 0; }\n  .container { max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 30px; background-color: #ffffff; }\n  .header-title { color: ${accentColor}; font-size: 20px; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; border-bottom: 2px solid ${accentColor}; padding-bottom: 10px; text-align: center; }\n  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }\n  td { padding: 10px 0; vertical-align: top; font-size: 14px; border-bottom: 1px solid #f0f0f0; }\n  .label-col { width: 30%; font-weight: 700; color: #111827; padding-right: 10px; white-space: nowrap; }\n  .value-col { width: 70%; color: #374151; }\n  .link-text { color: ${accentColor}; font-weight: 600; text-decoration: none; }\n  .footer { margin-top: 30px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 15px; }\n  a { color: #2563EB; text-decoration: none; }\n</style>\n</head>\n<body>\n<table class=\"outer-wrapper\" role=\"presentation\" cellspacing=\"0\" cellpadding=\"0\">\n  <tr>\n    <td align=\"center\">\n      <div class=\"container\">\n        <p>Hi Team,</p>\n        <p>Please find the endorsement details for <strong>${vaName}</strong> below.</p>\n        <br>\n        <div class=\"header-title\">${emailTitle}</div>\n        <table role=\"presentation\">\n          <tr>\n            <td colspan=\"2\" class=\"label-col\" style=\"padding-bottom: 5px; color: ${emailSummaryLabelColor};\">ENDORSEMENT SUMMARY:</td>\n          </tr>\n          <tr>\n            <td colspan=\"2\" class=\"value-col\" style=\"background-color: #fafafa; padding: 15px; border-radius: 4px; font-style: italic; border: 1px solid #eee;\">\n              \"${endorsementSummary}\"\n            </td>\n          </tr>\n          <tr><td colspan=\"2\" style=\"height: 15px;\"></td></tr>\n          <tr>\n            <td class=\"label-col\">Candidate Name:</td>\n            <td class=\"value-col\"><strong>${vaName}</strong></td>\n          </tr>\n          ${branchRows}\n          <tr>\n            <td class=\"label-col\">Email:</td>\n            <td class=\"value-col\">${email !== \"N/A\" ? `<a href=\"mailto:${email}\">${email}</a>` : \"N/A\"}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Phone:</td>\n            <td class=\"value-col\">${phone}</td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Intro Video:</td>\n            <td class=\"value-col\"><a href=\"${videoLink}\" class=\"link-text\" target=\"_blank\">Watch Video &rarr;</a></td>\n          </tr>\n          <tr>\n            <td class=\"label-col\">Resume:</td>\n            <td class=\"value-col\"><a href=\"${resumeLink}\" class=\"link-text\" target=\"_blank\">View Resume &rarr;</a></td>\n          </tr>\n          ${assessmentRows}\n        </table>\n        <div class=\"footer\">\n          This is an automated email. For concerns, reach out to the requestor: <a href=\"mailto:${requestorEmail}\">${requestorEmail}</a>.\n        </div>\n      </div>\n    </td>\n  </tr>\n</table>\n</body>\n</html>`;\n\n  // \u2500\u2500\u2500 OUTPUTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n  item.json.placement_email_html = htmlContent;\n  item.json.slack_message_text   = slackMessage;\n  item.json.email_subject        = emailSubject;\n  item.json.requestor_email      = requestorEmail;\n}\n\nreturn $input.all();"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -128,
+          -32
+        ],
+        "id": "dc0d8aaa-a259-4412-b753-329e5ff4bbdf",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "sendTo": "=talentacquisitions@scalevirtually.com, {{ $json.requestor_email }}",
+          "subject": "={{ $json.email_subject }}",
+          "message": "={{ $json.placement_email_html }}",
+          "options": {
+            "appendAttribution": false,
+            "ccList": "placements@scalevirtually.com, hr@scalevirtually.com"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          96,
+          -32
+        ],
+        "id": "5af5e73e-e978-420d-a9a8-6b54320d3540",
+        "name": "Send a message",
+        "webhookId": "29b74b35-0131-4936-843f-d5a716e22edb",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

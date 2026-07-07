@@ -1,0 +1,191 @@
+{
+  "updatedAt": "2026-05-27T17:43:26.459Z",
+  "createdAt": "2026-05-21T18:37:28.567Z",
+  "id": "1XbJ4LEHrcHtrWLj",
+  "name": "Linkedin Outreach",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4394f981-844c-475f-9da1-ac9724614314",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "resource": "stats",
+        "accountIds": [
+          "={{ $json.items[0].id }}"
+        ],
+        "campaignIds": [
+          "={{ $json.items[1].id }}"
+        ],
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-heyreach.heyReach",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "fd9d296f-7be0-4a0c-8129-acf5995ce605",
+      "name": "Retrieve overall statistics",
+      "credentials": {
+        "heyReachApi": {
+          "id": "fEzfXBSd6wzHRkjU",
+          "name": "HeyReach account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "linkedInAccount",
+        "limit": 100,
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-heyreach.heyReach",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "b86d1aad-7e87-447e-adfc-d4c5277040e8",
+      "name": "Retrieve a list of LinkedIn accounts",
+      "credentials": {
+        "heyReachApi": {
+          "id": "fEzfXBSd6wzHRkjU",
+          "name": "HeyReach account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 100,
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-heyreach.heyReach",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "a654ae3a-4ee4-4ee3-ab22-1a70c1cd035f",
+      "name": "Retrieve all campaigns",
+      "credentials": {
+        "heyReachApi": {
+          "id": "fEzfXBSd6wzHRkjU",
+          "name": "HeyReach account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Retrieve a list of LinkedIn accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve a list of LinkedIn accounts": {
+      "main": [
+        [
+          {
+            "node": "Retrieve all campaigns",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve all campaigns": {
+      "main": [
+        [
+          {
+            "node": "Retrieve overall statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "1673d212-e3a2-4427-9ffc-9be96848d406",
+  "activeVersionId": null,
+  "versionCounter": 3,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-05-21T18:37:28.575Z",
+      "createdAt": "2026-05-21T18:37:28.575Z",
+      "role": "workflow:owner",
+      "workflowId": "1XbJ4LEHrcHtrWLj",
+      "projectId": "1F2FqOomzP82L5v5",
+      "project": {
+        "updatedAt": "2026-04-09T17:48:06.104Z",
+        "createdAt": "2026-04-09T17:37:55.795Z",
+        "id": "1F2FqOomzP82L5v5",
+        "name": "Jenneiline Manuel <jenn@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2026-04-09T17:37:55.797Z",
+            "createdAt": "2026-04-09T17:37:55.797Z",
+            "userId": "18e9efa4-131e-4ef0-bf66-99bbaa47c61f",
+            "projectId": "1F2FqOomzP82L5v5",
+            "user": {
+              "updatedAt": "2026-07-02T16:12:02.000Z",
+              "createdAt": "2026-04-09T17:37:55.790Z",
+              "id": "18e9efa4-131e-4ef0-bf66-99bbaa47c61f",
+              "email": "jenn@scalevirtually.com",
+              "firstName": "Jenneiline",
+              "lastName": "Manuel",
+              "personalizationAnswers": null,
+              "settings": {
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "cvOi0g9fl0PcWFt0",
+                "userActivated": true,
+                "userActivatedAt": 1776884151639,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1777936404035
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-02",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

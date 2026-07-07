@@ -1,0 +1,4029 @@
+{
+  "updatedAt": "2026-07-04T13:13:12.351Z",
+  "createdAt": "2026-02-06T15:13:10.170Z",
+  "id": "7zrREMionrSvDFej",
+  "name": "[Gmail] Shortlisting Insights Fetcher",
+  "description": "Monitors Gmail replies to VA candidate shortlisting emails, summarizes the client\u2019s response in one sentence using AI, and appends the update to the matching ongoing Placement Requirement record in Airtable.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "subject: Scale Virtually: VA Candidates for"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        16
+      ],
+      "id": "e9456c9d-2e8e-45e1-96dc-2edc8334738d",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UJOF7gMKW80Euvj8",
+          "name": "PJ SV Project"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        800,
+        16
+      ],
+      "id": "d282f9a3-6f25-46a5-8ba6-c705b9c32268",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        512
+      ],
+      "id": "88c6e7ce-36eb-4bba-be4b-262c66c2b836",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "jgCQiVdBmV3ZkeeE",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n provides the input items in the '$input' variable\nconst items = $input.all();\nconst targetPrefix = \"Scale Virtually: VA Candidates for \";\n\nconst cleanedItems = items.map(item => {\n  // Access the 'Subject' inside the json property of the n8n item\n  let subject = item.json.Subject || \"\";\n\n  // Regex to strip \"Re:\", \"Fwd:\", and the specific \"Scale Virtually\" prefix\n  const regex = new RegExp(`^(Re: |Fwd: )*${targetPrefix}`, \"i\");\n  \n  const newSubject = subject.replace(regex, \"\").trim();\n\n  // Return the n8n item structure: { json: { ... } }\n  return {\n    json: {\n      ...item.json,\n      Subject: newSubject\n    }\n  };\n});\n\nreturn cleanedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        16
+      ],
+      "id": "5726e7dc-f14e-4c54-9522-dfbfc4b67a7e",
+      "name": "Subject-line Cleaner"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzMCMKzacW1QxcW",
+          "mode": "list",
+          "cachedResultName": "PLACEMENTS Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblzMCMKzacW1QxcW"
+        },
+        "filterByFormula": "={{ `AND({PL STAGE} = \"PL - Ongoing\", FIND(${JSON.stringify(String($json.Subject ?? '').replace(/^\"+|\"+$/g, ''))}, ARRAYJOIN({Company Rollup}, \"\")) > 0)` }}",
+        "options": {
+          "fields": [
+            "Clients",
+            "Record ID",
+            "PR \u2013 Updates"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        512,
+        -144
+      ],
+      "id": "2b46c88f-ac23-42ca-805a-2eaf2e7a862f",
+      "name": "Search PR records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Summarize the following email into exactly one sentence.\n\nConstraints:\n\nUse a third-person perspective.\n\nExtract the sender's first name from the From field below and use it as the subject of the sentence (e.g., \"John mentioned...\").\n\nDo not include greetings (Hi, Good day) or signatures.\n\nFocus on the core message.\n\nSender: {{ $json.From }} Snippet: {{ $json.snippet }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        432,
+        224
+      ],
+      "id": "97e487d9-8a56-43c7-b559-f3ed4f3cfe2b",
+      "name": "Email Summarizer",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the current date and time in PHT (Philippine Time)\nconst now = new Date();\nconst options = { \n  month: 'short', \n  day: '2-digit', \n  year: 'numeric', \n  hour: '2-digit', \n  minute: '2-digit', \n  hour12: true, \n  timeZone: 'Asia/Manila' \n};\n\n// Format: Feb 06, 2026 11:45 PM PHT\nconst timestamp = now.toLocaleString('en-US', options).replace(',', '') + ' PHT';\n\nconst items = $input.all();\n\nreturn items.map(item => {\n  const existingUpdates = item.json[\"PR \u2013 Updates\"] || \"\";\n  \n  // 1. Try to extract from the root-level \"output\" field first\n  let newSummary = item.json[\"output\"] || \"\";\n  \n  // 2. Fallback: If \"output\" is empty, look deep inside the Gemini \"candidates\" array\n  if (!newSummary.trim()) {\n    try {\n      if (\n        item.json.candidates && \n        item.json.candidates[0] && \n        item.json.candidates[0].content && \n        item.json.candidates[0].content.parts && \n        item.json.candidates[0].content.parts[0]\n      ) {\n        newSummary = item.json.candidates[0].content.parts[0].text || \"\";\n      }\n    } catch (e) {\n      newSummary = \"\";\n    }\n  }\n  \n  // Safeguard: If no update summary was found in either location, return the original record unchanged\n  if (!newSummary.trim()) {\n    return {\n      json: {\n        ...item.json,\n        final_update_string: existingUpdates\n      }\n    };\n  }\n  \n  // Create the new bullet entry\n  const newEntry = `\u2022 [${timestamp}] ${newSummary.trim()}`;\n\n  // APPEND to the end: existing + new\n  // If the existing field is empty, just use the new entry; otherwise, append it with newlines\n  const updatedField = existingUpdates \n    ? `${existingUpdates.trim()}\\n\\n${newEntry}` \n    : newEntry;\n\n  return {\n    json: {\n      ...item.json,\n      final_update_string: updatedField\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        16
+      ],
+      "id": "f1e0d3f3-d5c6-4db7-b5eb-df5cdb7f866f",
+      "name": "PR-Updates Compiler"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblzMCMKzacW1QxcW",
+          "mode": "list",
+          "cachedResultName": "PLACEMENTS Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblzMCMKzacW1QxcW"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Search PR records').item.json[\"Record ID\"] }}",
+            "PR \u2013 Updates": "={{ $json.final_update_string }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "PLACEMENT Requirements",
+              "displayName": "PLACEMENT Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirement",
+              "displayName": "PDEV Requirement",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Clients",
+              "displayName": "Clients",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidate Request Date",
+              "displayName": "Candidate Request Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Roles (from PDEV Requirement)",
+              "displayName": "Roles (from PDEV Requirement)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Spanish Speaking Required?",
+              "displayName": "Spanish Speaking Required?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "REQ MVA CALC",
+              "displayName": "REQ MVA CALC",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "REQUIRED MVA",
+              "displayName": "REQUIRED MVA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENT TYPE",
+              "displayName": "PLACEMENT TYPE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "First",
+                  "value": "First"
+                },
+                {
+                  "name": "Add-on [Sales]",
+                  "value": "Add-on [Sales]"
+                },
+                {
+                  "name": "Add-on [PDEV]",
+                  "value": "Add-on [PDEV]"
+                },
+                {
+                  "name": "Add-on [PLACEMENTS]",
+                  "value": "Add-on [PLACEMENTS]"
+                },
+                {
+                  "name": "Add-on [OPS]",
+                  "value": "Add-on [OPS]"
+                },
+                {
+                  "name": "Replacement",
+                  "value": "Replacement"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Full/Part Time",
+              "displayName": "Full/Part Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Part Time VA",
+                  "value": "Part Time VA"
+                },
+                {
+                  "name": "Full Time VA",
+                  "value": "Full Time VA"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL STAGE",
+              "displayName": "PL STAGE",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "PL - Request Received",
+                  "value": "PL - Request Received"
+                },
+                {
+                  "name": "PL - Ongoing",
+                  "value": "PL - Ongoing"
+                },
+                {
+                  "name": "PL - Completed",
+                  "value": "PL - Completed"
+                },
+                {
+                  "name": " PL - Parked",
+                  "value": " PL - Parked"
+                },
+                {
+                  "name": "PL - Non Responsive",
+                  "value": "PL - Non Responsive"
+                },
+                {
+                  "name": "PL - Failed Sale",
+                  "value": "PL - Failed Sale"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Time Zone",
+              "displayName": "Time Zone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Project Owner",
+              "displayName": "Project Owner",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF",
+              "displayName": "SUF",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Rate (from RFP)",
+              "displayName": "Client Rate (from RFP)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Initial Client Rate",
+              "displayName": "Initial Client Rate",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Finance Notes",
+              "displayName": "Finance Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C",
+              "displayName": "JD + C",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Candidate Sent Count",
+              "displayName": "Candidate Sent Count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Requestor",
+              "displayName": "Requestor",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Finance N",
+              "displayName": "Finance N",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Work Hours",
+              "displayName": "Work Hours",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Expected Start Date",
+              "displayName": "Expected Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Logistics Needed",
+              "displayName": "Logistics Needed",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Zoom Link",
+              "displayName": "Zoom Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rate Range (if necessary)",
+              "displayName": "Rate Range (if necessary)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Process Onboarding Strategy",
+              "displayName": "Process Onboarding Strategy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Immediate",
+                  "value": "Immediate"
+                },
+                {
+                  "name": "Postponed",
+                  "value": "Postponed"
+                },
+                {
+                  "name": "None",
+                  "value": "None"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Last Modified",
+              "displayName": "Last Modified",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL - Shortlisting",
+              "displayName": "PL - Shortlisting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Accepted [For CI]",
+              "displayName": "VA Accepted [For CI]",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "STP Required?",
+              "displayName": "STP Required?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Projects",
+              "displayName": "Projects",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "TA STP Requests",
+              "displayName": "TA STP Requests",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "STP Request Sent",
+              "displayName": "STP Request Sent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Virtual Assistants (from TA STP Requests)",
+              "displayName": "Virtual Assistants (from TA STP Requests)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "TTF",
+              "displayName": "TTF",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Accepted for CI",
+              "displayName": "Accepted for CI",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "MVA Pair being REPLACED",
+              "displayName": "MVA Pair being REPLACED",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Active VA",
+              "displayName": "Active VA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL - Shortlisting Batches",
+              "displayName": "PL - Shortlisting Batches",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email (from Clients)",
+              "displayName": "Email (from Clients)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Count (PL - Shortlisting)",
+              "displayName": "Count (PL - Shortlisting)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Shortlisted VA (from PL - Shortlisting Batches)",
+              "displayName": "Shortlisted VA (from PL - Shortlisting Batches)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Email Attachment",
+              "displayName": "Email Attachment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Mark requirement as Failed Sale?",
+              "displayName": "Mark requirement as Failed Sale?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL - Client Interviews",
+              "displayName": "PL - Client Interviews",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Placements",
+              "displayName": "VA Placements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Batch Sent Dates",
+              "displayName": "Batch Sent Dates",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Batch Sent Count",
+              "displayName": "Batch Sent Count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Interviewer(s)",
+              "displayName": "Interviewer(s)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Interviewer Contact Details",
+              "displayName": "Interviewer Contact Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Request Summary",
+              "displayName": "Request Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "JD + Client Profile",
+              "displayName": "JD + Client Profile",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Billing Address",
+              "displayName": "Billing Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SV Email (from Requestor)",
+              "displayName": "SV Email (from Requestor)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL - CI Batches",
+              "displayName": "PL - CI Batches",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Rollup",
+              "displayName": "Client Rollup",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Scope Type",
+              "displayName": "Scope Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Photo (from CLIENTS) (from PDEV Requirement)",
+              "displayName": "Photo (from CLIENTS) (from PDEV Requirement)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Rollup",
+              "displayName": "Company Rollup",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL Status",
+              "displayName": "PL Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + Client Profile fx",
+              "displayName": "JD + Client Profile fx",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsed to OPS",
+              "displayName": "Endorsed to OPS",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Last Modified By",
+              "displayName": "Last Modified By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PR ID",
+              "displayName": "PR ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "MVA (from PDEV Requirement)",
+              "displayName": "MVA (from PDEV Requirement)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Count (VA Placements)",
+              "displayName": "Count (VA Placements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "MVA Change",
+              "displayName": "MVA Change",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "For Scrubbing?",
+              "displayName": "For Scrubbing?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fields with Missing Data",
+              "displayName": "Fields with Missing Data",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Scrubbed At",
+              "displayName": "Last Scrubbed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placed VA",
+              "displayName": "Placed VA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Record ID",
+              "displayName": "Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CSA signed on: (from PDEV Requirement)",
+              "displayName": "CSA signed on: (from PDEV Requirement)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SUF paid on: (from PDEV Requirement)",
+              "displayName": "SUF paid on: (from PDEV Requirement)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client First Name",
+              "displayName": "Client First Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Last Name",
+              "displayName": "Client Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Role (from Clients)",
+              "displayName": "Client Role (from Clients)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Phone Number (from Clients)",
+              "displayName": "Phone Number (from Clients)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Email Address",
+              "displayName": "Client Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PR \u2013 Updates",
+              "displayName": "PR \u2013 Updates",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Billing Zip Code",
+              "displayName": "Billing Zip Code",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing State",
+              "displayName": "Billing State",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Billing City",
+              "displayName": "Billing City",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Phone",
+              "displayName": "Company Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Email (lookup only)",
+              "displayName": "Company Email (lookup only)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Address",
+              "displayName": "Company Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PR \u2013 Summary",
+              "displayName": "PR \u2013 Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "SHORT - Status",
+              "displayName": "SHORT - Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Final Client Rate from VAP",
+              "displayName": "Final Client Rate from VAP",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company Email",
+              "displayName": "Company Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Transcript",
+              "displayName": "Transcript",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Meeting Observations (from Transcript)",
+              "displayName": "Meeting Observations (from Transcript)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Meeting Summary (from Transcript)",
+              "displayName": "Meeting Summary (from Transcript)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Success Coach (from Clients)",
+              "displayName": "Success Coach (from Clients)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Transcript copy",
+              "displayName": "Transcript copy",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidate Request Month",
+              "displayName": "Candidate Request Month",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Candidate Request Year",
+              "displayName": "Candidate Request Year",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Pipeline Status",
+              "displayName": "Pipeline Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Request Received",
+                  "value": "Request Received"
+                },
+                {
+                  "name": "Shortlisting",
+                  "value": "Shortlisting"
+                },
+                {
+                  "name": "Client Interview",
+                  "value": "Client Interview"
+                },
+                {
+                  "name": "For Endorsement",
+                  "value": "For Endorsement"
+                },
+                {
+                  "name": "Endorsed",
+                  "value": "Endorsed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "STP Needs Follow-up?",
+              "displayName": "STP Needs Follow-up?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "STP TTF",
+              "displayName": "STP TTF",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Needs Shortlisting Follow-up?",
+              "displayName": "Needs Shortlisting Follow-up?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CI Scheduled?",
+              "displayName": "CI Scheduled?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Needs VA Follow-up?",
+              "displayName": "Needs VA Follow-up?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Needs Client Follow-up?",
+              "displayName": "Needs Client Follow-up?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client POC",
+              "displayName": "Client POC",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Contact Number",
+              "displayName": "POC Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Email",
+              "displayName": "POC Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Position",
+              "displayName": "POC Position",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Name",
+              "displayName": "POC Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Special Requirement?",
+              "displayName": "Special Requirement?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Client is a VIP",
+                  "value": "Client is a VIP"
+                },
+                {
+                  "name": "Urgent VA Placement Needed",
+                  "value": "Urgent VA Placement Needed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA TItle (from PDEV Requirement)",
+              "displayName": "VA TItle (from PDEV Requirement)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsement Count",
+              "displayName": "Endorsement Count",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "New Role?",
+              "displayName": "New Role?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Title",
+              "displayName": "VA Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirement (text)",
+              "displayName": "PDEV Requirement (text)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "With Updates",
+              "displayName": "With Updates",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsed to OPS [Year]",
+              "displayName": "Endorsed to OPS [Year]",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Endorsed to OPS [Month]",
+              "displayName": "Endorsed to OPS [Month]",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Placement ID being Replaced",
+              "displayName": "Placement ID being Replaced",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Reason for Replacement",
+              "displayName": "Reason for Replacement",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Company Restructuring",
+                  "value": "Company Restructuring"
+                },
+                {
+                  "name": "VA Resignation",
+                  "value": "VA Resignation"
+                },
+                {
+                  "name": "Slow Business",
+                  "value": "Slow Business"
+                },
+                {
+                  "name": "VA Attendance",
+                  "value": "VA Attendance"
+                },
+                {
+                  "name": "Non-Payment Pullout",
+                  "value": "Non-Payment Pullout"
+                },
+                {
+                  "name": "VA Performance/Productivity",
+                  "value": "VA Performance/Productivity"
+                },
+                {
+                  "name": "VA Attitude",
+                  "value": "VA Attitude"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Replaced VA",
+              "displayName": "Replaced VA",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "If VA Resignation, why?",
+              "displayName": "If VA Resignation, why?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "e2a51c2b-d1b6-437d-8e60-3737f2f19619",
+      "name": "Update record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        432
+      ],
+      "id": "917c7310-b940-451f-a12a-23a93f253f97",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7BN2R0TQRbTnikkq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-lite"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Summarize the following email into exactly one sentence.\n\nConstraints:\n\nUse a third-person perspective.\n\nExtract the sender's first name from the From field below and use it as the subject of the sentence (e.g., \"John mentioned...\").\n\nDo not include greetings (Hi, Good day) or signatures.\n\nFocus on the core message.\n\nSender: {{ $json.From }} Snippet: {{ $json.snippet }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        432,
+        576
+      ],
+      "id": "4a92d398-00df-4aa6-91f8-272cd6a421de",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7BN2R0TQRbTnikkq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "devstral-latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        128,
+        400
+      ],
+      "id": "4ae3efd6-d30b-4bf8-9449-3562872e3abe",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "fWP2CoyeCWozkuI2",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        304,
+        432
+      ],
+      "id": "d4dfb1f2-f1de-4ba4-ba82-fc2dd95810e8",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "oPgDvFEtwaQWk2Jh",
+          "name": "Solutions"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Subject-line Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "PR-Updates Compiler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subject-line Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Search PR records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search PR records": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "PR-Updates Compiler": {
+      "main": [
+        [
+          {
+            "node": "Update record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Message a model": {
+      "main": [
+        []
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1783382045,
+        "possibleDuplicates": [
+          "19f39daac38ca1ea",
+          "19f39839ff2597fa"
+        ]
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "dd7f4fc1-f7ff-4345-90cf-46863077d961",
+  "activeVersionId": "dd7f4fc1-f7ff-4345-90cf-46863077d961",
+  "versionCounter": 1443,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-06T15:13:10.173Z",
+      "createdAt": "2026-02-06T15:13:10.173Z",
+      "role": "workflow:owner",
+      "workflowId": "7zrREMionrSvDFej",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    },
+    {
+      "updatedAt": "2026-04-29T22:14:43.442Z",
+      "createdAt": "2026-04-29T22:14:43.442Z",
+      "id": "syNcT4Uk2dB151Vd",
+      "name": "AI Agent"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:13:12.353Z",
+    "createdAt": "2026-07-04T13:13:12.353Z",
+    "versionId": "dd7f4fc1-f7ff-4345-90cf-46863077d961",
+    "workflowId": "7zrREMionrSvDFej",
+    "nodes": [
+      {
+        "parameters": {
+          "pollTimes": {
+            "item": [
+              {
+                "mode": "everyMinute"
+              }
+            ]
+          },
+          "filters": {
+            "q": "subject: Scale Virtually: VA Candidates for"
+          }
+        },
+        "type": "n8n-nodes-base.gmailTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          0,
+          16
+        ],
+        "id": "e9456c9d-2e8e-45e1-96dc-2edc8334738d",
+        "name": "Gmail Trigger",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "UJOF7gMKW80Euvj8",
+            "name": "PJ SV Project"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineByPosition",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          800,
+          16
+        ],
+        "id": "d282f9a3-6f25-46a5-8ba6-c705b9c32268",
+        "name": "Merge"
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "mode": "list",
+            "value": "gpt-4.1-mini"
+          },
+          "builtInTools": {},
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          80,
+          512
+        ],
+        "id": "88c6e7ce-36eb-4bba-be4b-262c66c2b836",
+        "name": "OpenAI Chat Model",
+        "credentials": {
+          "openAiApi": {
+            "id": "jgCQiVdBmV3ZkeeE",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// n8n provides the input items in the '$input' variable\nconst items = $input.all();\nconst targetPrefix = \"Scale Virtually: VA Candidates for \";\n\nconst cleanedItems = items.map(item => {\n  // Access the 'Subject' inside the json property of the n8n item\n  let subject = item.json.Subject || \"\";\n\n  // Regex to strip \"Re:\", \"Fwd:\", and the specific \"Scale Virtually\" prefix\n  const regex = new RegExp(`^(Re: |Fwd: )*${targetPrefix}`, \"i\");\n  \n  const newSubject = subject.replace(regex, \"\").trim();\n\n  // Return the n8n item structure: { json: { ... } }\n  return {\n    json: {\n      ...item.json,\n      Subject: newSubject\n    }\n  };\n});\n\nreturn cleanedItems;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          16
+        ],
+        "id": "5726e7dc-f14e-4c54-9522-dfbfc4b67a7e",
+        "name": "Subject-line Cleaner"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblzMCMKzacW1QxcW",
+            "mode": "list",
+            "cachedResultName": "PLACEMENTS Requirements",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblzMCMKzacW1QxcW"
+          },
+          "filterByFormula": "={{ `AND({PL STAGE} = \"PL - Ongoing\", FIND(${JSON.stringify(String($json.Subject ?? '').replace(/^\"+|\"+$/g, ''))}, ARRAYJOIN({Company Rollup}, \"\")) > 0)` }}",
+          "options": {
+            "fields": [
+              "Clients",
+              "Record ID",
+              "PR \u2013 Updates"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          512,
+          -144
+        ],
+        "id": "2b46c88f-ac23-42ca-805a-2eaf2e7a862f",
+        "name": "Search PR records",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=Summarize the following email into exactly one sentence.\n\nConstraints:\n\nUse a third-person perspective.\n\nExtract the sender's first name from the From field below and use it as the subject of the sentence (e.g., \"John mentioned...\").\n\nDo not include greetings (Hi, Good day) or signatures.\n\nFocus on the core message.\n\nSender: {{ $json.From }} Snippet: {{ $json.snippet }}",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          432,
+          224
+        ],
+        "id": "97e487d9-8a56-43c7-b559-f3ed4f3cfe2b",
+        "name": "Email Summarizer",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000
+      },
+      {
+        "parameters": {
+          "jsCode": "// Get the current date and time in PHT (Philippine Time)\nconst now = new Date();\nconst options = { \n  month: 'short', \n  day: '2-digit', \n  year: 'numeric', \n  hour: '2-digit', \n  minute: '2-digit', \n  hour12: true, \n  timeZone: 'Asia/Manila' \n};\n\n// Format: Feb 06, 2026 11:45 PM PHT\nconst timestamp = now.toLocaleString('en-US', options).replace(',', '') + ' PHT';\n\nconst items = $input.all();\n\nreturn items.map(item => {\n  const existingUpdates = item.json[\"PR \u2013 Updates\"] || \"\";\n  \n  // 1. Try to extract from the root-level \"output\" field first\n  let newSummary = item.json[\"output\"] || \"\";\n  \n  // 2. Fallback: If \"output\" is empty, look deep inside the Gemini \"candidates\" array\n  if (!newSummary.trim()) {\n    try {\n      if (\n        item.json.candidates && \n        item.json.candidates[0] && \n        item.json.candidates[0].content && \n        item.json.candidates[0].content.parts && \n        item.json.candidates[0].content.parts[0]\n      ) {\n        newSummary = item.json.candidates[0].content.parts[0].text || \"\";\n      }\n    } catch (e) {\n      newSummary = \"\";\n    }\n  }\n  \n  // Safeguard: If no update summary was found in either location, return the original record unchanged\n  if (!newSummary.trim()) {\n    return {\n      json: {\n        ...item.json,\n        final_update_string: existingUpdates\n      }\n    };\n  }\n  \n  // Create the new bullet entry\n  const newEntry = `\u2022 [${timestamp}] ${newSummary.trim()}`;\n\n  // APPEND to the end: existing + new\n  // If the existing field is empty, just use the new entry; otherwise, append it with newlines\n  const updatedField = existingUpdates \n    ? `${existingUpdates.trim()}\\n\\n${newEntry}` \n    : newEntry;\n\n  return {\n    json: {\n      ...item.json,\n      final_update_string: updatedField\n    }\n  };\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1024,
+          16
+        ],
+        "id": "f1e0d3f3-d5c6-4db7-b5eb-df5cdb7f866f",
+        "name": "PR-Updates Compiler"
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblzMCMKzacW1QxcW",
+            "mode": "list",
+            "cachedResultName": "PLACEMENTS Requirements",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblzMCMKzacW1QxcW"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $('Search PR records').item.json[\"Record ID\"] }}",
+              "PR \u2013 Updates": "={{ $json.final_update_string }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": false
+              },
+              {
+                "id": "PLACEMENT Requirements",
+                "displayName": "PLACEMENT Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PDEV Requirement",
+                "displayName": "PDEV Requirement",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Clients",
+                "displayName": "Clients",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidate Request Date",
+                "displayName": "Candidate Request Date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Company",
+                "displayName": "Company",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Roles (from PDEV Requirement)",
+                "displayName": "Roles (from PDEV Requirement)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Spanish Speaking Required?",
+                "displayName": "Spanish Speaking Required?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "REQ MVA CALC",
+                "displayName": "REQ MVA CALC",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "REQUIRED MVA",
+                "displayName": "REQUIRED MVA",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PLACEMENT TYPE",
+                "displayName": "PLACEMENT TYPE",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "First",
+                    "value": "First"
+                  },
+                  {
+                    "name": "Add-on [Sales]",
+                    "value": "Add-on [Sales]"
+                  },
+                  {
+                    "name": "Add-on [PDEV]",
+                    "value": "Add-on [PDEV]"
+                  },
+                  {
+                    "name": "Add-on [PLACEMENTS]",
+                    "value": "Add-on [PLACEMENTS]"
+                  },
+                  {
+                    "name": "Add-on [OPS]",
+                    "value": "Add-on [OPS]"
+                  },
+                  {
+                    "name": "Replacement",
+                    "value": "Replacement"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Full/Part Time",
+                "displayName": "Full/Part Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Part Time VA",
+                    "value": "Part Time VA"
+                  },
+                  {
+                    "name": "Full Time VA",
+                    "value": "Full Time VA"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL STAGE",
+                "displayName": "PL STAGE",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "PL - Request Received",
+                    "value": "PL - Request Received"
+                  },
+                  {
+                    "name": "PL - Ongoing",
+                    "value": "PL - Ongoing"
+                  },
+                  {
+                    "name": "PL - Completed",
+                    "value": "PL - Completed"
+                  },
+                  {
+                    "name": " PL - Parked",
+                    "value": " PL - Parked"
+                  },
+                  {
+                    "name": "PL - Non Responsive",
+                    "value": "PL - Non Responsive"
+                  },
+                  {
+                    "name": "PL - Failed Sale",
+                    "value": "PL - Failed Sale"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Time Zone",
+                "displayName": "Time Zone",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Project Owner",
+                "displayName": "Project Owner",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Phone Number",
+                "displayName": "Phone Number",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "SUF",
+                "displayName": "SUF",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client Rate (from RFP)",
+                "displayName": "Client Rate (from RFP)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Initial Client Rate",
+                "displayName": "Initial Client Rate",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Finance Notes",
+                "displayName": "Finance Notes",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + C",
+                "displayName": "JD + C",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Candidate Sent Count",
+                "displayName": "Candidate Sent Count",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Requestor",
+                "displayName": "Requestor",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Finance N",
+                "displayName": "Finance N",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Work Hours",
+                "displayName": "Work Hours",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Expected Start Date",
+                "displayName": "Expected Start Date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Logistics Needed",
+                "displayName": "Logistics Needed",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Zoom Link",
+                "displayName": "Zoom Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rate Range (if necessary)",
+                "displayName": "Rate Range (if necessary)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Process Onboarding Strategy",
+                "displayName": "Process Onboarding Strategy",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Immediate",
+                    "value": "Immediate"
+                  },
+                  {
+                    "name": "Postponed",
+                    "value": "Postponed"
+                  },
+                  {
+                    "name": "None",
+                    "value": "None"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Created By",
+                "displayName": "Created By",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Last Modified",
+                "displayName": "Last Modified",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PL - Shortlisting",
+                "displayName": "PL - Shortlisting",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Accepted [For CI]",
+                "displayName": "VA Accepted [For CI]",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "STP Required?",
+                "displayName": "STP Required?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Projects",
+                "displayName": "Projects",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "TA STP Requests",
+                "displayName": "TA STP Requests",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "STP Request Sent",
+                "displayName": "STP Request Sent",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Virtual Assistants (from TA STP Requests)",
+                "displayName": "Virtual Assistants (from TA STP Requests)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "TTF",
+                "displayName": "TTF",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Accepted for CI",
+                "displayName": "Accepted for CI",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "MVA Pair being REPLACED",
+                "displayName": "MVA Pair being REPLACED",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Active VA",
+                "displayName": "Active VA",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PL - Shortlisting Batches",
+                "displayName": "PL - Shortlisting Batches",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Email (from Clients)",
+                "displayName": "Email (from Clients)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Count (PL - Shortlisting)",
+                "displayName": "Count (PL - Shortlisting)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Shortlisted VA (from PL - Shortlisting Batches)",
+                "displayName": "Shortlisted VA (from PL - Shortlisting Batches)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Email Attachment",
+                "displayName": "Email Attachment",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Mark requirement as Failed Sale?",
+                "displayName": "Mark requirement as Failed Sale?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL - Client Interviews",
+                "displayName": "PL - Client Interviews",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Placements",
+                "displayName": "VA Placements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Batch Sent Dates",
+                "displayName": "Batch Sent Dates",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Batch Sent Count",
+                "displayName": "Batch Sent Count",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Interviewer(s)",
+                "displayName": "Interviewer(s)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Interviewer Contact Details",
+                "displayName": "Interviewer Contact Details",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Request Summary",
+                "displayName": "Request Summary",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "JD + Client Profile",
+                "displayName": "JD + Client Profile",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Billing Address",
+                "displayName": "Billing Address",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "SV Email (from Requestor)",
+                "displayName": "SV Email (from Requestor)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PL - CI Batches",
+                "displayName": "PL - CI Batches",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Client Rollup",
+                "displayName": "Client Rollup",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Scope Type",
+                "displayName": "Scope Type",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Photo (from CLIENTS) (from PDEV Requirement)",
+                "displayName": "Photo (from CLIENTS) (from PDEV Requirement)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company Rollup",
+                "displayName": "Company Rollup",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Role",
+                "displayName": "Role",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PL Status",
+                "displayName": "PL Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + Client Profile fx",
+                "displayName": "JD + Client Profile fx",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Endorsed to OPS",
+                "displayName": "Endorsed to OPS",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Last Modified By",
+                "displayName": "Last Modified By",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PR ID",
+                "displayName": "PR ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "MVA (from PDEV Requirement)",
+                "displayName": "MVA (from PDEV Requirement)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Count (VA Placements)",
+                "displayName": "Count (VA Placements)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "MVA Change",
+                "displayName": "MVA Change",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "For Scrubbing?",
+                "displayName": "For Scrubbing?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Fields with Missing Data",
+                "displayName": "Fields with Missing Data",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Last Scrubbed At",
+                "displayName": "Last Scrubbed At",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Placed VA",
+                "displayName": "Placed VA",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Record ID",
+                "displayName": "Record ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CSA signed on: (from PDEV Requirement)",
+                "displayName": "CSA signed on: (from PDEV Requirement)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "SUF paid on: (from PDEV Requirement)",
+                "displayName": "SUF paid on: (from PDEV Requirement)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client First Name",
+                "displayName": "Client First Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client Last Name",
+                "displayName": "Client Last Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client Role (from Clients)",
+                "displayName": "Client Role (from Clients)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Phone Number (from Clients)",
+                "displayName": "Phone Number (from Clients)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client Email Address",
+                "displayName": "Client Email Address",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PR \u2013 Updates",
+                "displayName": "PR \u2013 Updates",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Billing Zip Code",
+                "displayName": "Billing Zip Code",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Billing State",
+                "displayName": "Billing State",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Billing City",
+                "displayName": "Billing City",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company Phone",
+                "displayName": "Company Phone",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company Email (lookup only)",
+                "displayName": "Company Email (lookup only)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company Address",
+                "displayName": "Company Address",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PR \u2013 Summary",
+                "displayName": "PR \u2013 Summary",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "SHORT - Status",
+                "displayName": "SHORT - Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Final Client Rate from VAP",
+                "displayName": "Final Client Rate from VAP",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company Email",
+                "displayName": "Company Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Transcript",
+                "displayName": "Transcript",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Meeting Observations (from Transcript)",
+                "displayName": "Meeting Observations (from Transcript)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Meeting Summary (from Transcript)",
+                "displayName": "Meeting Summary (from Transcript)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Success Coach (from Clients)",
+                "displayName": "Success Coach (from Clients)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Transcript copy",
+                "displayName": "Transcript copy",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidate Request Month",
+                "displayName": "Candidate Request Month",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Candidate Request Year",
+                "displayName": "Candidate Request Year",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Pipeline Status",
+                "displayName": "Pipeline Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Request Received",
+                    "value": "Request Received"
+                  },
+                  {
+                    "name": "Shortlisting",
+                    "value": "Shortlisting"
+                  },
+                  {
+                    "name": "Client Interview",
+                    "value": "Client Interview"
+                  },
+                  {
+                    "name": "For Endorsement",
+                    "value": "For Endorsement"
+                  },
+                  {
+                    "name": "Endorsed",
+                    "value": "Endorsed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "STP Needs Follow-up?",
+                "displayName": "STP Needs Follow-up?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "STP TTF",
+                "displayName": "STP TTF",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Needs Shortlisting Follow-up?",
+                "displayName": "Needs Shortlisting Follow-up?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CI Scheduled?",
+                "displayName": "CI Scheduled?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Needs VA Follow-up?",
+                "displayName": "Needs VA Follow-up?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Needs Client Follow-up?",
+                "displayName": "Needs Client Follow-up?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client POC",
+                "displayName": "Client POC",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "POC Contact Number",
+                "displayName": "POC Contact Number",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "POC Email",
+                "displayName": "POC Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "POC Position",
+                "displayName": "POC Position",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "POC Name",
+                "displayName": "POC Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Special Requirement?",
+                "displayName": "Special Requirement?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Client is a VIP",
+                    "value": "Client is a VIP"
+                  },
+                  {
+                    "name": "Urgent VA Placement Needed",
+                    "value": "Urgent VA Placement Needed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA TItle (from PDEV Requirement)",
+                "displayName": "VA TItle (from PDEV Requirement)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Endorsement Count",
+                "displayName": "Endorsement Count",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "New Role?",
+                "displayName": "New Role?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Title",
+                "displayName": "VA Title",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PDEV Requirement (text)",
+                "displayName": "PDEV Requirement (text)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "With Updates",
+                "displayName": "With Updates",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Endorsed to OPS [Year]",
+                "displayName": "Endorsed to OPS [Year]",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Endorsed to OPS [Month]",
+                "displayName": "Endorsed to OPS [Month]",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Placement ID being Replaced",
+                "displayName": "Placement ID being Replaced",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Reason for Replacement",
+                "displayName": "Reason for Replacement",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Company Restructuring",
+                    "value": "Company Restructuring"
+                  },
+                  {
+                    "name": "VA Resignation",
+                    "value": "VA Resignation"
+                  },
+                  {
+                    "name": "Slow Business",
+                    "value": "Slow Business"
+                  },
+                  {
+                    "name": "VA Attendance",
+                    "value": "VA Attendance"
+                  },
+                  {
+                    "name": "Non-Payment Pullout",
+                    "value": "Non-Payment Pullout"
+                  },
+                  {
+                    "name": "VA Performance/Productivity",
+                    "value": "VA Performance/Productivity"
+                  },
+                  {
+                    "name": "VA Attitude",
+                    "value": "VA Attitude"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Replaced VA",
+                "displayName": "Replaced VA",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "If VA Resignation, why?",
+                "displayName": "If VA Resignation, why?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1264,
+          0
+        ],
+        "id": "e2a51c2b-d1b6-437d-8e60-3737f2f19619",
+        "name": "Update record",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelName": "models/gemini-2.5-flash-lite",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+        "typeVersion": 1,
+        "position": [
+          -176,
+          432
+        ],
+        "id": "917c7310-b940-451f-a12a-23a93f253f97",
+        "name": "Google Gemini Chat Model",
+        "credentials": {
+          "googlePalmApi": {
+            "id": "7BN2R0TQRbTnikkq",
+            "name": "Google Gemini(PaLM) Api account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "models/gemini-2.5-flash-lite",
+            "mode": "list",
+            "cachedResultName": "models/gemini-2.5-flash-lite"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "=Summarize the following email into exactly one sentence.\n\nConstraints:\n\nUse a third-person perspective.\n\nExtract the sender's first name from the From field below and use it as the subject of the sentence (e.g., \"John mentioned...\").\n\nDo not include greetings (Hi, Good day) or signatures.\n\nFocus on the core message.\n\nSender: {{ $json.From }} Snippet: {{ $json.snippet }}"
+              }
+            ]
+          },
+          "simplify": false,
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.googleGemini",
+        "typeVersion": 1,
+        "position": [
+          432,
+          576
+        ],
+        "id": "4a92d398-00df-4aa6-91f8-272cd6a421de",
+        "name": "Message a model",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000,
+        "credentials": {
+          "googlePalmApi": {
+            "id": "7BN2R0TQRbTnikkq",
+            "name": "Google Gemini(PaLM) Api account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "model": "devstral-latest",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+        "typeVersion": 1,
+        "position": [
+          128,
+          400
+        ],
+        "id": "4ae3efd6-d30b-4bf8-9449-3562872e3abe",
+        "name": "Mistral Cloud Chat Model",
+        "credentials": {
+          "mistralCloudApi": {
+            "id": "fWP2CoyeCWozkuI2",
+            "name": "Mistral Cloud account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "model": "llama-3.1-8b-instant",
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+        "typeVersion": 1,
+        "position": [
+          304,
+          432
+        ],
+        "id": "d4dfb1f2-f1de-4ba4-ba82-fc2dd95810e8",
+        "name": "Groq Chat Model",
+        "credentials": {
+          "groqApi": {
+            "id": "oPgDvFEtwaQWk2Jh",
+            "name": "Solutions"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Gmail Trigger": {
+        "main": [
+          [
+            {
+              "node": "Subject-line Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Chat Model": {
+        "ai_languageModel": [
+          []
+        ]
+      },
+      "Merge": {
+        "main": [
+          [
+            {
+              "node": "PR-Updates Compiler",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Subject-line Cleaner": {
+        "main": [
+          [
+            {
+              "node": "Search PR records",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Email Summarizer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search PR records": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email Summarizer": {
+        "main": [
+          [
+            {
+              "node": "Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "PR-Updates Compiler": {
+        "main": [
+          [
+            {
+              "node": "Update record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Gemini Chat Model": {
+        "ai_languageModel": [
+          []
+        ]
+      },
+      "Message a model": {
+        "main": [
+          []
+        ]
+      },
+      "Mistral Cloud Chat Model": {
+        "ai_languageModel": [
+          []
+        ]
+      },
+      "Groq Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "Email Summarizer",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,1745 @@
+{
+  "updatedAt": "2026-07-04T01:24:20.241Z",
+  "createdAt": "2026-05-14T13:50:21.800Z",
+  "id": "2izPxSa5wLKHxXJU",
+  "name": "Slack Chatbot V.03",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c4874a39-37ae-4c73-9343-253e212d82d3",
+                    "leftValue": "={{ $json.body.event.type }}",
+                    "rightValue": "app_mention",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new_question"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c52b7058-f87e-4c2d-8a75-58f57365b21a",
+                    "leftValue": "={{ $json.body.event.type === 'message' && !$json.body.event.bot_id }}",
+                    "rightValue": "message",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "new_message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c4f12473-6a38-4d5e-8846-f0aed0032013",
+                    "leftValue": "={{ $json.body.payload ? JSON.parse($json.body.payload).type : \"\" }}",
+                    "rightValue": "block_actions",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "button_click"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1dc9250e-4dcc-4b0b-87e3-c70713b6bc17",
+                    "leftValue": "={{ $json.body.event.type }}",
+                    "rightValue": "={{ $json.body.event.type }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "reaction_added"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ],
+      "id": "fd869666-967a-4a65-8172-f114cf7ba63d",
+      "name": "Event Identifier"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c67d04de-5a80-4707-962b-38f5d3cd7797",
+              "name": "text",
+              "value": "={{ ($json.body.event.blocks?.[0]?.elements?.[0]?.elements?.[1]?.text || $json.body.event.text || '').replace(/<@.*?>/g, '').trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        176
+      ],
+      "id": "2ccc832a-dd08-40aa-8eea-d65e94163b1e",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.channel, '') }}\",\n  \"thread_ts\": \"{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.ts, '') }}\",\n  \"text\": \"{{ $json.slack_content }}\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.slack_content }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4d Helpful\"\n          },\n          \"style\": \"primary\",\n          \"value\": \"helpful_{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.ts, '') }}\",\n          \"action_id\": \"feedback_positive\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4e Not Helpful\"\n          },\n          \"style\": \"danger\",\n          \"value\": \"unhelpful_{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.ts, '') }}\",\n          \"action_id\": \"feedback_negative\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3328,
+        192
+      ],
+      "id": "43c2f2f2-97e3-46de-9147-c9fa6fd22239",
+      "name": "Send Slack Message",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $('Webhook').first().json.body.event.channel }}\",\n  \"thread_ts\": \"{{ $('Webhook').first().json.body.event.ts }}\",\n  \"text\": \"{{ $('Build API Payload').first().json.slackMessage }}\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $('Build API Payload').first().json.slackMessage }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4d Helpful\"\n          },\n          \"style\": \"primary\",\n          \"value\": \"helpful_{{ $('Webhook').first().json.body.event.ts }}\",\n          \"action_id\": \"feedback_positive\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4e Not Helpful\"\n          },\n          \"style\": \"danger\",\n          \"value\": \"unhelpful_{{ $('Webhook').first().json.body.event.ts }}\",\n          \"action_id\": \"feedback_negative\"\n        }\n      ]\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6016,
+        -1056
+      ],
+      "id": "1ea4d762-e27e-4a4c-9dea-00d22d270325",
+      "name": "Send Slack Message1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.update",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"channel\": $json.channel_id,\n  \"ts\": $json.click_ts,\n  \"text\": $json.original_text,\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": $json.original_text\n      },\n      \"accessory\": {\n        \"type\": \"button\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"Fill Out Form\",\n          \"emoji\": true\n        },\n        \"value\": \"airtable_click\",\n        \"url\": \"https://airtable.com/apptuAm73VyH7pcHA/pag5CO7L6G0WpegeV/form\",\n        \"action_id\": \"button-action\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"\ud83d\udcdd _Thanks for the feedback! Click the button above to provide more details._\"\n        }\n      ]\n    }\n  ]\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        928,
+        576
+      ],
+      "id": "86e70df2-9b50-4b8f-88e9-d51d35343a91",
+      "name": "Update Message",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Parse the incoming Slack payload\nconst payload = JSON.parse($input.first().json.body.payload);\n\n// 2. Get the value \u2014 may be undefined if it's not a feedback button\nconst rawValue = payload.actions[0].value;\n\n// \u2705 Guard: skip if this isn't a feedback button click\nif (!rawValue || !rawValue.includes('_')) {\n  return [{\n    json: {\n      skipped: true,\n      reason: 'Not a feedback button click',\n      action_id: payload.actions[0].action_id\n    }\n  }];\n}\n\n// 3. Split the value (e.g., \"helpful_1773338337.652549\")\nconst splitValue = rawValue.split('_');\nconst feedbackType = splitValue[0];\nconst originalTs = splitValue[1];\n\n// 4. Grab the user, channel, and message timestamps\nconst userId = payload.user.id;\nconst channelId = payload.channel.id;\nconst messageTs = payload.container.message_ts;\n\n// 5. Output\nreturn [{\n  json: {\n    feedback: feedbackType,\n    anchor_ts: originalTs,\n    user_id: userId,\n    channel_id: channelId,\n    click_ts: messageTs,\n    original_text: payload.message.blocks[0].text.text\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        576
+      ],
+      "id": "8d14df97-b005-4f77-a1ad-1e3237851ced",
+      "name": "Parser for button"
+    },
+    {
+      "parameters": {
+        "resource": "user",
+        "operation": "getProfile",
+        "user": {
+          "__rl": true,
+          "value": "={{ $('Event Identifier').item.json.body.event.user }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1216,
+        176
+      ],
+      "id": "c2798852-9bf0-43ea-9059-d0ca8b6b4c2f",
+      "name": "Get a user's profile",
+      "webhookId": "0aa5bf99-96d7-40a4-a2b7-458a0a4eff4a",
+      "alwaysOutputData": false,
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "feedback",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "message_id",
+              "fieldValue": "={{ $json.message_id }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.anchor_ts }}"
+            },
+            {
+              "fieldId": "user_slack_id",
+              "fieldValue": "={{ $json.user_id }}"
+            },
+            {
+              "fieldId": "rating",
+              "fieldValue": "={{ $json.feedback }}"
+            },
+            {
+              "fieldId": "comment",
+              "fieldValue": "={{ $json.comment }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "ccf7dc35-8cd7-4a33-ae5c-8c7e68018664",
+      "name": "SB: Log Feedback",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        576
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "VZ9E4UrKeu1Vb0fF",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.body }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-type",
+                "value": "text/plain"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        208,
+        192
+      ],
+      "id": "ba5d0dde-18a5-4f2a-ac57-912151acdef0",
+      "name": "URL Verification1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "svpc-v.03",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        192
+      ],
+      "id": "1ce9856b-4202-4449-8e8f-26a8255b7773",
+      "name": "Webhook",
+      "webhookId": "c5741dfc-5b4c-4e0b-a295-62552e8dbead"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sv-chatbot-api.vercel.app/api/v3/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZWNyZXQiOiJpTG92M1MwbHV0MW9uU2M0bGVWMXJ0dWFsWUAyMDI2IiwiaWF0IjoxNzc5MTM2OTUxLCJleHAiOjE4MTAyNDA5NTF9.Pj0m98h_X_xWrK80Sh-CpdfqN_ztsODl5N_L27yU9cA"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Build API Payload').first().json.payload }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "9a3fd357-55d2-420b-a034-90b4f9958c1d",
+      "name": "POST: Bryan API",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2720,
+        192
+      ],
+      "typeVersion": 4.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\n// Handle error responses\nif (response.status === 'error') {\n  const errContent = 'Sorry, something went wrong on my end. Please try again in a moment! \\uD83D\\uDE0A';\n  return [{\n    json: {\n      classifier_status: 'ERROR',\n      content: errContent,\n      slack_content: errContent,\n      output: errContent,\n      error_code: response.error?.code || 'UNKNOWN',\n      thread_id: null,\n      matched_docs: [],\n      model_used: '',\n      tokens: 0,\n      latency_ms: 0\n    }\n  }];\n}\n\nconst content = response.response?.content || '';\n\n// Sanitize for safe Slack JSON injection\nconst slack_content = content\n  .replace(/\\\\/g, '\\\\\\\\')\n  .replace(/\"/g, '\\\\\"')\n  .replace(/\\n/g, '\\\\n')\n  .replace(/\\r/g, '\\\\r')\n  .replace(/\\t/g, '\\\\t');\n\nreturn [{\n  json: {\n    classifier_status: response.meta?.classifier_status || 'OFF_TOPIC',\n    content,\n    slack_content,\n    output: slack_content,\n    thread_id: response.thread_id,\n    matched_docs: response.matched_docs || [],\n    model_used: response.meta?.model_used || '',\n    tokens: response.meta?.tokens || 0,\n    latency_ms: response.meta?.latency_ms || 0\n  }\n}];"
+      },
+      "id": "ece2be19-f2da-4860-87f8-ba1e088a53c3",
+      "name": "Parse API Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2976,
+        192
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Webhook').first().json.body.event;\nconst profile = $('Get a user\\'s profile').first().json;\nconst classifyData = $('Parse Classify Response').first().json;\nconst classifyRaw = $('POST: Bryan Classify').first().json;\nconst isPersonalData = $('Format user_data_context').isExecuted;\nconst userData = isPersonalData\n  ? $('Format user_data_context').first().json\n  : null;\n\nconst messageObj = classifyRaw.message || {};\nconst profileObj = classifyRaw.profile || {};\n\n// Always build intent from the normalized classifyData \u2014 never from classifyRaw.intent directly\n// This ensures intent.code is never an empty string (would cause 400 from Bryan's API)\nconst intentObj = {\n  requires_personal_data: classifyData.intent_requires_personal,\n  confidence: classifyData.intent_confidence,\n  reason: classifyData.intent_reason,\n  tokens: classifyData.intent_tokens,\n  model: classifyData.intent_model,\n  code: classifyData.intent_code  // always \"PERSONAL_DATA\" or \"POLICY\", never empty\n};\n\nconst systemPrompt = `You are the SV Assistant \u2014 an AI-powered chatbot for Scale Virtually contractors.\n\nYou have TWO responsibilities:\n1. CLASSIFY the user's message into the correct status\n2. RESPOND based on that classification\n\nException: If the system flag is_personal_data = true, skip classification. The mode is already PERSONAL_DATA.\n\n---\n\nABSOLUTE GROUNDING RULE \u2014 READ FIRST\n\nYou may ONLY answer using:\n- Information retrieved from the internal SV document store (doc retrieval)\n- The profile and personal records data provided in this payload (for PERSONAL_DATA mode)\n\nYou have NO web search, NO external knowledge, NO general knowledge access for SV-specific facts. Do not use anything from your training data to fill gaps \u2014 insurance amounts, eligibility dates, bank names, policy numbers, percentages, deadlines, contact emails not listed below, or any other SV-specific fact MUST come from a retrieved chunk or the profile data.\n\nIf the retrieved chunks do not explicitly contain the answer:\n- Do NOT guess, estimate, infer, or generalize from similar policies\n- Do NOT make up numbers, dates, names, or amounts under any circumstance\n- Do NOT list steps, processes, or procedures that are not explicitly and completely stated in a retrieved chunk \u2014 a single-step answer (\"Report this to the DevOps Team at devops@scalevirtually.com\") is a valid and complete answer if that is all the chunk says\n- Instead, either:\n  (a) ask ONE clarifying question if the request is ambiguous, or\n  (b) say plainly that the document doesn't specify that and redirect to Contractor Services at hr@scalevirtually.com\n\nZERO CHUNK COVERAGE = SV_NO_MATCH:\nIf retrieved chunks contain zero information about the specific topic asked \u2014 classify as SV_NO_MATCH and say: \"I don't have documentation covering that specific topic. For help, please reach out to Contractor Services at hr@scalevirtually.com.\" Do NOT answer from general knowledge just because the topic sounds plausible for an HR chatbot.\n\nMATCHED DOCS EMPTY = NO ANSWER:\nIf you receive zero matched documents or the matched_docs array is empty, you MUST NOT answer the question from your own knowledge. Treat this identically to SV_NO_MATCH \u2014 respond with: \"I wasn't able to find documentation on that. Please reach out to Contractor Services at hr@scalevirtually.com.\" Do not say \"yes you can\" or \"no you cannot\" for any SV policy question when you have no retrieved chunks to back it up.\n\nZERO TOLERANCE HALLUCINATION RULE \u2014 THIS IS THE MOST IMPORTANT RULE IN THIS PROMPT:\n\nYou are NOT allowed to construct, reason, infer, or synthesize any answer. You are a retrieval display system. Your only job is to find the exact sentence in a retrieved chunk that directly answers the question, then repeat it. That is all.\n\nTHE BINARY TEST \u2014 apply this before writing a single word of your response:\n\"Does a retrieved chunk contain a sentence that directly and explicitly answers this exact question?\"\n- YES \u2192 copy that sentence. That is your answer.\n- NO \u2192 say \"I don't have documentation on that. Please reach out to Contractor Services at hr@scalevirtually.com.\" Nothing else.\n\nThere is no third option. There is no \"I'll use related content to help.\" There is no \"based on the policy, it would make sense that...\" There is no \"generally speaking.\" Either the exact answer exists in the chunk or it does not.\n\nWHAT \"DIRECTLY ANSWERS\" MEANS \u2014 BE STRICT:\nA chunk that mentions the same topic does NOT directly answer the question.\nA chunk that lists prohibited behaviors does NOT answer \"what should I do if X happens.\"\nA chunk that describes a policy does NOT answer \"how do I file\" or \"who do I contact.\"\nA chunk about PTO rules does NOT answer \"how many PTOs do I have left.\"\nA chunk mentioning a team name does NOT answer \"what does that team handle.\"\nA chunk containing keywords like \"PTO,\" \"attendance,\" \"portal,\" \"OT\" does NOT answer \"what is the #support channel for\" or \"what questions are best suited for #support.\"\nA chunk listing what the chatbot covers does NOT define what a Slack channel is for.\nRelated \u2260 Responsive. Similar words \u2260 Matching answer. Topic overlap \u2260 Permission to answer. Keywords present \u2260 Question answered.\n\nDEFINITIONAL QUESTIONS \u2014 HIGHEST STRICTNESS BAR:\nQuestions of the form \"what is X for,\" \"what questions belong in X,\" \"what type of questions are best suited for X,\" \"what does X handle,\" \"what is X used for\" \u2014 require a retrieved chunk that contains a sentence explicitly defining what X is for. A chunk that merely mentions X, uses X as an example, or contains topics that sound related to X does NOT qualify. If no chunk contains that explicit definition \u2014 classify as SV_NO_MATCH and say: \"I don't have documentation specifically defining that. Please reach out to Contractor Services at hr@scalevirtually.com.\" Do not construct a definition by assembling related keywords from multiple chunks.\n\nFORBIDDEN CONSTRUCTIONS \u2014 never produce these regardless of what chunks are retrieved:\n- Prevention tips, best practices, or safety advice not verbatim in a chunk\n- Contact information (emails, teams, names) not verbatim in the retrieved chunk for that specific action\n- Step-by-step instructions assembled from multiple chunks or inferred from context\n- Elaborations, explanations, or context added around a verbatim answer\n- Any sentence beginning with \"typically,\" \"generally,\" \"usually,\" \"it's best to,\" \"you should,\" \"make sure to\"\n- Any redirect to a team or email that is not explicitly named in the chunk as the contact for that specific issue\n- Categorized bullet lists assembled by pulling keywords across multiple chunks \u2014 if no single chunk presents a categorized list, you cannot create one\n- Definitions or descriptions of Slack channels (#support, #help-desk, #general, etc.) unless a chunk explicitly defines that channel's purpose\n- Any answer to \"what is X for\" or \"what type of questions belong in X\" unless a chunk contains that exact definition verbatim\n\nSTEPS AND PROCEDURES \u2014 VERBATIM OR NOTHING:\n- Copy each step exactly as it appears in the chunk \u2014 same label, same wording, same order\n- If a step is not written in the document, it does not exist. Do not add it.\n- If the chunk lists 2 steps, your answer has 2 steps. Not 3. Not 4.\n- Do not rename steps. \"System Sweep\" is \"System Sweep\" \u2014 not \"account audit\" or \"data cleanup\"\n- Do not add what happens during a step. State the step name only, exactly as written.\n\nZERO CHUNK COVERAGE OR NO DIRECT ANSWER:\nImmediately respond: \"I don't have documentation specifically covering that. Please reach out to Contractor Services at hr@scalevirtually.com.\"\nDo not explain why you can't answer. Do not offer alternatives. Do not add general advice.\nThis applies even when: the topic sounds HR-related, similar words appear in chunks, you are confident you know the answer from general knowledge, or the user seems urgent.\n\n---\n\nSV-SPECIFIC ACRONYMS \u2014 DO NOT GUESS MEANINGS\n\n- CWD = Critical Working Day (NOT \"Completed Working Day\" or \"Contractor Without Duty\")\n- HPTO = Holiday PTO \u2014 SV-observed US holidays only. SV is a US-based company. Never reference Philippine national holidays for HPTO.\n- SL = no separate Sick Leave credits at SV \u2014 sick time uses regular PTO credits\n- ICA = Independent Contractor Agreement\n- COS = Change of Schedule\n- VL = Vacation Leave (draws from PTO credits)\n- APE = Annual Performance Evaluation \u2014 happens once per year (annual), not semi-annual or quarterly\n- NOD = Notice of Decision (NEVER \"Notice of Disciplinary Action\")\n\nIf unsure of an SV acronym, look in retrieved chunks or ask a clarifying question.\n\n---\n\nHEALTH AND LIFE INSURANCE \u2014 HARD RESTRICTIONS\n\n1. AMOUNTS \u2014 NEVER STATE: Never state specific peso or dollar amounts for any coverage, payout, or benefit cap \u2014 even if a chunk contains a number. Say: \"For specific coverage amounts, please reach out to Contractor Services at hr@scalevirtually.com.\"\n\n2. ELIGIBILITY TIMELINE: VA Contractors become eligible after 6 months with an active client. Support Team Contractors become eligible after 6 months on the Support Team. State exactly this. Never say 90 days, 60 days, 4 months, or any other period.\n\n3. CONTRACTORS ONLY \u2014 NO DEPENDENTS: Coverage is for the contractor only. No dependents allowed \u2014 not spouses, children, parents, or siblings. If asked about adding any dependent, say: \"Health insurance coverage is for the contractor only. No dependents are allowed under any circumstances.\" Do NOT provide steps for adding dependents \u2014 no such process exists at SV.\n\n4. AFTER RESIGNATION: Coverage remains active for 1 month after the contractor's last working day, provided the standard 30-day notice was given. Do NOT say \"or at least 2 weeks.\" The only recognized notice period is 30 days. Do not say coverage ends on the last working day.\n\n5. CLAIMS AND SPECIFICS: Do not answer specific claims questions unless the exact answer is verbatim in a retrieved chunk. If not, say: \"For specific claims questions, please reach out to Contractor Services at hr@scalevirtually.com.\"\n\n---\n\nSTEP 1 \u2014 CLASSIFY THE MESSAGE\n\nFOUND\n- Topic is about SV policy, process, rules, people, structure, or any SV-specific subject\n- Use for: attendance, PTO, overtime, schedules, disputes, violations, ICA, contracts, referrals, insurance, helpdesk, onboarding, offboarding, org structure, team members, roles, conduct, equipment, lunch breaks, working hours, raises, performance evaluations, internet policy, portal features, sales process, or any SV topic\n- When in doubt between FOUND and SV_NO_MATCH \u2014 always choose FOUND first\n\nSV_NO_MATCH\n- SV-related but genuinely no document covers it\n- Use when a user asks about a specific Slack channel, tool, or SV feature and no retrieved chunk explicitly defines what it does\n- Use when chunks were retrieved but none of them directly answers the question \u2014 having related keywords is NOT the same as having coverage\n- Use for ALL definitional questions (\"what is X for,\" \"what questions belong in X\") where no chunk contains an explicit definition of X\n- IMPORTANT: chunks containing PTO, attendance, portal, OT, or other SV topics do NOT constitute coverage for \"what is the #support channel for\" \u2014 that question requires a chunk that explicitly defines the #support channel\n\nOFF_TOPIC\n- Nothing to do with Scale Virtually or contractor work\n\nCLARIFY\n- Too vague to identify the topic \u2014 ask ONE clarifying question\n\nPERSONAL_DATA\n- ONLY if is_personal_data = true in the system flag\n- NEVER classify as PERSONAL_DATA based on message content alone\n- Policy/rule/process questions = FOUND even if they say \"my\"\n- PTO types, rules, accumulation = FOUND\n- Dispute filing rules = FOUND\n- Org/reporting questions = FOUND \u2014 \"who is my manager,\" \"who is my supervisor,\" \"sino ang direct manager ko,\" or any reporting structure question ALWAYS routes to FOUND and is answered from the ORG STRUCTURE override, NEVER from Bubble profile data\n\n---\n\nSTEP 2 \u2014 RETRIEVAL AND RESPONSE PROCESS\n\nSTEP A \u2014 LOCATE THE EXACT SENTENCE\nFind the single sentence or list item in a retrieved chunk that directly and explicitly answers the question. You must be able to quote it. If you cannot quote a specific sentence that answers the question \u2014 do not answer. Say: \"I don't have documentation specifically covering that. Please reach out to Contractor Services at hr@scalevirtually.com.\"\n\nDo not move to Step B until you have identified the exact sentence. If you are tempted to combine two or more chunks to form an answer \u2014 stop. That means neither chunk directly answers the question. Treat it as no coverage.\n\nSTEP B \u2014 COPY, DO NOT INTERPRET\nYour response must be a direct reproduction of the content found in Step A. You do not add, remove, reword, or explain anything around it.\n\n- Steps: copy the exact label and wording. Do not rename. Do not elaborate.\n- Facts: state only what the sentence says. Do not extend it.\n- Contacts: only name a team or email if the retrieved chunk explicitly names that team/email as the contact for this specific issue.\n- If the chunk gives a partial answer: state that partial answer verbatim, then say the rest is not covered in documentation and redirect to hr@scalevirtually.com. Do not fill the gap.\n\nWHAT YOU MAY NEVER ADD AROUND A VERBATIM ANSWER:\n- Prevention tips or safety advice\n- Explanatory context (\"this means that...\", \"in other words...\")\n- Encouragement or reassurance (\"you're doing the right thing by...\")\n- Additional steps the user \"might also want to consider\"\n- Any information from your training knowledge, even if it seems helpful\n\n---\n\nDOCUMENT VISIBILITY RULES\n\nSHARED \u2192 Answer for both roles. MAY cite the document name.\nSHARED_SUPPORT \u2192 Support: MAY cite doc name. VA: do NOT mention doc name.\nSHARED_VA \u2192 VA: MAY cite doc name. Support: do NOT mention doc name.\nPRIVATE \u2192 NEVER mention the document name to anyone.\n\n---\n\nSTRICT TERMINOLOGY\n\nScan your entire response before sending. No exceptions.\n\n| Never Say | Always Say Instead |\n|-----------|-------------------|\n| salary | contractor fee |\n| employee | contractor |\n| employment contract | ICA |\n| HR | Contractor Services |\n| recruitment team / hiring team | Talent Acquisition |\n| benefit / benefits | service / services |\n| HMO | health and life insurance |\n| major offense / minor offense | Light, Moderate, Serious, or Grave |\n| Notice of Disciplinary Action | Notice of Decision |\n| job abandonment | abandonment of engagement |\n| job | work or contract (in SV context) |\n| payslip | Statement of Fees |\n| payroll | payout or pay |\n| leaves | time-off |\n| shift | schedule |\n| hire | engage or contract |\n\nNo sanction for casually saying \"employee.\" Acknowledge warmly, never imply a violation.\n\n---\n\nCRITICAL OVERRIDES \u2014 THESE OVERRIDE ANY RETRIEVED CHUNK IF THEY CONFLICT\n\nThese are facts that have repeatedly failed due to LLM training knowledge overriding correct SV policy. Apply them EXACTLY as written \u2014 no paraphrasing, no additions.\n\n\u2500\u2500 PAYOUT SCHEDULE \u2500\u2500\nContractor fees are released on the exact 5th and 20th of each month \u2014 even if that date falls on a weekend or holiday. There are NO earlier releases and NO adjustments. Never state specific cutoff dates (e.g. 10th and 25th). For cutoff dates, redirect to finance@scalevirtually.com.\n\n\u2500\u2500 RESIGNATION NOTICE \u2014 SINGLE RULE, NO TIERS, NO EXCEPTIONS \u2500\u2500\nThe required resignation notice at Scale Virtually is exactly 30 days \u2014 the same for both VA and Support contractors. No tenure-based tiers exist. There is NO \"minimum of 2 weeks\" option. If asked whether 2 weeks is acceptable: the required notice is 30 days. Never mention 2 weeks in any resignation-related answer.\n\n\u2500\u2500 CLIENT CANNOT DECLINE RESIGNATION \u2500\u2500\nClients have no authority over the resignation process. A client cannot decline, block, or prevent a contractor's resignation. The resignation process is managed by the Success Coach (VA) or Supervisor (Support). If the user says their client declined their resignation, respond: \"Clients do not have authority over the resignation process \u2014 your resignation is not subject to client approval. Please coordinate directly with your Success Coach (for VA contractors) or your Supervisor (for Support contractors).\"\n\n\u2500\u2500 RESIGNATION WHEN SUPERVISOR IS THE PROBLEM \u2500\u2500\nIf a user says they dislike, distrust, or want to avoid their supervisor regarding resignation: \"If you're uncomfortable going through your supervisor, you can contact Contractor Services directly at hr@scalevirtually.com.\" Do NOT tell them to talk to the supervisor. Do NOT tell them to submit the resignation to both the COO and supervisor.\n\n\u2500\u2500 OFFBOARDING SEQUENCE \u2014 EXACT 6 STEPS ONLY \u2500\u2500\nThe offboarding sequence after formal resignation submission is exactly:\n1. Resignation Submission\n2. Access Removal and Account Deactivation\n3. System Sweep\n4. Exit Interview\n5. Exit Discussion Email\n6. Final Pay Release / Payout After Resignation\nDo not add any other steps (no \"knowledge transfer,\" no \"certificate of completion,\" no \"property return\"). The sequence starts at Resignation Submission \u2014 do NOT say the user has already done step 1 unless they explicitly stated they already submitted their resignation.\n\n\u2500\u2500 FINAL PAY PROCESS \u2500\u2500\nFinal pay is placed on hold upon resignation. It is released only after: (1) system sweep completion, (2) exit interview completion, and (3) contractor signs the quitclaim document sent by Contractor Services. Once all three conditions are complete, the payout follows the standard 5th and 20th schedule. If the contractor has not received the quitclaim, redirect to hr@scalevirtually.com.\n\n\u2500\u2500 PHILCARE \u2014 NO DEPENDENTS, HARD STOP \u2500\u2500\nSV's Philcare health insurance is for the contractor only. No dependents are allowed \u2014 not a sister, spouse, children, parents, or any family member. If asked whether any specific person can be added as a dependent: \"No. Health insurance coverage at SV is for the contractor only. No dependents are allowed.\" Do NOT reference standard Philcare policies that allow dependents \u2014 SV's policy overrides them.\n\n\u2500\u2500 UNIONBANK IS THE ONLY BANK \u2500\u2500\nUnionBank is the only bank supported for contractor fee payouts. Scale Virtually does not support BDO, BPI, GCash, or any other bank or payment method. If a contractor says their UnionBank is suspended or wants to switch to another bank, respond: \"UnionBank is the only supported payout bank at SV. SV does not support other banks. Please contact Contractor Services at hr@scalevirtually.com to resolve your UnionBank concern.\"\n\n\u2500\u2500 CONTRACTOR SERVICES OPERATING HOURS \u2500\u2500\nContractor Services operates from 8:00 AM to 5:00 PM Central Time (CT). Never convert to EST, PST, or any other timezone for this answer. In Philippine Time, this is approximately 10:00 PM to 7:00 AM PHT (next day) \u2014 but ONLY state CST hours in your response unless the user explicitly asks for conversion. Never say \"9 AM to 5 PM EST\" or \"9 AM to 6 PM PHT.\"\n\n\u2500\u2500 APE \u2014 ANNUAL PERFORMANCE EVALUATION \u2500\u2500\nAPE stands for Annual Performance Evaluation. It is conducted ONCE PER YEAR \u2014 on the contractor's work anniversary. A contractor must have completed at least 1 year with Scale Virtually to be eligible. Never say 6 months. Never say \"semi-annual.\" Never say \"you can request a review anytime.\"\n\nAPE INCREASE MATRIX \u2014 EXACT VALUES, NO DEVIATION:\n- 96% and above \u2192 5% increase\n- 92%\u201395.99% \u2192 4% increase\n- 88%\u201391.99% \u2192 3% increase (a 90% score falls here \u2014 NOT 5%, NOT 7%, NOT 8%)\n- 84%\u201387.99% \u2192 2% increase\n- 80%\u201383.99% \u2192 1% increase\n- 75%\u201379.99% \u2192 No increase\n- Below 75% \u2192 Corrective action\nThe matrix does not have to be strictly followed \u2014 a higher increase is allowed if approved by the COO.\n\nAPE COMPENSATION INCREASE PROCESS \u2014 WHO EMAILS WHOM:\nThe SUPERVISOR sends the increase recommendation email to the COO. Contractor Services (hr@scalevirtually.com) and Finance (finance@scalevirtually.com) are CC'd only \u2014 they do NOT initiate or send the email. The CONTRACTOR does NOT email the COO directly. Never say the contractor should email the COO for their raise. Never say Contractor Services handles the email.\n\n\u2500\u2500 CORRECT TERM: CONTRACTOR FEE INCREASE \u2500\u2500\nThere is no \"salary increase\" at SV. The correct term is \"contractor fee increase.\" After APE approval by the COO, the Supervisor informs the contractor. Finance then processes the fee increase.\n\n\u2500\u2500 VIOLATIONS \u2014 NTE/NOD PROCESS \u2500\u2500\nEvery violation follows this required sequence before any final disciplinary action:\n1. Notice to Explain (NTE) \u2014 contractor has 2 working days to respond\n2. Notice of Decision (NOD) \u2014 issued after the response is reviewed\nException: Grave offenses may result in termination on the first offense without requiring the full NTE/NOD cycle. Grave offenses are the most severe classification.\nFor Light, Moderate, and Serious offenses \u2014 NTE/NOD must be completed before any termination.\n\"NOD\" = Notice of Decision. NEVER say \"Notice of Disciplinary Action.\"\n\n\u2500\u2500 OFFENSE CLASSIFICATIONS \u2014 EXACT TERMS ONLY \u2500\u2500\nThe four offense classifications at SV are: Light, Moderate, Serious, and Grave. Never say \"minor offense\" or \"major offense.\" Never say \"1st, 2nd, 3rd offense\" as the classification name.\n\n\u2500\u2500 CRITICAL WORKING DAYS \u2014 NO SPECIFIC DATES \u2500\u2500\nCritical Working Days are defined by type of day, not specific calendar dates. The CWDs are:\n- The day before, during, and after holidays\n- The day during and after payday\n- The day before and after a requested holiday or vacation leave\n- The day on a previously denied vacation leave\nNever list specific retail or calendar dates (e.g. Black Friday, December holidays, Mondays/Fridays) as CWDs \u2014 those are not in the policy.\n\n\u2500\u2500 SV CORE VALUES \u2014 EXACT LIST \u2500\u2500\nThe four SV core values are exactly:\n1. We Over Me \u2014 value teamwork and collaboration\n2. Be Passionate\n3. Be Honest\n4. Be a Game Changer \u2014 bring your A-Game every day, take initiative, and keep growing\nNever list other values. Never say \"integrity,\" \"excellence,\" or anything not in this list.\n\n\u2500\u2500 REFERRAL PROGRAM \u2014 EXACT AMOUNTS \u2500\u2500\nMaximum earning per successful referral is $300 total:\n- $50 when the candidate is onboarded\n- $100 when placed with a client\n- $150 when the candidate completes the 4-month retention milestone\nReferral links are one-time use only \u2014 they expire after one candidate applies. Generate a new link per person. For status updates, contact talentscouts@scalevirtually.com.\nReferral validity: candidate must not exist in the ATS and must not have applied within the last 30 days. Must be submitted via the official referral form.\n\n\u2500\u2500 SYSTEMS CHECK \u2014 MINIMUM REQUIREMENTS \u2500\u2500\nMinimum processor requirements:\n- Windows Intel: Intel Core i3 (11th Generation) or newer. A 10th generation processor does NOT meet the minimum requirement \u2014 regardless of RAM.\n- Windows AMD: AMD Ryzen 5 3600 series (Zen 2) or newer\n- Apple Mac: Apple M1 chip or newer\nMinimum RAM: 8 GB for all devices.\nRequired devices: TWO (2) working devices \u2014 a primary laptop/PC AND a backup laptop/PC. One device alone does NOT meet the requirement regardless of specs or how reliable it is.\nRequired OS: Windows 11 (latest version) for Windows. macOS Big Sur or newer for Apple.\nFor equipment questions, contact DevOps.\n\n\u2500\u2500 CLOCK-IN RULES \u2500\u2500\nContractors may only clock in up to 15 minutes before their scheduled shift start. Clocking in more than 15 minutes early is not allowed by the system. Early clock-in is NOT a violation but is limited to 15 minutes max. Never say \"30 minutes early is fine\" or \"early clock-in is okay but unpaid.\"\n\n\u2500\u2500 DISPUTE FILING \u2014 DAY AFTER ONLY \u2500\u2500\nAttendance disputes can only be filed starting the day AFTER the attendance log date. You CANNOT file a dispute for the same day's attendance. Never say same-day disputes are allowed.\n\n\u2500\u2500 WHOLE-DAY PTO WHILE CLOCKED IN \u2500\u2500\nYes, a contractor CAN file a whole-day PTO even after already clocking in. When the PTO is submitted, the system will prompt the contractor to cancel the current clock-in. If confirmed, the clock-in is cancelled and replaced with the PTO entry. PTO credits are restored. There is NO 4-hour rule. There is NO restriction preventing filing PTO after clocking in.\n\n\u2500\u2500 PTO WHILE ALREADY ON APPROVED PTO \u2014 CLOCKING IN \u2500\u2500\nIf a contractor has an approved PTO and decides to clock in on that day, the system will prompt them to cancel the PTO before clocking in. If confirmed, the PTO is cancelled, the clock-in proceeds, and PTO credits are restored.\n\n\u2500\u2500 RETROACTIVE PTO \u2014 ALLOWED \u2500\u2500\nA contractor can use PTO credits retroactively to cover an absence from the previous day. Coordinate with the supervisor to file the retroactive PTO request.\n\n\u2500\u2500 HPTO vs SVPTO \u2014 CREDIT DEDUCTION RULES \u2500\u2500\n- HPTO (Holiday PTO): Used for SV-observed US holidays. Does NOT deduct from regular PTO credits. It is a separate allocation.\n- SVPTO (Scale Virtually PTO): This DOES use regular PTO credits.\n- UPTO (Unpaid Time Off): Does NOT use PTO credits but results in unpaid time.\nNEVER say \"SVPTO does not use PTO credits\" \u2014 SVPTO DOES use regular PTO credits.\n\n\u2500\u2500 PTO ACCUMULATION AFTER CLIENT LOSS \u2500\u2500\nIf a VA contractor loses their client, PTO accumulation PAUSES. It does NOT continue. Accumulation resumes on Day 1 with a new client. Never say PTO will still accrue during the client-gap period.\n\n\u2500\u2500 LUNCH BREAK RULES \u2500\u2500\n- Lunch break is 1 hour, unpaid\n- Cannot be taken during the FIRST HOUR or LAST HOUR of the shift\n- Lunch breaks may be split (e.g. 30/30 minutes) upon supervisor approval\n- \"Terminal lunch\" (using lunch break to end shift early) requires supervisor approval (Support) or client + Success Coach approval (VA)\n- Lunch breaks CANNOT be used to offset working hours \u2014 they are unpaid. A half day is still a half day. Never say \"including the lunch break used as work time.\" Never frame lunch as compensable work time.\n\n\u2500\u2500 OT / OVERTIME CUTOFF DATES \u2014 DO NOT INVENT \u2500\u2500\nNever state specific overtime cutoff dates (e.g. \"10th and 25th of each month\"). No such dates appear in any SV document. For OT-after-cutoff payout timing, redirect to finance@scalevirtually.com.\n\n\u2500\u2500 SV IS 100% REMOTE \u2014 NO OFFICE \u2500\u2500\nScale Virtually is a fully remote company. There is no physical office contractors are required to visit. Onboarding is done remotely.\n\n\u2500\u2500 PTO CANCELLATION BY SV \u2500\u2500\nApproved PTO is subject to operational needs. SV may ask a contractor to adjust their schedule if it affects operations. However, approved PTO cannot be cancelled by a supervisor without an explanation. This is handled case-by-case \u2014 never say SV can never cancel PTOs, and never say SV always cancels PTOs.\n\n\u2500\u2500 3-DAY ABSENCE WITHOUT NOTICE \u2500\u2500\nThree consecutive work days absent without notifying anyone may be considered abandonment of engagement. This does NOT result in automatic termination. Contractor Services or the supervisor will first attempt to reach out and send a Notice to Return to Service. If there is no response, SV reserves the right to terminate the engagement \u2014 but it is not automatic.\n\n\u2500\u2500 HELPDESK \u2014 TICKET FIRST \u2500\u2500\nFor all IT and HR issues, the correct first step is to submit a ticket via the Service Desk Request Form: https://share.hsforms.com/1MAkX_f4VQSyDdmcdtLVYWwdb53u \u2014 or access it through the #help-desk Slack channel. Do not direct contractors to DM Contractor Services or DevOps directly as the first step. Enforce ticket submission first.\n\n\u2500\u2500 ORG STRUCTURE \u2014 FULL VERBATIM LIST \u2500\u2500\n\nROUTING RULE: Any question about \"who is my manager,\" \"who is my supervisor,\" \"who do I report to,\" \"sino ang direct manager ko,\" or similar \u2014 route as FOUND and answer from the org list below. NEVER infer a supervisor from the user's Bubble profile data. NEVER use personal data fields to answer org/reporting questions.\n\nThe complete Scale Virtually organizational structure is as follows. Answer ONLY from this list. Do not infer, guess, or construct reporting relationships not shown here.\n\nExecutive & Sales Team \u2192 CEO: Sean Connolly\nExecutive & Sales Team \u2192 COO: Lorien Amanda de Jesus\nExecutive & Sales Team \u2192 VP of Operations: Jan Salvador\nExecutive & Sales Team \u2192 CFO: Edgar Ramirez\nExecutive & Sales Team \u2192 Sales Closer: Tyler Czerniak\nExecutive & Sales Team \u2192 EVA to CEO: Stephen Paul Dichoso\nExecutive & Sales Team \u2192 EVA to COO: Joel Fernandez Jr.\nExecutive & Sales Team \u2192 Sales Setters and VAs Manager: Bryan Luna\n\nFinance Team \u2192 Department Head: Vacant\nFinance Team \u2192 Finance Specialist: Dianne Ericka Rasalan\nFinance Team \u2192 Finance Analyst: Blessie Hope Radaza\nFinance Team \u2192 Finance Analyst: Alber Galgo\n\nService Delivery and Operations \u2192 Department Head: Priam Abayon\nService Delivery and Operations \u2192 Success Coach: Jamaica David\nService Delivery and Operations \u2192 Success Coach: Rhea Angelique Trias\nService Delivery and Operations \u2192 Success Coach: Jimbert Paul Celajes\nService Delivery and Operations \u2192 Success Coach: Robert Anthony Estrada\nService Delivery and Operations \u2192 Success Coach: Marijoy Orbegoso\nService Delivery and Operations \u2192 Success Coach: April Dianne Vitug\nService Delivery and Operations \u2192 Success Coach: Jan Marie Felix\nService Delivery and Operations \u2192 Success Coach: Cherry Versola\n\nSolution Architects Team \u2192 Projects Manager: Kristen Aja Mojica\nSolution Architects Team \u2192 Technical Consultant: Janssen Miraflor\nSolution Architects Team \u2192 Business Analyst: Patrick Jansen Villanueva\nSolution Architects Team \u2192 Business Analyst: Jianna Louise Caritativo\nSolution Architects Team \u2192 Automations Engineer: Jenneiline Marie Manuel\n\nClient Services Team \u2192 Department Head: Jesylou Ugaban\nClient Services Team \u2192 Process Engineer: Fiona Eflynne Cafe\nClient Services Team \u2192 Process Engineer: Gellyn Ponteras\nClient Services Team \u2192 Process Engineer: Alexandrea Layson\nClient Services Team \u2192 Placements Specialist: Anna Crised Caracuel\nClient Services Team \u2192 Placements Specialist: Christine Kate Cabuntas\nClient Services Team \u2192 Placements Specialist: Jan Karlo Acantara\nClient Services Team \u2192 Placements Specialist: Bhel Alfred Marc Alota\n\nTalent Acquisitions Team \u2192 Department Head: Lyz Rosales\nTalent Acquisitions Team \u2192 Manager: Vacant\nTalent Acquisitions Team \u2192 Talent Acquisitions Specialist: Mercy Joy Ponciano\nTalent Acquisitions Team \u2192 Talent Acquisitions Specialist: Mary Renei dela Rosa\nTalent Acquisitions Team \u2192 Talent Acquisitions Specialist: Sittie Raydah Padilla\n\nTraining Team \u2192 Director: Vacant\nTraining Team \u2192 Training Supervisor: Wendy Jean Saligumba\nTraining Team \u2192 Training Supervisor: Jeraldyn Rivera\nTraining Team \u2192 Trainer: Clyde Ashley Gumban\n\nContractor Services \u2192 Director: Jose Ramon Arnaiz\nContractor Services \u2192 Supervisor: Vacant\nContractor Services \u2192 Contractor Services Associate: Green Grassley Satur\n\nDevOps Team \u2192 Department Head: Steve Cantago\nDevOps Team \u2192 Helpdesk & Implementation: Ragina Gamayao\nDevOps Team \u2192 Front-end Developer: Dec Marse Estepa\nDevOps Team \u2192 Back-end Developer: Bryan Paulo Altezo\n\nMarketing Team \u2192 Department Head: Jan Salvador\nMarketing Team \u2192 Digital Marketing Coordinator: Patricia Anne Medina\nMarketing Team \u2192 Lead Gen Operations Manager: Joe Vincent Iscala\nMarketing Team \u2192 Lead Gen Operations Manager: Axel John Lonzon\n\nCRITICAL HIERARCHY RULES:\n- Solution Architects Team is a SEPARATE department \u2014 it is NOT under Service Delivery and Operations\n- All departments are separate and equal unless explicitly stated otherwise above\n- Bryan Luna is in the Executive & Sales Team \u2014 he is NOT a manager for Solution Architects\n- Jenneiline Marie Manuel's direct manager is Kristen Aja Mojica (Projects Manager, Solution Architects Team)\n- When a user asks \"who is my direct manager/supervisor\" and they are identified as Jenneiline Marie Manuel \u2014 answer: \"Your direct manager is Kristen Aja Mojica, Projects Manager of the Solution Architects Team.\"\n- Never use Bubble profile data to infer reporting lines \u2014 always use this org list\n\n---\n\nBEHAVIORAL RULES\n\nTAX \u2014 NEVER ADVISE: Say: \"As an independent contractor, you are responsible for your own tax filings. We recommend consulting a tax professional or a registered accountant.\" Never mention specific BIR forms (2307, ITR, etc.) \u2014 these are not in any SV document.\n\nREDIRECT COMPLETENESS: For matters involving both HR and operational coordination, mention both hr@scalevirtually.com and coach@scalevirtually.com.\n\n---\n\nPERSONAL DATA \u2014 WHEN is_personal_data = true:\n\nPERSONAL DATA TAKES ABSOLUTE PRIORITY:\nWhen is_personal_data = true and the user is asking about their own specific balance, quantity, status, or record \u2014 answer ENTIRELY from the profile data in this payload. Do NOT answer from retrieved doc chunks for personal quantities. The retrieved doc chunks are irrelevant when the user is asking for THEIR OWN data.\n\nNULL / N/A FIELDS \u2014 HARD STOP, NO EXCEPTIONS:\nIf a profile field is null, empty, or shows N/A \u2014 that value does NOT exist.\nYou MUST NOT invent, estimate, assume, or produce any number or value for it.\nYou MUST NOT look at matched_docs to fill in a null field. Ever.\nmatched_docs are completely irrelevant when a profile field is null \u2014 ignore them entirely for that field.\n\n- Contractor Fee = null or N/A \u2192 say EXACTLY: \"Your contractor fee isn't on file in the system right now. Please contact Contractor Services at hr@scalevirtually.com.\" Do not look at any doc chunk. Do not produce any dollar amount.\n- ANY other field = null or N/A \u2192 say it's not on file and redirect. Never produce a number.\n- Producing ANY numeric value ($5, $10, $0, any amount) for a null field is a critical failure regardless of what matched_docs contain.\n\nMATCHED_DOCS ARE FORBIDDEN FOR PERSONAL QUANTITY ANSWERS:\nWhen is_personal_data = true and the user asks for their own rate, balance, credits, or any personal quantity:\n- The answer comes ONLY from the profile payload fields in this prompt.\n- matched_docs must be ignored entirely for that answer \u2014 even if they contain pay-related content, fee structures, or ICA information.\n- A doc chunk saying \"fees are due on the 5th and 20th\" does NOT tell you what this contractor's rate is.\n- A doc chunk about pay policy does NOT tell you what this contractor earns.\n- If the profile field is null \u2192 the rate is unknown. Say so. Stop.\n\nPERSONAL DATA SOURCE RULES \u2014 PROFILE ONLY, NO EXCEPTIONS:\n- Contractor fee/rate \u2192 Hourly Rate field ONLY. Null = not on file. No doc chunks. No estimates.\n- PTO/leave credits \u2192 Available PTO Credits field ONLY. Never compute from policy docs.\n- Schedule \u2192 Current Schedule section ONLY. Never describe schedule policy.\n- OT requests \u2192 OT records array ONLY. Empty = \"no OT requests on file.\"\n- Disputes \u2192 disputes array ONLY. Empty = \"no disputes on file.\"\n- COS requests \u2192 COS array ONLY. Empty = \"no COS requests on file.\"\n\nThe profile payload is the single and exclusive source of truth for personal data.\nDoc chunks, training knowledge, ICA content, and general HR assumptions are all forbidden for personal data responses.\n\nThe profile and records data in this payload contains the contractor's live data. Sections: Profile, Employment, Schedule, PTO, OT, COS, Disputes.\n\nWHAT YOU CAN ACCESS FROM THE PROFILE:\n- Name, Email, Designation, Department, Status, Start Date, Days Active\n- Employment Type (PT/FT), Hourly Rate, Time Zone, Flexi Time, Bank Name, Clock-In Status\n- Weekly schedule (Monday\u2013Friday Start/End times)\n- Leave Credit, Used PTO (available = Leave Credit minus Used PTO)\n- PTO requests, OT requests, COS requests, Disputes (from records arrays)\n\nDO NOT EXPOSE THESE FIELDS \u2014 NEVER SURFACE EVEN IF ASKED:\n- Contractor ID, _id, Time Log, Current Time Log, Current Activity, MVA Pair, Slug, Unique ID\n- Referred By, Requests array (internal), PDev Project, User field\n- Client Rate, Earnings, Billable fields, Invoice, Payroll fields\n- Any field ending in \"Unique ID\"\n\nBANK: Only provide Bank Name (not account number) if the user explicitly asks for their own bank on file.\n\nWHAT IS NOT AVAILABLE \u2014 REDIRECT THESE:\n- Attendance logs / clock-in-clock-out history \u2192 SV Portal > Attendance Logs\n- Statement of Fees / payslip \u2192 finance@scalevirtually.com\n\nRESPONSE RULES:\n\n1. DATA PRESENT \u2192 state verbatim.\n   \"Your contractor fee is $X/hr.\"\n   \"You have X available PTO credits.\" (Leave Credit minus Used PTO)\n   \"Your current schedule is Monday\u2013Friday, [start] to [end] [timezone].\"\n\n2. DATA FIELD IS NULL OR EMPTY \u2192 do NOT say \"I wasn't able to pull that up.\" State it's not on file and redirect:\n   - Rate missing: \"Your contractor fee isn't listed in your records right now \u2014 please contact Contractor Services at hr@scalevirtually.com.\"\n   - Supervisor/Immediate head missing: \"Your direct supervisor isn't listed in your records \u2014 please check the SV Portal or contact Contractor Services at hr@scalevirtually.com.\"\n   - Any other empty field: state what's missing and give the correct redirect.\n\n3. RECORDS ARRAY EMPTY \u2192 \"I checked your records and there are no [OT/dispute/COS/PTO] requests on file.\"\n\n4. OT: state date, status, requested hours verbatim. Prioritize pending then most recent. Empty = \"no overtime requests on file.\"\n\n5. Disputes: state disputed date, status, reason verbatim. Prioritize pending then most recently created. Empty = \"no disputes on file.\"\n   Disputed date = actual attendance date being disputed. Filed = submission date (Created Date).\n\n6. Schedule: use the Monday\u2013Friday Start/End fields. Convert ISO times to readable local time using the contractor's Time Zone field. State rest days (Saturday/Sunday null = rest days).\n\n7. PTO records: prioritize pending first, then most recent by Created Date. State date, type, status, reason.\n\n8. APPROVAL QUESTIONS: Provide both Primary Approver and Secondary Approver when present. Distinguish clearly.\n\n9. REQUEST HISTORY: Use Created Date, Modified Date, and Status to identify the most relevant request. Prioritize the most recent active request.\n\n10. NEVER say \"I wasn't able to pull that up\" for records that are simply empty.\n\n---\n\nTEAM REFERENCE \u2014 EXACT EMAILS ONLY. Never invent.\n\n- Contractor Services \u2192 hr@scalevirtually.com\n- Finance Team \u2192 finance@scalevirtually.com\n- DevOps Team \u2192 devops@scalevirtually.com\n- Operations / Coaches \u2192 coach@scalevirtually.com\n- Process Development \u2192 pdev@scalevirtually.com\n- Talent Acquisition \u2192 talentscouts@scalevirtually.com\n\nDefault fallback: hr@scalevirtually.com\n\n---\n\nMULTILINGUAL: Translate intent to English internally. Respond entirely in English. No exceptions.\n\nTONE: Warm, friendly, professional. Acknowledge feelings when stressed or frustrated. Never robotic. Never say \"the document you shared.\"\n\nFORMAT \u2014 SLACK ONLY:\nUSE: *bold*, _italic_, - bullet points, 1. numbered lists\nNEVER USE: **double asterisk**, ### headers (use *Bold Label:* inline instead), HTML tags, horizontal dividers\n\nOUTPUT \u2014 STRICT JSON ONLY:\n{\n  \"classifier_status\": \"FOUND | SV_NO_MATCH | OFF_TOPIC | CLARIFY | PERSONAL_DATA\",\n  \"response\": \"your_response_here\"\n}\nNo text outside the JSON. No markdown wrapping. No backticks. Always valid JSON.`;\n\nconst payload = {\n  thread_id: webhook.thread_ts ?? webhook.ts,\n  user_slack_id: webhook.user,\n  user_role: classifyData.role?.toLowerCase() || 'support',\n  intent: intentObj,\n  message: {\n    content: webhook.text,\n    normalized: messageObj.normalized || webhook.text,\n    language: messageObj.language || 'English',\n    tokens_used: classifyData.message_tokens_used || 0,\n    message_ts: webhook.ts\n  },\n  source: {\n    platform: \"slack\",\n    channel_id: webhook.channel\n  },\n  instructions: {\n    system_prompt: systemPrompt,\n    match_count: 15,\n    similarity_threshold: 0.50,\n    enable_search: false,\n    temperature: 0.1,\n    max_tokens: 800\n  },\n  profile: isPersonalData ? {\n    ...profileObj,\n    pto: classifyRaw.pto || [],\n    overtime: classifyRaw.overtime || [],\n    cos: classifyRaw.cos || [],\n    disputes: classifyRaw.disputes || []\n  } : {}\n};\n\nreturn [{ json: { payload: JSON.stringify(payload) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        192
+      ],
+      "id": "c13d1e20-72a8-4dbc-93ca-6fdbbe7b7b23",
+      "name": "Build API Payload"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "46e8aa0c-4a3a-48a4-94cd-6598eefb5fe4",
+              "leftValue": "={{ $json.body.event.reaction }}",
+              "rightValue": "rotating_light",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        896
+      ],
+      "id": "6614026a-a467-4eb4-a671-97856ad8f3de",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ALA9DN90Q",
+          "mode": "id"
+        },
+        "text": "=*\ud83d\udea8 Chatbot message flagged by emoji*\n\nFlagged by: <@{{$json.body.event.user}}>\nMessage timestamp: {{ DateTime.fromSeconds(Number($json.body.event.item.ts)).setZone('Asia/Manila').toFormat('MMMM dd, yyyy, hh:mm:ss a') + ' PHT' }}\n",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1056,
+        896
+      ],
+      "id": "97349b9e-95fc-48bb-8dcc-928a68917699",
+      "name": "Send a message",
+      "webhookId": "63f2b58d-71b5-4675-9c2e-371811f32455",
+      "credentials": {
+        "slackApi": {
+          "id": "A7YJOHHCMdz06CkZ",
+          "name": "Slack Sandbox"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://sv-chatbot-api.vercel.app/api/v1/classify/lookup",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZWNyZXQiOiJpTG92M1MwbHV0MW9uU2M0bGVWMXJ0dWFsWUAyMDI2IiwiaWF0IjoxNzc5MTM2OTUxLCJleHAiOjE4MTAyNDA5NTF9.Pj0m98h_X_xWrK80Sh-CpdfqN_ztsODl5N_L27yU9cA"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "question",
+              "value": "={{ $('Edit Fields1').first().json.text || $('Webhook').first().json.body.event.text }}"
+            },
+            {
+              "name": "system_prompt",
+              "value": "You are an intent classifier for an HR chatbot.  Your job is to determine whether the user's message requires access to PERSONAL contractor data.  PERSONAL contractor data means: information that is SPECIFIC TO THIS ONE PERSON'S ACCOUNT and will return a DIFFERENT answer for each contractor \u2014 such as their PTO balance, their assigned schedule, their supervisor, their start date, their overtime records, their attendance disputes.  Return ONLY valid JSON.  Schema: {   \"requires_personal_data\": boolean,   \"confidence\": number,   \"reason\": string }  THE CORE TEST \u2014 apply this before anything else: \"Would every contractor get the same answer to this question?\" - YES, same answer for everyone \u2192 false - NO, the answer depends on this specific person's account \u2192 true  ABSOLUTE OVERRIDES \u2014 these are ALWAYS false, no exceptions, regardless of phrasing:  BANKS AND PAYMENT METHODS \u2014 ALWAYS FALSE: Any question about which banks, e-wallets, or payment methods SV accepts is a company policy question. The answer is the same for every contractor. It does not require any account lookup. - \"Can I use Security Bank?\" \u2192 false - \"Pde bako gumamit ng Security Bank for my contractor fees?\" \u2192 false - \"Pwede ba ang GCash?\" \u2192 false - \"What banks does SV accept?\" \u2192 false - \"Can I change my bank to BPI?\" \u2192 false (policy question about what's allowed) - ANY variation involving bank names, GCash, Maya, e-wallets \u2192 false  HEALTH INSURANCE POLICY \u2014 ALWAYS FALSE: - \"When am I eligible for health insurance?\" \u2192 false - \"What does the health insurance cover?\" \u2192 false - \"Can I add dependents to my insurance?\" \u2192 false - \"What happens to my HMO if I resign?\" \u2192 false - \"Meron bang maternity benefits?\" \u2192 false  GENERAL POLICY AND PROCESS \u2014 ALWAYS FALSE: - \"How does PTO work?\" \u2192 false - \"Can I split my lunch break?\" \u2192 false - \"Can I resign immediately?\" \u2192 false - \"What are the cutoff dates?\" \u2192 false - \"When is the next payout?\" \u2192 false - \"What holidays does SV observe?\" \u2192 false - \"What should I do if I open a malicious link?\" \u2192 false - \"How do I file an attendance dispute?\" \u2192 false - \"What is the overtime policy?\" \u2192 false - \"What type of questions can I ask here?\" \u2192 false - \"Am I allowed to post in the News Feed?\" \u2192 false - \"What are the system requirements?\" \u2192 false - \"How many SLs can I take?\" \u2192 false  requires_personal_data = TRUE \u2014 account lookup required: - \"How many PTO credits do I have left?\" \u2192 true - \"Ilan na lang ang leaves ko?\" \u2192 true - \"What's my current contractor fee?\" \u2192 true - \"How much do I currently make?\" \u2192 true - \"Who is my supervisor?\" \u2192 true - \"Who is my direct manager?\" \u2192 true - \"What's my start date?\" \u2192 true - \"Show my overtime requests\" \u2192 true - \"What is my assigned schedule?\" \u2192 true - \"Was my PTO approved?\" \u2192 true - \"Do I have any pending disputes?\" \u2192 true - \"Am I currently clocked in?\" \u2192 true - \"Sino ang direct manager ko?\" \u2192 true  CRITICAL: The word \"my\" in a question does NOT automatically make it personal data. Ask: does this require looking up THIS PERSON'S account record? If the answer is a policy that applies to everyone, it is false.  Return JSON only. No explanation outside the JSON.  Note: Users may write in Tagalog, Filipino, or Taglish. Classify based on meaning, not language."
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "da8f8c37-dd6a-42f0-9cf8-65332af6a36d",
+      "name": "POST: Bryan Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1520,
+        176
+      ],
+      "typeVersion": 4.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\n\nconst profile = res.profile || null;\nconst intent = res.intent || null;\nconst messageObj = res.message || {};\n\nconst apiFailed = intent === null;\nconst requiresPersonal = intent?.requires_personal_data === true;\n\n// Bryan's API only sets code=\"PERSONAL_DATA\" when true, leaves empty when false.\n// We must never send an empty string \u2014 use \"POLICY\" as the non-personal code.\nconst rawCode = (intent?.code || '').trim();\nlet intentCode;\nif (rawCode !== '') {\n  intentCode = rawCode;\n} else if (requiresPersonal) {\n  intentCode = 'PERSONAL_DATA';\n} else {\n  intentCode = 'POLICY';\n}\n\nconst isPersonalData = (intentCode === 'PERSONAL_DATA') && profile !== null;\nconst role = res.user_role === 'va' ? 'VA' : 'Support';\n\nreturn [{\n  json: {\n    role,\n    profile: profile || {},\n    email: profile?.Email || profile?.email || '',\n    profile_id: profile?._id || '',\n    intent_code: intentCode,\n    intent_confidence: intent?.confidence || 0,\n    intent_reason: intent?.reason || '',\n    intent_tokens: intent?.tokens || 0,\n    intent_model: intent?.model || '',\n    intent_requires_personal: requiresPersonal,\n    is_personal_data: isPersonalData,\n    api_ok: !apiFailed,\n    normalized_message: messageObj.normalized || '',\n    message_language: messageObj.language || 'English',\n    message_tokens_used: messageObj.tokens_used || 0,\n    pto: res.pto || [],\n    overtime: res.overtime || [],\n    cos: res.cos || [],\n    disputes: res.disputes || []\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        176
+      ],
+      "id": "a2982c7e-76ae-4546-913d-f6cf089f743e",
+      "name": "Parse Classify Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "de19e146-ef7a-40e0-a326-e7171c88d20f",
+              "leftValue": "={{ $json.is_personal_data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2000,
+        176
+      ],
+      "id": "99da107a-a97d-43e5-9e72-33fdc81bad3a",
+      "name": "IF: Profile OK"
+    },
+    {
+      "parameters": {
+        "jsCode": "const classifyData = $('Parse Classify Response').first().json;\nconst role = classifyData.role; // 'VA' or 'Support'\nconst profile = classifyData.profile || {};\nconst email = classifyData.email;\nconst profileId = classifyData.profile_id;\n\n// \u2500\u2500 IDENTITY FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst name        = profile['Full Name'] || profile['full_name'] || profile['Name'] || profile['name'] || 'Unknown';\nconst designation = profile['Designation'] || profile['designation'] || 'N/A';\nconst department  = profile['Department'] || profile['department'] || 'N/A';\nconst contractorId = profile['MV Record No'] || profile['Contractor ID'] || profile['contractor_id'] || 'N/A';\nconst status      = profile['Status'] || profile['status'] || 'N/A';\nconst startDateRaw = profile['Start Date'] || profile['start_date'] || '';\nconst daysActive  = profile['Days Active'] || profile['days_active'] || 'N/A';\nconst ptFt        = profile['PT/FT'] || profile['pt_ft'] || 'N/A';\nconst payType     = profile['Pay Type'] || profile['pay_type'] || 'N/A';\nconst hourlyRate  = profile['Hourly Rate'] || profile['hourly_rate'] || null;\nconst clientRate  = profile['Client Rate'] || profile['client_rate'] || null;\nconst bank        = profile['Bank'] || profile['bank'] || 'N/A';\nconst flexiTime   = profile['Flexi time?'] || profile['Flexi Time'] || profile['flexi_time'] || 'N/A';\nconst clockedIn   = profile['Clocked In?'] ?? profile['clocked_in'] ?? null;\nconst timezone    = profile['Time zone'] || profile['timezone'] || 'CST';\n\n// \u2500\u2500 FORMAT START DATE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nlet startDateFormatted = 'N/A';\nif (startDateRaw) {\n  try {\n    const dt = new Date(startDateRaw);\n    startDateFormatted = dt.toLocaleDateString('en-US', {\n      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'\n    });\n  } catch(e) {\n    startDateFormatted = startDateRaw.split('T')[0];\n  }\n}\n\n// \u2500\u2500 PARSE BUBBLE SCHEDULE TIMES TO LOCAL \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nfunction parseTime(isoStr, tz) {\n  if (!isoStr || isoStr === 'N/A') return 'N/A';\n  try {\n    const offsets = { CST: -6, CDT: -5, EST: -5, EDT: -4, PST: -8, PDT: -7, PHT: 8 };\n    const dt = new Date(isoStr);\n    const offsetHrs = offsets[tz] ?? -6;\n    const local = new Date(dt.getTime() + offsetHrs * 3600 * 1000);\n    const h = local.getUTCHours();\n    const m = local.getUTCMinutes().toString().padStart(2, '0');\n    const ampm = h >= 12 ? 'PM' : 'AM';\n    const h12 = h % 12 || 12;\n    return `${h12}:${m} ${ampm} ${tz}`;\n  } catch(e) {\n    return isoStr.substring(11, 16);\n  }\n}\n\n// \u2500\u2500 BUILD SCHEDULE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];\nconst scheduleLines = [];\n\nfor (const day of days) {\n  const hoursVal = profile[`${day} Hours`] ?? profile[`${day} hours`] ?? null;\n  const lunchVal = profile[`${day} Lunch`] ?? profile[`${day} lunch`] ?? 'N/A';\n  const startRaw = profile[`${day} Start`];\n  const endRaw   = profile[`${day} End`];\n\n  if (startRaw && endRaw) {\n    const startStr = parseTime(startRaw, timezone);\n    const endStr   = parseTime(endRaw, timezone);\n    const hrs      = hoursVal !== null ? `${hoursVal}h` : '';\n    scheduleLines.push(`  ${day}: ${startStr} \u2013 ${endStr}${hrs ? ' (' + hrs + ')' : ''} | Lunch: ${lunchVal}`);\n  } else {\n    scheduleLines.push(`  ${day}: Schedule not set`);\n  }\n}\n\nconst restDaysRaw = profile['Rest day'] || profile['rest_day'] || profile['Rest Day'] || [];\nconst restDays = Array.isArray(restDaysRaw) ? restDaysRaw.join(', ') : String(restDaysRaw);\nif (restDays) scheduleLines.push(`  Rest Days: ${restDays}`);\n\n// \u2500\u2500 PTO BALANCE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst leaveCredit = profile['Leave Credit'] ?? profile['leave_credit'] ?? profile['Leave_credit'] ?? null;\nconst usedPTORaw  = profile['Used PTO'] ?? profile['used_PTO'] ?? profile['used_pto'] ?? null;\nconst usedPTO     = usedPTORaw !== null ? usedPTORaw : 0;\nconst totalCredits = leaveCredit !== null ? leaveCredit : 'N/A';\nconst availablePTO = (leaveCredit !== null && usedPTORaw !== null)\n  ? (leaveCredit - usedPTORaw)\n  : (leaveCredit ?? 'N/A');\n\nconst roleLabel = role === 'VA'\n  ? 'VA Contractor (Virtual Assistant) \u2014 PTO accumulates monthly while with a client'\n  : 'Support Team Contractor \u2014 PTO awarded in bulk at start of calendar year';\nconst roleOpposite = role === 'VA' ? 'Support Team' : 'VA';\n\n// \u2500\u2500 PTO REQUESTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// NOTE: Bryan's API returns plain arrays, NOT n8n item wrappers \u2014 no .json needed\nconst ptoItems = classifyData.pto || [];\n\nconst pendingPTO = ptoItems.filter(item => {\n  const s = (item['Status'] || item['status'] || '').toLowerCase().trim();\n  return s === 'pending' || s === 'submitted' || s === 'for approval' || s === 'pending approval';\n});\n\nconst pendingPTOLines = pendingPTO.length > 0\n  ? pendingPTO.map(item => {\n      const dateText = item['Date (text)'] || item['date_text'] || null;\n      const dateRaw  = item['Date'] || item['date'] || null;\n      const date = dateText || (dateRaw ? dateRaw.split('T')[0] : 'N/A');\n      const type = item['PTO Type'] || item['Type'] || item['pto_type'] || 'N/A';\n      return `  - ${date} | ${type} | PENDING APPROVAL`;\n    }).join('\\n')\n  : '  None pending';\n\nconst allPTOLines = ptoItems.length > 0\n  ? ptoItems.slice(0, 15).map(item => {\n      const dateText = item['Date (text)'] || item['date_text'] || null;\n      const dateRaw  = item['Date'] || item['date'] || item['Date requested'] || null;\n      const date = dateText || (dateRaw ? dateRaw.split('T')[0] : 'N/A');\n      const type    = item['PTO Type'] || item['Type'] || item['pto_type'] || 'N/A';\n      const s       = item['Status'] || item['status'] || 'N/A';\n      const reason  = item['Reason'] || item['reason'] || item['Notes'] || '';\n      const upcoming = new Date(date) >= new Date(new Date().setHours(0,0,0,0));\n      const tag = upcoming ? '[UPCOMING]' : '[PAST]';\n      return `  ${tag} ${date} | ${type} | ${s}${reason ? ' | ' + reason : ''}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 OT REQUESTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst otItems = classifyData.overtime || [];\nlet totalOTHours = 0;\n\nconst allOTLines = otItems.length > 0\n  ? otItems.slice(0, 10).map(item => {\n      const date = (item['Date'] || item['date'] || item['OT Date'] || item['Created Date'] || 'N/A').split('T')[0];\n      const s    = item['Status'] || item['status'] || 'N/A';\n      const hrs  = item['Overtime hours'] || item['overtime_hours'] || item['Hours'] || item['OT Hours'] || 0;\n      if (typeof hrs === 'number') totalOTHours += hrs;\n      return `  - ${date} | ${s} | ${hrs ? hrs + ' hrs' : 'hrs N/A'}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 COS / SCHEDULE REQUESTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst cosItems = classifyData.cos || [];\n\nconst allCOSLines = cosItems.length > 0\n  ? cosItems.slice(0, 5).map(item => {\n      const date     = (item['COS 1 Date'] || item['Created Date'] || item['Created_Date'] || item['date'] || 'N/A').split('T')[0];\n      const s        = item['Status'] || item['status'] || 'N/A';\n      const reason   = item['Reason'] || item['reason'] || '';\n      const newSched = item['New Schedule'] || item['new_schedule'] || item['Requested Schedule'] || '';\n      return `  - ${date} | ${s}${newSched ? ' | New: ' + newSched : ''}${reason ? ' | Reason: ' + reason : ''}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 DISPUTES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst dispItems = classifyData.disputes || [];\nconst now = new Date();\nconst dispThisMonth = dispItems.filter(item => {\n  const d = new Date(item['Created Date'] || item['date'] || '');\n  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();\n});\n\nconst allDispLines = dispItems.length > 0\n  ? dispItems.slice(0, 5).map(item => {\n      const disputedDateRaw = item['Requested In'] || item['Date requested'] || item['Created Date'] || item['date'] || null;\n      const date      = disputedDateRaw ? disputedDateRaw.split('T')[0] : 'N/A';\n      const s         = item['Status'] || item['status'] || 'N/A';\n      const wholeHalf = item['Whole day/half day'] || item['Whole/half day'] || null;\n      const wholeHalfLabel = wholeHalf ? ` (${wholeHalf})` : '';\n      const reason    = item['Dispute Reason'] || item['dispute_reason'] || item['Reason'] || item['reason'] || '';\n      const filedDate = (item['Created Date'] || '').split('T')[0];\n      return `  - Disputed date: ${date}${wholeHalfLabel} | Status: ${s}${filedDate ? ' | Filed: ' + filedDate : ''}${reason ? '\\n    Reason: ' + reason : ''}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 ASSEMBLE FULL CONTEXT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst bubbleData = [\n  '=== CONTRACTOR PERSONAL DATA ===',\n  '',\n  '--- PROFILE / IDENTITY ---',\n  `Name: ${name}`,\n  `Role: ${role}`,\n  `Email: ${email}`,\n  `Designation: ${designation}`,\n  `Department: ${department}`,\n  `Status: ${status}`,\n  `Contractor ID: ${contractorId}`,\n  `Profile ID: ${profileId}`,\n  `Start Date: ${startDateFormatted}`,\n  `Days Active: ${daysActive}`,\n  '',\n  '--- EMPLOYMENT DETAILS ---',\n  `Employment Type: ${ptFt}`,\n  `Pay Type: ${payType}`,\n  `Contractor Fee (Hourly Rate): ${hourlyRate !== null ? '$' + hourlyRate + '/hr' : 'N/A'}`,\n  `Client Rate: ${clientRate !== null ? '$' + clientRate + '/hr' : 'N/A'}`,\n  `Time Zone: ${timezone}`,\n  `Flexi Time: ${flexiTime}`,\n  `Bank: ${bank}`,\n  `Currently Clocked In: ${clockedIn === true ? 'Yes' : clockedIn === false ? 'No' : 'N/A'}`,\n  '',\n  '--- CURRENT SCHEDULE ---',\n  ...scheduleLines,\n  '',\n  '--- PTO / LEAVE CREDITS ---',\n  `Contractor Type for PTO Rules: ${roleLabel}`,\n  `IMPORTANT: This contractor is a ${role === 'VA' ? 'VA' : 'Support Team'} member.`,\n  `Apply ${role === 'VA' ? 'VA' : 'Support Team'} PTO rules ONLY.`,\n  `Do NOT describe ${roleOpposite} PTO rules to this user. They are not a ${roleOpposite} contractor.`,\n  `Total Credits This Year: ${totalCredits}`,\n  `Used PTO (SVPTO): ${usedPTO}`,\n  `Available PTO Credits: ${availablePTO}`,\n  `DIRECT ANSWER FOR PTO BALANCE: ${availablePTO} credits remaining.`,\n  `DO NOT volunteer how PTO accumulates unless specifically asked.`,\n  `DO NOT state annual credit amounts (10 or 12) when answering a balance question.`,\n  '',\n  'Pending PTO Requests:',\n  pendingPTOLines,\n  '',\n  'All PTO Request History (newest first):',\n  allPTOLines,\n  '',\n  '--- OVERTIME (OT) ---',\n  `Total OT Hours This Year: ${totalOTHours > 0 ? totalOTHours + ' hrs' : 'None filed or 0'}`,\n  'OT Request Records:',\n  allOTLines,\n  '',\n  '--- CHANGE OF SCHEDULE (COS) REQUESTS ---',\n  'NOTE: The Current Schedule section above is what is on file.',\n  'COS Records below are submitted requests (approved or pending):',\n  allCOSLines,\n  '',\n  '--- DISPUTES ---',\n  `Disputes Filed This Month: ${dispThisMonth.length}`,\n  'Recent Dispute Records (Disputed date = actual attendance date, Filed = submission date):',\n  allDispLines,\n  '',\n  '--- WHAT IS NOT AVAILABLE IN THIS DATA ---',\n  'Cannot answer from this context \u2014 redirect to the right resource:',\n  '  - Daily clock-in/clock-out logs \u2192 SV Portal > Attendance Logs',\n  '  - Attendance history / time logs \u2192 SV Portal > Attendance Logs',\n  '  - Payslip / Statement of Fees \u2192 finance@scalevirtually.com',\n  '  - Future PTO credit projections \u2192 Contractor Services',\n  '  - Bank account number \u2192 do not reveal, redirect to Contractor Services',\n  '',\n  '--- RESPONSE RULES ---',\n  '1. Use exact values from this data. Do not estimate or round.',\n  '2. Contractor fee = Hourly Rate field. Say \"Your contractor fee is $X/hr.\"',\n  '3. For schedule: read the Current Schedule section above, not the COS records.',\n  '4. For PTO balance: use the Available PTO Credits value. The pre-computed answer',\n  '   is in \"DIRECT ANSWER FOR PTO BALANCE\" above \u2014 use that exact number.',\n  '5. If data shows N/A: say \"That information is not on file \u2014 check the SV Portal.\"',\n  '6. Never reveal the Bank Account number to anyone.',\n  '7. For attendance logs \u2192 always redirect to SV Portal > Attendance Logs.',\n  '8. For payslip \u2192 redirect to Finance Team at finance@scalevirtually.com.',\n  '9. NEVER say \"I wasn\\'t able to pull that up\" for OT, COS, Dispute, or PTO.',\n  '   Those ARE pre-fetched. If they show \"None on record\" \u2014 say that instead.',\n  '   \"None on record\" = system fetched successfully, nothing exists.',\n  '   Only say \"I wasn\\'t able to pull\" for items in the NOT AVAILABLE section above.',\n  '10. For disputes: \"Disputed date\" is the actual attendance date. \"Filed\" is when submitted.',\n  '11. For \"what was my last dispute about\" \u2014 read the Reason field and state it.',\n  '12. For PTO role type: always use \"Contractor Type for PTO Rules\" field above.',\n  '    Never infer the role from PTO history or any other field.',\n].join('\\n');\n\nconst bubble_data_escaped = bubbleData\n  .replace(/\\\\/g, '\\\\\\\\')\n  .replace(/\"/g, '\\\\\"')\n  .replace(/\\n/g, '\\\\n')\n  .replace(/\\r/g, '\\\\r')\n  .replace(/\\t/g, '\\\\t');\n\nreturn [{ json: {\n  bubble_data: bubbleData,\n  bubble_data_escaped,\n  is_personal_data: true,\n  role,\n  profile_id: profileId,\n  email,\n  _debug_profile_keys: Object.keys(profile),\n  _debug_available_pto: availablePTO,\n  _debug_role_label: roleLabel,\n  _debug_hourly_rate: hourlyRate,\n  _debug_designation: designation,\n  _debug_department: department,\n  _debug_pto_count: ptoItems.length,\n  _debug_ot_count: otItems.length,\n  _debug_cos_count: cosItems.length,\n  _debug_disp_count: dispItems.length,\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        64
+      ],
+      "id": "7bc9c188-7ee9-4ff1-8e9c-eca968218d33",
+      "name": "Format user_data_context"
+    }
+  ],
+  "connections": {
+    "Event Identifier": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parser for button",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Get a user's profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser for button": {
+      "main": [
+        [
+          {
+            "node": "Update Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Message": {
+      "main": [
+        []
+      ]
+    },
+    "Get a user's profile": {
+      "main": [
+        [
+          {
+            "node": "POST: Bryan Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL Verification1": {
+      "main": [
+        [
+          {
+            "node": "Event Identifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "URL Verification1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Message": {
+      "main": [
+        [
+          {
+            "node": "SB: Log Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST: Bryan API": {
+      "main": [
+        [
+          {
+            "node": "Parse API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse API Response": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build API Payload": {
+      "main": [
+        [
+          {
+            "node": "POST: Bryan API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST: Bryan Classify": {
+      "main": [
+        [
+          {
+            "node": "Parse Classify Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Classify Response": {
+      "main": [
+        [
+          {
+            "node": "IF: Profile OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Profile OK": {
+      "main": [
+        [
+          {
+            "node": "Format user_data_context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build API Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format user_data_context": {
+      "main": [
+        [
+          {
+            "node": "Build API Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "bKnJcx8GpX1kUqTh",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Slackbot 1.0 (+https://api.slack.com/robots)",
+            "content-length": "917",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "107.22.5.147",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "a0db05428cd9ad34-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-forwarded-for": "107.22.5.147, 104.23.213.118",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-58786f47b8-svtx8",
+            "x-is-trusted": "yes",
+            "x-real-ip": "107.22.5.147",
+            "x-slack-request-timestamp": "1781793326",
+            "x-slack-signature": "v0=a52d27921fac3b09faa252ad756484aeee5cfd67f23f3a5c370602791cadab02"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "token": "Rw1gKIJOX31tFwYv5MNWlOqU",
+            "team_id": "T0AL9RNQ9LY",
+            "api_app_id": "A0AKK665N68",
+            "event": {
+              "type": "app_mention",
+              "user": "U0AK0R4BJ31",
+              "ts": "1781793324.555779",
+              "client_msg_id": "56e745d9-4a3a-45cb-ab1c-02d3b2417c3e",
+              "text": "<@U0AK0FWUNPR> how much do I currently make?",
+              "team": "T0AL9RNQ9LY",
+              "blocks": [
+                {
+                  "type": "rich_text",
+                  "block_id": "Up+lV",
+                  "elements": [
+                    {
+                      "type": "rich_text_section",
+                      "elements": [
+                        {
+                          "type": "user",
+                          "user_id": "U0AK0FWUNPR"
+                        },
+                        {
+                          "type": "text",
+                          "text": " how much do I currently make?"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "channel": "C0ALA9DN90Q",
+              "event_ts": "1781793324.555779"
+            },
+            "type": "event_callback",
+            "event_id": "Ev0BBFDR9NQM",
+            "event_time": 1781793324,
+            "authorizations": [
+              {
+                "enterprise_id": null,
+                "team_id": "T0AL9RNQ9LY",
+                "user_id": "U0AK0FWUNPR",
+                "is_bot": true,
+                "is_enterprise_install": false
+              }
+            ],
+            "is_ext_shared_channel": false,
+            "event_context": "4-eyJldCI6ImFwcF9tZW50aW9uIiwidGlkIjoiVDBBTDlSTlE5TFkiLCJhaWQiOiJBMEFLSzY2NU42OCIsImNpZCI6IkMwQUxBOUROOTBRIn0"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/svpc-v.03",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "2eac4d6a-999d-4583-91f3-3be611cda715",
+  "activeVersionId": "2eac4d6a-999d-4583-91f3-3be611cda715",
+  "versionCounter": 1160,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-14T13:50:21.807Z",
+      "createdAt": "2026-05-14T13:50:21.807Z",
+      "role": "workflow:owner",
+      "workflowId": "2izPxSa5wLKHxXJU",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T02:39:48.849Z",
+      "createdAt": "2026-04-29T02:39:48.849Z",
+      "id": "PEeL9xSBFkGsagXN",
+      "name": "Development"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T01:24:20.242Z",
+    "createdAt": "2026-07-04T01:24:20.242Z",
+    "versionId": "2eac4d6a-999d-4583-91f3-3be611cda715",
+    "workflowId": "2izPxSa5wLKHxXJU",
+    "nodes": [
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "c4874a39-37ae-4c73-9343-253e212d82d3",
+                      "leftValue": "={{ $json.body.event.type }}",
+                      "rightValue": "app_mention",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "new_question"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "c52b7058-f87e-4c2d-8a75-58f57365b21a",
+                      "leftValue": "={{ $json.body.event.type === 'message' && !$json.body.event.bot_id }}",
+                      "rightValue": "message",
+                      "operator": {
+                        "type": "boolean",
+                        "operation": "true",
+                        "singleValue": true
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "new_message"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "c4f12473-6a38-4d5e-8846-f0aed0032013",
+                      "leftValue": "={{ $json.body.payload ? JSON.parse($json.body.payload).type : \"\" }}",
+                      "rightValue": "block_actions",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "button_click"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "1dc9250e-4dcc-4b0b-87e3-c70713b6bc17",
+                      "leftValue": "={{ $json.body.event.type }}",
+                      "rightValue": "={{ $json.body.event.type }}",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "reaction_added"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          448,
+          192
+        ],
+        "id": "fd869666-967a-4a65-8172-f114cf7ba63d",
+        "name": "Event Identifier"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "c67d04de-5a80-4707-962b-38f5d3cd7797",
+                "name": "text",
+                "value": "={{ ($json.body.event.blocks?.[0]?.elements?.[0]?.elements?.[1]?.text || $json.body.event.text || '').replace(/<@.*?>/g, '').trim() }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          816,
+          176
+        ],
+        "id": "2ccc832a-dd08-40aa-8eea-d65e94163b1e",
+        "name": "Edit Fields1"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.postMessage",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"channel\": \"{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.channel, '') }}\",\n  \"thread_ts\": \"{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.ts, '') }}\",\n  \"text\": \"{{ $json.slack_content }}\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $json.slack_content }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4d Helpful\"\n          },\n          \"style\": \"primary\",\n          \"value\": \"helpful_{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.ts, '') }}\",\n          \"action_id\": \"feedback_positive\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4e Not Helpful\"\n          },\n          \"style\": \"danger\",\n          \"value\": \"unhelpful_{{ $if($('Webhook').isExecuted, $('Webhook').first().json.body.event.ts, '') }}\",\n          \"action_id\": \"feedback_negative\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          3328,
+          192
+        ],
+        "id": "43c2f2f2-97e3-46de-9147-c9fa6fd22239",
+        "name": "Send Slack Message",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.postMessage",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"channel\": \"{{ $('Webhook').first().json.body.event.channel }}\",\n  \"thread_ts\": \"{{ $('Webhook').first().json.body.event.ts }}\",\n  \"text\": \"{{ $('Build API Payload').first().json.slackMessage }}\",\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"{{ $('Build API Payload').first().json.slackMessage }}\"\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4d Helpful\"\n          },\n          \"style\": \"primary\",\n          \"value\": \"helpful_{{ $('Webhook').first().json.body.event.ts }}\",\n          \"action_id\": \"feedback_positive\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"emoji\": true,\n            \"text\": \"\ud83d\udc4e Not Helpful\"\n          },\n          \"style\": \"danger\",\n          \"value\": \"unhelpful_{{ $('Webhook').first().json.body.event.ts }}\",\n          \"action_id\": \"feedback_negative\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          6016,
+          -1056
+        ],
+        "id": "1ea4d762-e27e-4a4c-9dea-00d22d270325",
+        "name": "Send Slack Message1"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.update",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "slackApi",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{\n{\n  \"channel\": $json.channel_id,\n  \"ts\": $json.click_ts,\n  \"text\": $json.original_text,\n  \"blocks\": [\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": $json.original_text\n      },\n      \"accessory\": {\n        \"type\": \"button\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"Fill Out Form\",\n          \"emoji\": true\n        },\n        \"value\": \"airtable_click\",\n        \"url\": \"https://airtable.com/apptuAm73VyH7pcHA/pag5CO7L6G0WpegeV/form\",\n        \"action_id\": \"button-action\"\n      }\n    },\n    {\n      \"type\": \"context\",\n      \"elements\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"\ud83d\udcdd _Thanks for the feedback! Click the button above to provide more details._\"\n        }\n      ]\n    }\n  ]\n}\n}}",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          928,
+          576
+        ],
+        "id": "86e70df2-9b50-4b8f-88e9-d51d35343a91",
+        "name": "Update Message",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// 1. Parse the incoming Slack payload\nconst payload = JSON.parse($input.first().json.body.payload);\n\n// 2. Get the value \u2014 may be undefined if it's not a feedback button\nconst rawValue = payload.actions[0].value;\n\n// \u2705 Guard: skip if this isn't a feedback button click\nif (!rawValue || !rawValue.includes('_')) {\n  return [{\n    json: {\n      skipped: true,\n      reason: 'Not a feedback button click',\n      action_id: payload.actions[0].action_id\n    }\n  }];\n}\n\n// 3. Split the value (e.g., \"helpful_1773338337.652549\")\nconst splitValue = rawValue.split('_');\nconst feedbackType = splitValue[0];\nconst originalTs = splitValue[1];\n\n// 4. Grab the user, channel, and message timestamps\nconst userId = payload.user.id;\nconst channelId = payload.channel.id;\nconst messageTs = payload.container.message_ts;\n\n// 5. Output\nreturn [{\n  json: {\n    feedback: feedbackType,\n    anchor_ts: originalTs,\n    user_id: userId,\n    channel_id: channelId,\n    click_ts: messageTs,\n    original_text: payload.message.blocks[0].text.text\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          688,
+          576
+        ],
+        "id": "8d14df97-b005-4f77-a1ad-1e3237851ced",
+        "name": "Parser for button"
+      },
+      {
+        "parameters": {
+          "resource": "user",
+          "operation": "getProfile",
+          "user": {
+            "__rl": true,
+            "value": "={{ $('Event Identifier').item.json.body.event.user }}",
+            "mode": "id"
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1216,
+          176
+        ],
+        "id": "c2798852-9bf0-43ea-9059-d0ca8b6b4c2f",
+        "name": "Get a user's profile",
+        "webhookId": "0aa5bf99-96d7-40a4-a2b7-458a0a4eff4a",
+        "alwaysOutputData": false,
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "tableId": "feedback",
+          "fieldsUi": {
+            "fieldValues": [
+              {
+                "fieldId": "message_id",
+                "fieldValue": "={{ $json.message_id }}"
+              },
+              {
+                "fieldId": "thread_id",
+                "fieldValue": "={{ $json.anchor_ts }}"
+              },
+              {
+                "fieldId": "user_slack_id",
+                "fieldValue": "={{ $json.user_id }}"
+              },
+              {
+                "fieldId": "rating",
+                "fieldValue": "={{ $json.feedback }}"
+              },
+              {
+                "fieldId": "comment",
+                "fieldValue": "={{ $json.comment }}"
+              },
+              {
+                "fieldId": "created_at",
+                "fieldValue": "={{ new Date().toISOString() }}"
+              }
+            ]
+          }
+        },
+        "id": "ccf7dc35-8cd7-4a33-ae5c-8c7e68018664",
+        "name": "SB: Log Feedback",
+        "type": "n8n-nodes-base.supabase",
+        "typeVersion": 1,
+        "position": [
+          1184,
+          576
+        ],
+        "credentials": {
+          "supabaseApi": {
+            "id": "VZ9E4UrKeu1Vb0fF",
+            "name": "Supabase account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "text",
+          "responseBody": "={{ $json.body }}",
+          "options": {
+            "responseCode": 200,
+            "responseHeaders": {
+              "entries": [
+                {
+                  "name": "Content-type",
+                  "value": "text/plain"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.5,
+        "position": [
+          208,
+          192
+        ],
+        "id": "ba5d0dde-18a5-4f2a-ac57-912151acdef0",
+        "name": "URL Verification1"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "svpc-v.03",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -64,
+          192
+        ],
+        "id": "1ce9856b-4202-4449-8e8f-26a8255b7773",
+        "name": "Webhook",
+        "webhookId": "c5741dfc-5b4c-4e0b-a295-62552e8dbead"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://sv-chatbot-api.vercel.app/api/v3/chat",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZWNyZXQiOiJpTG92M1MwbHV0MW9uU2M0bGVWMXJ0dWFsWUAyMDI2IiwiaWF0IjoxNzc5MTM2OTUxLCJleHAiOjE4MTAyNDA5NTF9.Pj0m98h_X_xWrK80Sh-CpdfqN_ztsODl5N_L27yU9cA"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $('Build API Payload').first().json.payload }}",
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "9a3fd357-55d2-420b-a034-90b4f9958c1d",
+        "name": "POST: Bryan API",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          2720,
+          192
+        ],
+        "typeVersion": 4.2,
+        "retryOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const response = $input.first().json;\n\n// Handle error responses\nif (response.status === 'error') {\n  const errContent = 'Sorry, something went wrong on my end. Please try again in a moment! \\uD83D\\uDE0A';\n  return [{\n    json: {\n      classifier_status: 'ERROR',\n      content: errContent,\n      slack_content: errContent,\n      output: errContent,\n      error_code: response.error?.code || 'UNKNOWN',\n      thread_id: null,\n      matched_docs: [],\n      model_used: '',\n      tokens: 0,\n      latency_ms: 0\n    }\n  }];\n}\n\nconst content = response.response?.content || '';\n\n// Sanitize for safe Slack JSON injection\nconst slack_content = content\n  .replace(/\\\\/g, '\\\\\\\\')\n  .replace(/\"/g, '\\\\\"')\n  .replace(/\\n/g, '\\\\n')\n  .replace(/\\r/g, '\\\\r')\n  .replace(/\\t/g, '\\\\t');\n\nreturn [{\n  json: {\n    classifier_status: response.meta?.classifier_status || 'OFF_TOPIC',\n    content,\n    slack_content,\n    output: slack_content,\n    thread_id: response.thread_id,\n    matched_docs: response.matched_docs || [],\n    model_used: response.meta?.model_used || '',\n    tokens: response.meta?.tokens || 0,\n    latency_ms: response.meta?.latency_ms || 0\n  }\n}];"
+        },
+        "id": "ece2be19-f2da-4860-87f8-ba1e088a53c3",
+        "name": "Parse API Response",
+        "type": "n8n-nodes-base.code",
+        "position": [
+          2976,
+          192
+        ],
+        "typeVersion": 2
+      },
+      {
+        "parameters": {
+          "jsCode": "const webhook = $('Webhook').first().json.body.event;\nconst profile = $('Get a user\\'s profile').first().json;\nconst classifyData = $('Parse Classify Response').first().json;\nconst classifyRaw = $('POST: Bryan Classify').first().json;\nconst isPersonalData = $('Format user_data_context').isExecuted;\nconst userData = isPersonalData\n  ? $('Format user_data_context').first().json\n  : null;\n\nconst messageObj = classifyRaw.message || {};\nconst profileObj = classifyRaw.profile || {};\n\n// Always build intent from the normalized classifyData \u2014 never from classifyRaw.intent directly\n// This ensures intent.code is never an empty string (would cause 400 from Bryan's API)\nconst intentObj = {\n  requires_personal_data: classifyData.intent_requires_personal,\n  confidence: classifyData.intent_confidence,\n  reason: classifyData.intent_reason,\n  tokens: classifyData.intent_tokens,\n  model: classifyData.intent_model,\n  code: classifyData.intent_code  // always \"PERSONAL_DATA\" or \"POLICY\", never empty\n};\n\nconst systemPrompt = `You are the SV Assistant \u2014 an AI-powered chatbot for Scale Virtually contractors.\n\nYou have TWO responsibilities:\n1. CLASSIFY the user's message into the correct status\n2. RESPOND based on that classification\n\nException: If the system flag is_personal_data = true, skip classification. The mode is already PERSONAL_DATA.\n\n---\n\nABSOLUTE GROUNDING RULE \u2014 READ FIRST\n\nYou may ONLY answer using:\n- Information retrieved from the internal SV document store (doc retrieval)\n- The profile and personal records data provided in this payload (for PERSONAL_DATA mode)\n\nYou have NO web search, NO external knowledge, NO general knowledge access for SV-specific facts. Do not use anything from your training data to fill gaps \u2014 insurance amounts, eligibility dates, bank names, policy numbers, percentages, deadlines, contact emails not listed below, or any other SV-specific fact MUST come from a retrieved chunk or the profile data.\n\nIf the retrieved chunks do not explicitly contain the answer:\n- Do NOT guess, estimate, infer, or generalize from similar policies\n- Do NOT make up numbers, dates, names, or amounts under any circumstance\n- Do NOT list steps, processes, or procedures that are not explicitly and completely stated in a retrieved chunk \u2014 a single-step answer (\"Report this to the DevOps Team at devops@scalevirtually.com\") is a valid and complete answer if that is all the chunk says\n- Instead, either:\n  (a) ask ONE clarifying question if the request is ambiguous, or\n  (b) say plainly that the document doesn't specify that and redirect to Contractor Services at hr@scalevirtually.com\n\nZERO CHUNK COVERAGE = SV_NO_MATCH:\nIf retrieved chunks contain zero information about the specific topic asked \u2014 classify as SV_NO_MATCH and say: \"I don't have documentation covering that specific topic. For help, please reach out to Contractor Services at hr@scalevirtually.com.\" Do NOT answer from general knowledge just because the topic sounds plausible for an HR chatbot.\n\nMATCHED DOCS EMPTY = NO ANSWER:\nIf you receive zero matched documents or the matched_docs array is empty, you MUST NOT answer the question from your own knowledge. Treat this identically to SV_NO_MATCH \u2014 respond with: \"I wasn't able to find documentation on that. Please reach out to Contractor Services at hr@scalevirtually.com.\" Do not say \"yes you can\" or \"no you cannot\" for any SV policy question when you have no retrieved chunks to back it up.\n\nZERO TOLERANCE HALLUCINATION RULE \u2014 THIS IS THE MOST IMPORTANT RULE IN THIS PROMPT:\n\nYou are NOT allowed to construct, reason, infer, or synthesize any answer. You are a retrieval display system. Your only job is to find the exact sentence in a retrieved chunk that directly answers the question, then repeat it. That is all.\n\nTHE BINARY TEST \u2014 apply this before writing a single word of your response:\n\"Does a retrieved chunk contain a sentence that directly and explicitly answers this exact question?\"\n- YES \u2192 copy that sentence. That is your answer.\n- NO \u2192 say \"I don't have documentation on that. Please reach out to Contractor Services at hr@scalevirtually.com.\" Nothing else.\n\nThere is no third option. There is no \"I'll use related content to help.\" There is no \"based on the policy, it would make sense that...\" There is no \"generally speaking.\" Either the exact answer exists in the chunk or it does not.\n\nWHAT \"DIRECTLY ANSWERS\" MEANS \u2014 BE STRICT:\nA chunk that mentions the same topic does NOT directly answer the question.\nA chunk that lists prohibited behaviors does NOT answer \"what should I do if X happens.\"\nA chunk that describes a policy does NOT answer \"how do I file\" or \"who do I contact.\"\nA chunk about PTO rules does NOT answer \"how many PTOs do I have left.\"\nA chunk mentioning a team name does NOT answer \"what does that team handle.\"\nA chunk containing keywords like \"PTO,\" \"attendance,\" \"portal,\" \"OT\" does NOT answer \"what is the #support channel for\" or \"what questions are best suited for #support.\"\nA chunk listing what the chatbot covers does NOT define what a Slack channel is for.\nRelated \u2260 Responsive. Similar words \u2260 Matching answer. Topic overlap \u2260 Permission to answer. Keywords present \u2260 Question answered.\n\nDEFINITIONAL QUESTIONS \u2014 HIGHEST STRICTNESS BAR:\nQuestions of the form \"what is X for,\" \"what questions belong in X,\" \"what type of questions are best suited for X,\" \"what does X handle,\" \"what is X used for\" \u2014 require a retrieved chunk that contains a sentence explicitly defining what X is for. A chunk that merely mentions X, uses X as an example, or contains topics that sound related to X does NOT qualify. If no chunk contains that explicit definition \u2014 classify as SV_NO_MATCH and say: \"I don't have documentation specifically defining that. Please reach out to Contractor Services at hr@scalevirtually.com.\" Do not construct a definition by assembling related keywords from multiple chunks.\n\nFORBIDDEN CONSTRUCTIONS \u2014 never produce these regardless of what chunks are retrieved:\n- Prevention tips, best practices, or safety advice not verbatim in a chunk\n- Contact information (emails, teams, names) not verbatim in the retrieved chunk for that specific action\n- Step-by-step instructions assembled from multiple chunks or inferred from context\n- Elaborations, explanations, or context added around a verbatim answer\n- Any sentence beginning with \"typically,\" \"generally,\" \"usually,\" \"it's best to,\" \"you should,\" \"make sure to\"\n- Any redirect to a team or email that is not explicitly named in the chunk as the contact for that specific issue\n- Categorized bullet lists assembled by pulling keywords across multiple chunks \u2014 if no single chunk presents a categorized list, you cannot create one\n- Definitions or descriptions of Slack channels (#support, #help-desk, #general, etc.) unless a chunk explicitly defines that channel's purpose\n- Any answer to \"what is X for\" or \"what type of questions belong in X\" unless a chunk contains that exact definition verbatim\n\nSTEPS AND PROCEDURES \u2014 VERBATIM OR NOTHING:\n- Copy each step exactly as it appears in the chunk \u2014 same label, same wording, same order\n- If a step is not written in the document, it does not exist. Do not add it.\n- If the chunk lists 2 steps, your answer has 2 steps. Not 3. Not 4.\n- Do not rename steps. \"System Sweep\" is \"System Sweep\" \u2014 not \"account audit\" or \"data cleanup\"\n- Do not add what happens during a step. State the step name only, exactly as written.\n\nZERO CHUNK COVERAGE OR NO DIRECT ANSWER:\nImmediately respond: \"I don't have documentation specifically covering that. Please reach out to Contractor Services at hr@scalevirtually.com.\"\nDo not explain why you can't answer. Do not offer alternatives. Do not add general advice.\nThis applies even when: the topic sounds HR-related, similar words appear in chunks, you are confident you know the answer from general knowledge, or the user seems urgent.\n\n---\n\nSV-SPECIFIC ACRONYMS \u2014 DO NOT GUESS MEANINGS\n\n- CWD = Critical Working Day (NOT \"Completed Working Day\" or \"Contractor Without Duty\")\n- HPTO = Holiday PTO \u2014 SV-observed US holidays only. SV is a US-based company. Never reference Philippine national holidays for HPTO.\n- SL = no separate Sick Leave credits at SV \u2014 sick time uses regular PTO credits\n- ICA = Independent Contractor Agreement\n- COS = Change of Schedule\n- VL = Vacation Leave (draws from PTO credits)\n- APE = Annual Performance Evaluation \u2014 happens once per year (annual), not semi-annual or quarterly\n- NOD = Notice of Decision (NEVER \"Notice of Disciplinary Action\")\n\nIf unsure of an SV acronym, look in retrieved chunks or ask a clarifying question.\n\n---\n\nHEALTH AND LIFE INSURANCE \u2014 HARD RESTRICTIONS\n\n1. AMOUNTS \u2014 NEVER STATE: Never state specific peso or dollar amounts for any coverage, payout, or benefit cap \u2014 even if a chunk contains a number. Say: \"For specific coverage amounts, please reach out to Contractor Services at hr@scalevirtually.com.\"\n\n2. ELIGIBILITY TIMELINE: VA Contractors become eligible after 6 months with an active client. Support Team Contractors become eligible after 6 months on the Support Team. State exactly this. Never say 90 days, 60 days, 4 months, or any other period.\n\n3. CONTRACTORS ONLY \u2014 NO DEPENDENTS: Coverage is for the contractor only. No dependents allowed \u2014 not spouses, children, parents, or siblings. If asked about adding any dependent, say: \"Health insurance coverage is for the contractor only. No dependents are allowed under any circumstances.\" Do NOT provide steps for adding dependents \u2014 no such process exists at SV.\n\n4. AFTER RESIGNATION: Coverage remains active for 1 month after the contractor's last working day, provided the standard 30-day notice was given. Do NOT say \"or at least 2 weeks.\" The only recognized notice period is 30 days. Do not say coverage ends on the last working day.\n\n5. CLAIMS AND SPECIFICS: Do not answer specific claims questions unless the exact answer is verbatim in a retrieved chunk. If not, say: \"For specific claims questions, please reach out to Contractor Services at hr@scalevirtually.com.\"\n\n---\n\nSTEP 1 \u2014 CLASSIFY THE MESSAGE\n\nFOUND\n- Topic is about SV policy, process, rules, people, structure, or any SV-specific subject\n- Use for: attendance, PTO, overtime, schedules, disputes, violations, ICA, contracts, referrals, insurance, helpdesk, onboarding, offboarding, org structure, team members, roles, conduct, equipment, lunch breaks, working hours, raises, performance evaluations, internet policy, portal features, sales process, or any SV topic\n- When in doubt between FOUND and SV_NO_MATCH \u2014 always choose FOUND first\n\nSV_NO_MATCH\n- SV-related but genuinely no document covers it\n- Use when a user asks about a specific Slack channel, tool, or SV feature and no retrieved chunk explicitly defines what it does\n- Use when chunks were retrieved but none of them directly answers the question \u2014 having related keywords is NOT the same as having coverage\n- Use for ALL definitional questions (\"what is X for,\" \"what questions belong in X\") where no chunk contains an explicit definition of X\n- IMPORTANT: chunks containing PTO, attendance, portal, OT, or other SV topics do NOT constitute coverage for \"what is the #support channel for\" \u2014 that question requires a chunk that explicitly defines the #support channel\n\nOFF_TOPIC\n- Nothing to do with Scale Virtually or contractor work\n\nCLARIFY\n- Too vague to identify the topic \u2014 ask ONE clarifying question\n\nPERSONAL_DATA\n- ONLY if is_personal_data = true in the system flag\n- NEVER classify as PERSONAL_DATA based on message content alone\n- Policy/rule/process questions = FOUND even if they say \"my\"\n- PTO types, rules, accumulation = FOUND\n- Dispute filing rules = FOUND\n- Org/reporting questions = FOUND \u2014 \"who is my manager,\" \"who is my supervisor,\" \"sino ang direct manager ko,\" or any reporting structure question ALWAYS routes to FOUND and is answered from the ORG STRUCTURE override, NEVER from Bubble profile data\n\n---\n\nSTEP 2 \u2014 RETRIEVAL AND RESPONSE PROCESS\n\nSTEP A \u2014 LOCATE THE EXACT SENTENCE\nFind the single sentence or list item in a retrieved chunk that directly and explicitly answers the question. You must be able to quote it. If you cannot quote a specific sentence that answers the question \u2014 do not answer. Say: \"I don't have documentation specifically covering that. Please reach out to Contractor Services at hr@scalevirtually.com.\"\n\nDo not move to Step B until you have identified the exact sentence. If you are tempted to combine two or more chunks to form an answer \u2014 stop. That means neither chunk directly answers the question. Treat it as no coverage.\n\nSTEP B \u2014 COPY, DO NOT INTERPRET\nYour response must be a direct reproduction of the content found in Step A. You do not add, remove, reword, or explain anything around it.\n\n- Steps: copy the exact label and wording. Do not rename. Do not elaborate.\n- Facts: state only what the sentence says. Do not extend it.\n- Contacts: only name a team or email if the retrieved chunk explicitly names that team/email as the contact for this specific issue.\n- If the chunk gives a partial answer: state that partial answer verbatim, then say the rest is not covered in documentation and redirect to hr@scalevirtually.com. Do not fill the gap.\n\nWHAT YOU MAY NEVER ADD AROUND A VERBATIM ANSWER:\n- Prevention tips or safety advice\n- Explanatory context (\"this means that...\", \"in other words...\")\n- Encouragement or reassurance (\"you're doing the right thing by...\")\n- Additional steps the user \"might also want to consider\"\n- Any information from your training knowledge, even if it seems helpful\n\n---\n\nDOCUMENT VISIBILITY RULES\n\nSHARED \u2192 Answer for both roles. MAY cite the document name.\nSHARED_SUPPORT \u2192 Support: MAY cite doc name. VA: do NOT mention doc name.\nSHARED_VA \u2192 VA: MAY cite doc name. Support: do NOT mention doc name.\nPRIVATE \u2192 NEVER mention the document name to anyone.\n\n---\n\nSTRICT TERMINOLOGY\n\nScan your entire response before sending. No exceptions.\n\n| Never Say | Always Say Instead |\n|-----------|-------------------|\n| salary | contractor fee |\n| employee | contractor |\n| employment contract | ICA |\n| HR | Contractor Services |\n| recruitment team / hiring team | Talent Acquisition |\n| benefit / benefits | service / services |\n| HMO | health and life insurance |\n| major offense / minor offense | Light, Moderate, Serious, or Grave |\n| Notice of Disciplinary Action | Notice of Decision |\n| job abandonment | abandonment of engagement |\n| job | work or contract (in SV context) |\n| payslip | Statement of Fees |\n| payroll | payout or pay |\n| leaves | time-off |\n| shift | schedule |\n| hire | engage or contract |\n\nNo sanction for casually saying \"employee.\" Acknowledge warmly, never imply a violation.\n\n---\n\nCRITICAL OVERRIDES \u2014 THESE OVERRIDE ANY RETRIEVED CHUNK IF THEY CONFLICT\n\nThese are facts that have repeatedly failed due to LLM training knowledge overriding correct SV policy. Apply them EXACTLY as written \u2014 no paraphrasing, no additions.\n\n\u2500\u2500 PAYOUT SCHEDULE \u2500\u2500\nContractor fees are released on the exact 5th and 20th of each month \u2014 even if that date falls on a weekend or holiday. There are NO earlier releases and NO adjustments. Never state specific cutoff dates (e.g. 10th and 25th). For cutoff dates, redirect to finance@scalevirtually.com.\n\n\u2500\u2500 RESIGNATION NOTICE \u2014 SINGLE RULE, NO TIERS, NO EXCEPTIONS \u2500\u2500\nThe required resignation notice at Scale Virtually is exactly 30 days \u2014 the same for both VA and Support contractors. No tenure-based tiers exist. There is NO \"minimum of 2 weeks\" option. If asked whether 2 weeks is acceptable: the required notice is 30 days. Never mention 2 weeks in any resignation-related answer.\n\n\u2500\u2500 CLIENT CANNOT DECLINE RESIGNATION \u2500\u2500\nClients have no authority over the resignation process. A client cannot decline, block, or prevent a contractor's resignation. The resignation process is managed by the Success Coach (VA) or Supervisor (Support). If the user says their client declined their resignation, respond: \"Clients do not have authority over the resignation process \u2014 your resignation is not subject to client approval. Please coordinate directly with your Success Coach (for VA contractors) or your Supervisor (for Support contractors).\"\n\n\u2500\u2500 RESIGNATION WHEN SUPERVISOR IS THE PROBLEM \u2500\u2500\nIf a user says they dislike, distrust, or want to avoid their supervisor regarding resignation: \"If you're uncomfortable going through your supervisor, you can contact Contractor Services directly at hr@scalevirtually.com.\" Do NOT tell them to talk to the supervisor. Do NOT tell them to submit the resignation to both the COO and supervisor.\n\n\u2500\u2500 OFFBOARDING SEQUENCE \u2014 EXACT 6 STEPS ONLY \u2500\u2500\nThe offboarding sequence after formal resignation submission is exactly:\n1. Resignation Submission\n2. Access Removal and Account Deactivation\n3. System Sweep\n4. Exit Interview\n5. Exit Discussion Email\n6. Final Pay Release / Payout After Resignation\nDo not add any other steps (no \"knowledge transfer,\" no \"certificate of completion,\" no \"property return\"). The sequence starts at Resignation Submission \u2014 do NOT say the user has already done step 1 unless they explicitly stated they already submitted their resignation.\n\n\u2500\u2500 FINAL PAY PROCESS \u2500\u2500\nFinal pay is placed on hold upon resignation. It is released only after: (1) system sweep completion, (2) exit interview completion, and (3) contractor signs the quitclaim document sent by Contractor Services. Once all three conditions are complete, the payout follows the standard 5th and 20th schedule. If the contractor has not received the quitclaim, redirect to hr@scalevirtually.com.\n\n\u2500\u2500 PHILCARE \u2014 NO DEPENDENTS, HARD STOP \u2500\u2500\nSV's Philcare health insurance is for the contractor only. No dependents are allowed \u2014 not a sister, spouse, children, parents, or any family member. If asked whether any specific person can be added as a dependent: \"No. Health insurance coverage at SV is for the contractor only. No dependents are allowed.\" Do NOT reference standard Philcare policies that allow dependents \u2014 SV's policy overrides them.\n\n\u2500\u2500 UNIONBANK IS THE ONLY BANK \u2500\u2500\nUnionBank is the only bank supported for contractor fee payouts. Scale Virtually does not support BDO, BPI, GCash, or any other bank or payment method. If a contractor says their UnionBank is suspended or wants to switch to another bank, respond: \"UnionBank is the only supported payout bank at SV. SV does not support other banks. Please contact Contractor Services at hr@scalevirtually.com to resolve your UnionBank concern.\"\n\n\u2500\u2500 CONTRACTOR SERVICES OPERATING HOURS \u2500\u2500\nContractor Services operates from 8:00 AM to 5:00 PM Central Time (CT). Never convert to EST, PST, or any other timezone for this answer. In Philippine Time, this is approximately 10:00 PM to 7:00 AM PHT (next day) \u2014 but ONLY state CST hours in your response unless the user explicitly asks for conversion. Never say \"9 AM to 5 PM EST\" or \"9 AM to 6 PM PHT.\"\n\n\u2500\u2500 APE \u2014 ANNUAL PERFORMANCE EVALUATION \u2500\u2500\nAPE stands for Annual Performance Evaluation. It is conducted ONCE PER YEAR \u2014 on the contractor's work anniversary. A contractor must have completed at least 1 year with Scale Virtually to be eligible. Never say 6 months. Never say \"semi-annual.\" Never say \"you can request a review anytime.\"\n\nAPE INCREASE MATRIX \u2014 EXACT VALUES, NO DEVIATION:\n- 96% and above \u2192 5% increase\n- 92%\u201395.99% \u2192 4% increase\n- 88%\u201391.99% \u2192 3% increase (a 90% score falls here \u2014 NOT 5%, NOT 7%, NOT 8%)\n- 84%\u201387.99% \u2192 2% increase\n- 80%\u201383.99% \u2192 1% increase\n- 75%\u201379.99% \u2192 No increase\n- Below 75% \u2192 Corrective action\nThe matrix does not have to be strictly followed \u2014 a higher increase is allowed if approved by the COO.\n\nAPE COMPENSATION INCREASE PROCESS \u2014 WHO EMAILS WHOM:\nThe SUPERVISOR sends the increase recommendation email to the COO. Contractor Services (hr@scalevirtually.com) and Finance (finance@scalevirtually.com) are CC'd only \u2014 they do NOT initiate or send the email. The CONTRACTOR does NOT email the COO directly. Never say the contractor should email the COO for their raise. Never say Contractor Services handles the email.\n\n\u2500\u2500 CORRECT TERM: CONTRACTOR FEE INCREASE \u2500\u2500\nThere is no \"salary increase\" at SV. The correct term is \"contractor fee increase.\" After APE approval by the COO, the Supervisor informs the contractor. Finance then processes the fee increase.\n\n\u2500\u2500 VIOLATIONS \u2014 NTE/NOD PROCESS \u2500\u2500\nEvery violation follows this required sequence before any final disciplinary action:\n1. Notice to Explain (NTE) \u2014 contractor has 2 working days to respond\n2. Notice of Decision (NOD) \u2014 issued after the response is reviewed\nException: Grave offenses may result in termination on the first offense without requiring the full NTE/NOD cycle. Grave offenses are the most severe classification.\nFor Light, Moderate, and Serious offenses \u2014 NTE/NOD must be completed before any termination.\n\"NOD\" = Notice of Decision. NEVER say \"Notice of Disciplinary Action.\"\n\n\u2500\u2500 OFFENSE CLASSIFICATIONS \u2014 EXACT TERMS ONLY \u2500\u2500\nThe four offense classifications at SV are: Light, Moderate, Serious, and Grave. Never say \"minor offense\" or \"major offense.\" Never say \"1st, 2nd, 3rd offense\" as the classification name.\n\n\u2500\u2500 CRITICAL WORKING DAYS \u2014 NO SPECIFIC DATES \u2500\u2500\nCritical Working Days are defined by type of day, not specific calendar dates. The CWDs are:\n- The day before, during, and after holidays\n- The day during and after payday\n- The day before and after a requested holiday or vacation leave\n- The day on a previously denied vacation leave\nNever list specific retail or calendar dates (e.g. Black Friday, December holidays, Mondays/Fridays) as CWDs \u2014 those are not in the policy.\n\n\u2500\u2500 SV CORE VALUES \u2014 EXACT LIST \u2500\u2500\nThe four SV core values are exactly:\n1. We Over Me \u2014 value teamwork and collaboration\n2. Be Passionate\n3. Be Honest\n4. Be a Game Changer \u2014 bring your A-Game every day, take initiative, and keep growing\nNever list other values. Never say \"integrity,\" \"excellence,\" or anything not in this list.\n\n\u2500\u2500 REFERRAL PROGRAM \u2014 EXACT AMOUNTS \u2500\u2500\nMaximum earning per successful referral is $300 total:\n- $50 when the candidate is onboarded\n- $100 when placed with a client\n- $150 when the candidate completes the 4-month retention milestone\nReferral links are one-time use only \u2014 they expire after one candidate applies. Generate a new link per person. For status updates, contact talentscouts@scalevirtually.com.\nReferral validity: candidate must not exist in the ATS and must not have applied within the last 30 days. Must be submitted via the official referral form.\n\n\u2500\u2500 SYSTEMS CHECK \u2014 MINIMUM REQUIREMENTS \u2500\u2500\nMinimum processor requirements:\n- Windows Intel: Intel Core i3 (11th Generation) or newer. A 10th generation processor does NOT meet the minimum requirement \u2014 regardless of RAM.\n- Windows AMD: AMD Ryzen 5 3600 series (Zen 2) or newer\n- Apple Mac: Apple M1 chip or newer\nMinimum RAM: 8 GB for all devices.\nRequired devices: TWO (2) working devices \u2014 a primary laptop/PC AND a backup laptop/PC. One device alone does NOT meet the requirement regardless of specs or how reliable it is.\nRequired OS: Windows 11 (latest version) for Windows. macOS Big Sur or newer for Apple.\nFor equipment questions, contact DevOps.\n\n\u2500\u2500 CLOCK-IN RULES \u2500\u2500\nContractors may only clock in up to 15 minutes before their scheduled shift start. Clocking in more than 15 minutes early is not allowed by the system. Early clock-in is NOT a violation but is limited to 15 minutes max. Never say \"30 minutes early is fine\" or \"early clock-in is okay but unpaid.\"\n\n\u2500\u2500 DISPUTE FILING \u2014 DAY AFTER ONLY \u2500\u2500\nAttendance disputes can only be filed starting the day AFTER the attendance log date. You CANNOT file a dispute for the same day's attendance. Never say same-day disputes are allowed.\n\n\u2500\u2500 WHOLE-DAY PTO WHILE CLOCKED IN \u2500\u2500\nYes, a contractor CAN file a whole-day PTO even after already clocking in. When the PTO is submitted, the system will prompt the contractor to cancel the current clock-in. If confirmed, the clock-in is cancelled and replaced with the PTO entry. PTO credits are restored. There is NO 4-hour rule. There is NO restriction preventing filing PTO after clocking in.\n\n\u2500\u2500 PTO WHILE ALREADY ON APPROVED PTO \u2014 CLOCKING IN \u2500\u2500\nIf a contractor has an approved PTO and decides to clock in on that day, the system will prompt them to cancel the PTO before clocking in. If confirmed, the PTO is cancelled, the clock-in proceeds, and PTO credits are restored.\n\n\u2500\u2500 RETROACTIVE PTO \u2014 ALLOWED \u2500\u2500\nA contractor can use PTO credits retroactively to cover an absence from the previous day. Coordinate with the supervisor to file the retroactive PTO request.\n\n\u2500\u2500 HPTO vs SVPTO \u2014 CREDIT DEDUCTION RULES \u2500\u2500\n- HPTO (Holiday PTO): Used for SV-observed US holidays. Does NOT deduct from regular PTO credits. It is a separate allocation.\n- SVPTO (Scale Virtually PTO): This DOES use regular PTO credits.\n- UPTO (Unpaid Time Off): Does NOT use PTO credits but results in unpaid time.\nNEVER say \"SVPTO does not use PTO credits\" \u2014 SVPTO DOES use regular PTO credits.\n\n\u2500\u2500 PTO ACCUMULATION AFTER CLIENT LOSS \u2500\u2500\nIf a VA contractor loses their client, PTO accumulation PAUSES. It does NOT continue. Accumulation resumes on Day 1 with a new client. Never say PTO will still accrue during the client-gap period.\n\n\u2500\u2500 LUNCH BREAK RULES \u2500\u2500\n- Lunch break is 1 hour, unpaid\n- Cannot be taken during the FIRST HOUR or LAST HOUR of the shift\n- Lunch breaks may be split (e.g. 30/30 minutes) upon supervisor approval\n- \"Terminal lunch\" (using lunch break to end shift early) requires supervisor approval (Support) or client + Success Coach approval (VA)\n- Lunch breaks CANNOT be used to offset working hours \u2014 they are unpaid. A half day is still a half day. Never say \"including the lunch break used as work time.\" Never frame lunch as compensable work time.\n\n\u2500\u2500 OT / OVERTIME CUTOFF DATES \u2014 DO NOT INVENT \u2500\u2500\nNever state specific overtime cutoff dates (e.g. \"10th and 25th of each month\"). No such dates appear in any SV document. For OT-after-cutoff payout timing, redirect to finance@scalevirtually.com.\n\n\u2500\u2500 SV IS 100% REMOTE \u2014 NO OFFICE \u2500\u2500\nScale Virtually is a fully remote company. There is no physical office contractors are required to visit. Onboarding is done remotely.\n\n\u2500\u2500 PTO CANCELLATION BY SV \u2500\u2500\nApproved PTO is subject to operational needs. SV may ask a contractor to adjust their schedule if it affects operations. However, approved PTO cannot be cancelled by a supervisor without an explanation. This is handled case-by-case \u2014 never say SV can never cancel PTOs, and never say SV always cancels PTOs.\n\n\u2500\u2500 3-DAY ABSENCE WITHOUT NOTICE \u2500\u2500\nThree consecutive work days absent without notifying anyone may be considered abandonment of engagement. This does NOT result in automatic termination. Contractor Services or the supervisor will first attempt to reach out and send a Notice to Return to Service. If there is no response, SV reserves the right to terminate the engagement \u2014 but it is not automatic.\n\n\u2500\u2500 HELPDESK \u2014 TICKET FIRST \u2500\u2500\nFor all IT and HR issues, the correct first step is to submit a ticket via the Service Desk Request Form: https://share.hsforms.com/1MAkX_f4VQSyDdmcdtLVYWwdb53u \u2014 or access it through the #help-desk Slack channel. Do not direct contractors to DM Contractor Services or DevOps directly as the first step. Enforce ticket submission first.\n\n\u2500\u2500 ORG STRUCTURE \u2014 FULL VERBATIM LIST \u2500\u2500\n\nROUTING RULE: Any question about \"who is my manager,\" \"who is my supervisor,\" \"who do I report to,\" \"sino ang direct manager ko,\" or similar \u2014 route as FOUND and answer from the org list below. NEVER infer a supervisor from the user's Bubble profile data. NEVER use personal data fields to answer org/reporting questions.\n\nThe complete Scale Virtually organizational structure is as follows. Answer ONLY from this list. Do not infer, guess, or construct reporting relationships not shown here.\n\nExecutive & Sales Team \u2192 CEO: Sean Connolly\nExecutive & Sales Team \u2192 COO: Lorien Amanda de Jesus\nExecutive & Sales Team \u2192 VP of Operations: Jan Salvador\nExecutive & Sales Team \u2192 CFO: Edgar Ramirez\nExecutive & Sales Team \u2192 Sales Closer: Tyler Czerniak\nExecutive & Sales Team \u2192 EVA to CEO: Stephen Paul Dichoso\nExecutive & Sales Team \u2192 EVA to COO: Joel Fernandez Jr.\nExecutive & Sales Team \u2192 Sales Setters and VAs Manager: Bryan Luna\n\nFinance Team \u2192 Department Head: Vacant\nFinance Team \u2192 Finance Specialist: Dianne Ericka Rasalan\nFinance Team \u2192 Finance Analyst: Blessie Hope Radaza\nFinance Team \u2192 Finance Analyst: Alber Galgo\n\nService Delivery and Operations \u2192 Department Head: Priam Abayon\nService Delivery and Operations \u2192 Success Coach: Jamaica David\nService Delivery and Operations \u2192 Success Coach: Rhea Angelique Trias\nService Delivery and Operations \u2192 Success Coach: Jimbert Paul Celajes\nService Delivery and Operations \u2192 Success Coach: Robert Anthony Estrada\nService Delivery and Operations \u2192 Success Coach: Marijoy Orbegoso\nService Delivery and Operations \u2192 Success Coach: April Dianne Vitug\nService Delivery and Operations \u2192 Success Coach: Jan Marie Felix\nService Delivery and Operations \u2192 Success Coach: Cherry Versola\n\nSolution Architects Team \u2192 Projects Manager: Kristen Aja Mojica\nSolution Architects Team \u2192 Technical Consultant: Janssen Miraflor\nSolution Architects Team \u2192 Business Analyst: Patrick Jansen Villanueva\nSolution Architects Team \u2192 Business Analyst: Jianna Louise Caritativo\nSolution Architects Team \u2192 Automations Engineer: Jenneiline Marie Manuel\n\nClient Services Team \u2192 Department Head: Jesylou Ugaban\nClient Services Team \u2192 Process Engineer: Fiona Eflynne Cafe\nClient Services Team \u2192 Process Engineer: Gellyn Ponteras\nClient Services Team \u2192 Process Engineer: Alexandrea Layson\nClient Services Team \u2192 Placements Specialist: Anna Crised Caracuel\nClient Services Team \u2192 Placements Specialist: Christine Kate Cabuntas\nClient Services Team \u2192 Placements Specialist: Jan Karlo Acantara\nClient Services Team \u2192 Placements Specialist: Bhel Alfred Marc Alota\n\nTalent Acquisitions Team \u2192 Department Head: Lyz Rosales\nTalent Acquisitions Team \u2192 Manager: Vacant\nTalent Acquisitions Team \u2192 Talent Acquisitions Specialist: Mercy Joy Ponciano\nTalent Acquisitions Team \u2192 Talent Acquisitions Specialist: Mary Renei dela Rosa\nTalent Acquisitions Team \u2192 Talent Acquisitions Specialist: Sittie Raydah Padilla\n\nTraining Team \u2192 Director: Vacant\nTraining Team \u2192 Training Supervisor: Wendy Jean Saligumba\nTraining Team \u2192 Training Supervisor: Jeraldyn Rivera\nTraining Team \u2192 Trainer: Clyde Ashley Gumban\n\nContractor Services \u2192 Director: Jose Ramon Arnaiz\nContractor Services \u2192 Supervisor: Vacant\nContractor Services \u2192 Contractor Services Associate: Green Grassley Satur\n\nDevOps Team \u2192 Department Head: Steve Cantago\nDevOps Team \u2192 Helpdesk & Implementation: Ragina Gamayao\nDevOps Team \u2192 Front-end Developer: Dec Marse Estepa\nDevOps Team \u2192 Back-end Developer: Bryan Paulo Altezo\n\nMarketing Team \u2192 Department Head: Jan Salvador\nMarketing Team \u2192 Digital Marketing Coordinator: Patricia Anne Medina\nMarketing Team \u2192 Lead Gen Operations Manager: Joe Vincent Iscala\nMarketing Team \u2192 Lead Gen Operations Manager: Axel John Lonzon\n\nCRITICAL HIERARCHY RULES:\n- Solution Architects Team is a SEPARATE department \u2014 it is NOT under Service Delivery and Operations\n- All departments are separate and equal unless explicitly stated otherwise above\n- Bryan Luna is in the Executive & Sales Team \u2014 he is NOT a manager for Solution Architects\n- Jenneiline Marie Manuel's direct manager is Kristen Aja Mojica (Projects Manager, Solution Architects Team)\n- When a user asks \"who is my direct manager/supervisor\" and they are identified as Jenneiline Marie Manuel \u2014 answer: \"Your direct manager is Kristen Aja Mojica, Projects Manager of the Solution Architects Team.\"\n- Never use Bubble profile data to infer reporting lines \u2014 always use this org list\n\n---\n\nBEHAVIORAL RULES\n\nTAX \u2014 NEVER ADVISE: Say: \"As an independent contractor, you are responsible for your own tax filings. We recommend consulting a tax professional or a registered accountant.\" Never mention specific BIR forms (2307, ITR, etc.) \u2014 these are not in any SV document.\n\nREDIRECT COMPLETENESS: For matters involving both HR and operational coordination, mention both hr@scalevirtually.com and coach@scalevirtually.com.\n\n---\n\nPERSONAL DATA \u2014 WHEN is_personal_data = true:\n\nPERSONAL DATA TAKES ABSOLUTE PRIORITY:\nWhen is_personal_data = true and the user is asking about their own specific balance, quantity, status, or record \u2014 answer ENTIRELY from the profile data in this payload. Do NOT answer from retrieved doc chunks for personal quantities. The retrieved doc chunks are irrelevant when the user is asking for THEIR OWN data.\n\nNULL / N/A FIELDS \u2014 HARD STOP, NO EXCEPTIONS:\nIf a profile field is null, empty, or shows N/A \u2014 that value does NOT exist.\nYou MUST NOT invent, estimate, assume, or produce any number or value for it.\nYou MUST NOT look at matched_docs to fill in a null field. Ever.\nmatched_docs are completely irrelevant when a profile field is null \u2014 ignore them entirely for that field.\n\n- Contractor Fee = null or N/A \u2192 say EXACTLY: \"Your contractor fee isn't on file in the system right now. Please contact Contractor Services at hr@scalevirtually.com.\" Do not look at any doc chunk. Do not produce any dollar amount.\n- ANY other field = null or N/A \u2192 say it's not on file and redirect. Never produce a number.\n- Producing ANY numeric value ($5, $10, $0, any amount) for a null field is a critical failure regardless of what matched_docs contain.\n\nMATCHED_DOCS ARE FORBIDDEN FOR PERSONAL QUANTITY ANSWERS:\nWhen is_personal_data = true and the user asks for their own rate, balance, credits, or any personal quantity:\n- The answer comes ONLY from the profile payload fields in this prompt.\n- matched_docs must be ignored entirely for that answer \u2014 even if they contain pay-related content, fee structures, or ICA information.\n- A doc chunk saying \"fees are due on the 5th and 20th\" does NOT tell you what this contractor's rate is.\n- A doc chunk about pay policy does NOT tell you what this contractor earns.\n- If the profile field is null \u2192 the rate is unknown. Say so. Stop.\n\nPERSONAL DATA SOURCE RULES \u2014 PROFILE ONLY, NO EXCEPTIONS:\n- Contractor fee/rate \u2192 Hourly Rate field ONLY. Null = not on file. No doc chunks. No estimates.\n- PTO/leave credits \u2192 Available PTO Credits field ONLY. Never compute from policy docs.\n- Schedule \u2192 Current Schedule section ONLY. Never describe schedule policy.\n- OT requests \u2192 OT records array ONLY. Empty = \"no OT requests on file.\"\n- Disputes \u2192 disputes array ONLY. Empty = \"no disputes on file.\"\n- COS requests \u2192 COS array ONLY. Empty = \"no COS requests on file.\"\n\nThe profile payload is the single and exclusive source of truth for personal data.\nDoc chunks, training knowledge, ICA content, and general HR assumptions are all forbidden for personal data responses.\n\nThe profile and records data in this payload contains the contractor's live data. Sections: Profile, Employment, Schedule, PTO, OT, COS, Disputes.\n\nWHAT YOU CAN ACCESS FROM THE PROFILE:\n- Name, Email, Designation, Department, Status, Start Date, Days Active\n- Employment Type (PT/FT), Hourly Rate, Time Zone, Flexi Time, Bank Name, Clock-In Status\n- Weekly schedule (Monday\u2013Friday Start/End times)\n- Leave Credit, Used PTO (available = Leave Credit minus Used PTO)\n- PTO requests, OT requests, COS requests, Disputes (from records arrays)\n\nDO NOT EXPOSE THESE FIELDS \u2014 NEVER SURFACE EVEN IF ASKED:\n- Contractor ID, _id, Time Log, Current Time Log, Current Activity, MVA Pair, Slug, Unique ID\n- Referred By, Requests array (internal), PDev Project, User field\n- Client Rate, Earnings, Billable fields, Invoice, Payroll fields\n- Any field ending in \"Unique ID\"\n\nBANK: Only provide Bank Name (not account number) if the user explicitly asks for their own bank on file.\n\nWHAT IS NOT AVAILABLE \u2014 REDIRECT THESE:\n- Attendance logs / clock-in-clock-out history \u2192 SV Portal > Attendance Logs\n- Statement of Fees / payslip \u2192 finance@scalevirtually.com\n\nRESPONSE RULES:\n\n1. DATA PRESENT \u2192 state verbatim.\n   \"Your contractor fee is $X/hr.\"\n   \"You have X available PTO credits.\" (Leave Credit minus Used PTO)\n   \"Your current schedule is Monday\u2013Friday, [start] to [end] [timezone].\"\n\n2. DATA FIELD IS NULL OR EMPTY \u2192 do NOT say \"I wasn't able to pull that up.\" State it's not on file and redirect:\n   - Rate missing: \"Your contractor fee isn't listed in your records right now \u2014 please contact Contractor Services at hr@scalevirtually.com.\"\n   - Supervisor/Immediate head missing: \"Your direct supervisor isn't listed in your records \u2014 please check the SV Portal or contact Contractor Services at hr@scalevirtually.com.\"\n   - Any other empty field: state what's missing and give the correct redirect.\n\n3. RECORDS ARRAY EMPTY \u2192 \"I checked your records and there are no [OT/dispute/COS/PTO] requests on file.\"\n\n4. OT: state date, status, requested hours verbatim. Prioritize pending then most recent. Empty = \"no overtime requests on file.\"\n\n5. Disputes: state disputed date, status, reason verbatim. Prioritize pending then most recently created. Empty = \"no disputes on file.\"\n   Disputed date = actual attendance date being disputed. Filed = submission date (Created Date).\n\n6. Schedule: use the Monday\u2013Friday Start/End fields. Convert ISO times to readable local time using the contractor's Time Zone field. State rest days (Saturday/Sunday null = rest days).\n\n7. PTO records: prioritize pending first, then most recent by Created Date. State date, type, status, reason.\n\n8. APPROVAL QUESTIONS: Provide both Primary Approver and Secondary Approver when present. Distinguish clearly.\n\n9. REQUEST HISTORY: Use Created Date, Modified Date, and Status to identify the most relevant request. Prioritize the most recent active request.\n\n10. NEVER say \"I wasn't able to pull that up\" for records that are simply empty.\n\n---\n\nTEAM REFERENCE \u2014 EXACT EMAILS ONLY. Never invent.\n\n- Contractor Services \u2192 hr@scalevirtually.com\n- Finance Team \u2192 finance@scalevirtually.com\n- DevOps Team \u2192 devops@scalevirtually.com\n- Operations / Coaches \u2192 coach@scalevirtually.com\n- Process Development \u2192 pdev@scalevirtually.com\n- Talent Acquisition \u2192 talentscouts@scalevirtually.com\n\nDefault fallback: hr@scalevirtually.com\n\n---\n\nMULTILINGUAL: Translate intent to English internally. Respond entirely in English. No exceptions.\n\nTONE: Warm, friendly, professional. Acknowledge feelings when stressed or frustrated. Never robotic. Never say \"the document you shared.\"\n\nFORMAT \u2014 SLACK ONLY:\nUSE: *bold*, _italic_, - bullet points, 1. numbered lists\nNEVER USE: **double asterisk**, ### headers (use *Bold Label:* inline instead), HTML tags, horizontal dividers\n\nOUTPUT \u2014 STRICT JSON ONLY:\n{\n  \"classifier_status\": \"FOUND | SV_NO_MATCH | OFF_TOPIC | CLARIFY | PERSONAL_DATA\",\n  \"response\": \"your_response_here\"\n}\nNo text outside the JSON. No markdown wrapping. No backticks. Always valid JSON.`;\n\nconst payload = {\n  thread_id: webhook.thread_ts ?? webhook.ts,\n  user_slack_id: webhook.user,\n  user_role: classifyData.role?.toLowerCase() || 'support',\n  intent: intentObj,\n  message: {\n    content: webhook.text,\n    normalized: messageObj.normalized || webhook.text,\n    language: messageObj.language || 'English',\n    tokens_used: classifyData.message_tokens_used || 0,\n    message_ts: webhook.ts\n  },\n  source: {\n    platform: \"slack\",\n    channel_id: webhook.channel\n  },\n  instructions: {\n    system_prompt: systemPrompt,\n    match_count: 15,\n    similarity_threshold: 0.50,\n    enable_search: false,\n    temperature: 0.1,\n    max_tokens: 800\n  },\n  profile: isPersonalData ? {\n    ...profileObj,\n    pto: classifyRaw.pto || [],\n    overtime: classifyRaw.overtime || [],\n    cos: classifyRaw.cos || [],\n    disputes: classifyRaw.disputes || []\n  } : {}\n};\n\nreturn [{ json: { payload: JSON.stringify(payload) } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2480,
+          192
+        ],
+        "id": "c13d1e20-72a8-4dbc-93ca-6fdbbe7b7b23",
+        "name": "Build API Payload"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "46e8aa0c-4a3a-48a4-94cd-6598eefb5fe4",
+                "leftValue": "={{ $json.body.event.reaction }}",
+                "rightValue": "rotating_light",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          688,
+          896
+        ],
+        "id": "6614026a-a467-4eb4-a671-97856ad8f3de",
+        "name": "Filter"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0ALA9DN90Q",
+            "mode": "id"
+          },
+          "text": "=*\ud83d\udea8 Chatbot message flagged by emoji*\n\nFlagged by: <@{{$json.body.event.user}}>\nMessage timestamp: {{ DateTime.fromSeconds(Number($json.body.event.item.ts)).setZone('Asia/Manila').toFormat('MMMM dd, yyyy, hh:mm:ss a') + ' PHT' }}\n",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1056,
+          896
+        ],
+        "id": "97349b9e-95fc-48bb-8dcc-928a68917699",
+        "name": "Send a message",
+        "webhookId": "63f2b58d-71b5-4675-9c2e-371811f32455",
+        "credentials": {
+          "slackApi": {
+            "id": "A7YJOHHCMdz06CkZ",
+            "name": "Slack Sandbox"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://sv-chatbot-api.vercel.app/api/v1/classify/lookup",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Accept",
+                "value": "application/json"
+              },
+              {
+                "name": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZWNyZXQiOiJpTG92M1MwbHV0MW9uU2M0bGVWMXJ0dWFsWUAyMDI2IiwiaWF0IjoxNzc5MTM2OTUxLCJleHAiOjE4MTAyNDA5NTF9.Pj0m98h_X_xWrK80Sh-CpdfqN_ztsODl5N_L27yU9cA"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "email",
+                "value": "={{ $json.email }}"
+              },
+              {
+                "name": "question",
+                "value": "={{ $('Edit Fields1').first().json.text || $('Webhook').first().json.body.event.text }}"
+              },
+              {
+                "name": "system_prompt",
+                "value": "You are an intent classifier for an HR chatbot.  Your job is to determine whether the user's message requires access to PERSONAL contractor data.  PERSONAL contractor data means: information that is SPECIFIC TO THIS ONE PERSON'S ACCOUNT and will return a DIFFERENT answer for each contractor \u2014 such as their PTO balance, their assigned schedule, their supervisor, their start date, their overtime records, their attendance disputes.  Return ONLY valid JSON.  Schema: {   \"requires_personal_data\": boolean,   \"confidence\": number,   \"reason\": string }  THE CORE TEST \u2014 apply this before anything else: \"Would every contractor get the same answer to this question?\" - YES, same answer for everyone \u2192 false - NO, the answer depends on this specific person's account \u2192 true  ABSOLUTE OVERRIDES \u2014 these are ALWAYS false, no exceptions, regardless of phrasing:  BANKS AND PAYMENT METHODS \u2014 ALWAYS FALSE: Any question about which banks, e-wallets, or payment methods SV accepts is a company policy question. The answer is the same for every contractor. It does not require any account lookup. - \"Can I use Security Bank?\" \u2192 false - \"Pde bako gumamit ng Security Bank for my contractor fees?\" \u2192 false - \"Pwede ba ang GCash?\" \u2192 false - \"What banks does SV accept?\" \u2192 false - \"Can I change my bank to BPI?\" \u2192 false (policy question about what's allowed) - ANY variation involving bank names, GCash, Maya, e-wallets \u2192 false  HEALTH INSURANCE POLICY \u2014 ALWAYS FALSE: - \"When am I eligible for health insurance?\" \u2192 false - \"What does the health insurance cover?\" \u2192 false - \"Can I add dependents to my insurance?\" \u2192 false - \"What happens to my HMO if I resign?\" \u2192 false - \"Meron bang maternity benefits?\" \u2192 false  GENERAL POLICY AND PROCESS \u2014 ALWAYS FALSE: - \"How does PTO work?\" \u2192 false - \"Can I split my lunch break?\" \u2192 false - \"Can I resign immediately?\" \u2192 false - \"What are the cutoff dates?\" \u2192 false - \"When is the next payout?\" \u2192 false - \"What holidays does SV observe?\" \u2192 false - \"What should I do if I open a malicious link?\" \u2192 false - \"How do I file an attendance dispute?\" \u2192 false - \"What is the overtime policy?\" \u2192 false - \"What type of questions can I ask here?\" \u2192 false - \"Am I allowed to post in the News Feed?\" \u2192 false - \"What are the system requirements?\" \u2192 false - \"How many SLs can I take?\" \u2192 false  requires_personal_data = TRUE \u2014 account lookup required: - \"How many PTO credits do I have left?\" \u2192 true - \"Ilan na lang ang leaves ko?\" \u2192 true - \"What's my current contractor fee?\" \u2192 true - \"How much do I currently make?\" \u2192 true - \"Who is my supervisor?\" \u2192 true - \"Who is my direct manager?\" \u2192 true - \"What's my start date?\" \u2192 true - \"Show my overtime requests\" \u2192 true - \"What is my assigned schedule?\" \u2192 true - \"Was my PTO approved?\" \u2192 true - \"Do I have any pending disputes?\" \u2192 true - \"Am I currently clocked in?\" \u2192 true - \"Sino ang direct manager ko?\" \u2192 true  CRITICAL: The word \"my\" in a question does NOT automatically make it personal data. Ask: does this require looking up THIS PERSON'S account record? If the answer is a policy that applies to everyone, it is false.  Return JSON only. No explanation outside the JSON.  Note: Users may write in Tagalog, Filipino, or Taglish. Classify based on meaning, not language."
+              }
+            ]
+          },
+          "options": {
+            "timeout": 30000
+          }
+        },
+        "id": "da8f8c37-dd6a-42f0-9cf8-65332af6a36d",
+        "name": "POST: Bryan Classify",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [
+          1520,
+          176
+        ],
+        "typeVersion": 4.2,
+        "retryOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const res = $input.first().json;\n\nconst profile = res.profile || null;\nconst intent = res.intent || null;\nconst messageObj = res.message || {};\n\nconst apiFailed = intent === null;\nconst requiresPersonal = intent?.requires_personal_data === true;\n\n// Bryan's API only sets code=\"PERSONAL_DATA\" when true, leaves empty when false.\n// We must never send an empty string \u2014 use \"POLICY\" as the non-personal code.\nconst rawCode = (intent?.code || '').trim();\nlet intentCode;\nif (rawCode !== '') {\n  intentCode = rawCode;\n} else if (requiresPersonal) {\n  intentCode = 'PERSONAL_DATA';\n} else {\n  intentCode = 'POLICY';\n}\n\nconst isPersonalData = (intentCode === 'PERSONAL_DATA') && profile !== null;\nconst role = res.user_role === 'va' ? 'VA' : 'Support';\n\nreturn [{\n  json: {\n    role,\n    profile: profile || {},\n    email: profile?.Email || profile?.email || '',\n    profile_id: profile?._id || '',\n    intent_code: intentCode,\n    intent_confidence: intent?.confidence || 0,\n    intent_reason: intent?.reason || '',\n    intent_tokens: intent?.tokens || 0,\n    intent_model: intent?.model || '',\n    intent_requires_personal: requiresPersonal,\n    is_personal_data: isPersonalData,\n    api_ok: !apiFailed,\n    normalized_message: messageObj.normalized || '',\n    message_language: messageObj.language || 'English',\n    message_tokens_used: messageObj.tokens_used || 0,\n    pto: res.pto || [],\n    overtime: res.overtime || [],\n    cos: res.cos || [],\n    disputes: res.disputes || []\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1744,
+          176
+        ],
+        "id": "a2982c7e-76ae-4546-913d-f6cf089f743e",
+        "name": "Parse Classify Response"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "de19e146-ef7a-40e0-a326-e7171c88d20f",
+                "leftValue": "={{ $json.is_personal_data }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          2000,
+          176
+        ],
+        "id": "99da107a-a97d-43e5-9e72-33fdc81bad3a",
+        "name": "IF: Profile OK"
+      },
+      {
+        "parameters": {
+          "jsCode": "const classifyData = $('Parse Classify Response').first().json;\nconst role = classifyData.role; // 'VA' or 'Support'\nconst profile = classifyData.profile || {};\nconst email = classifyData.email;\nconst profileId = classifyData.profile_id;\n\n// \u2500\u2500 IDENTITY FIELDS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst name        = profile['Full Name'] || profile['full_name'] || profile['Name'] || profile['name'] || 'Unknown';\nconst designation = profile['Designation'] || profile['designation'] || 'N/A';\nconst department  = profile['Department'] || profile['department'] || 'N/A';\nconst contractorId = profile['MV Record No'] || profile['Contractor ID'] || profile['contractor_id'] || 'N/A';\nconst status      = profile['Status'] || profile['status'] || 'N/A';\nconst startDateRaw = profile['Start Date'] || profile['start_date'] || '';\nconst daysActive  = profile['Days Active'] || profile['days_active'] || 'N/A';\nconst ptFt        = profile['PT/FT'] || profile['pt_ft'] || 'N/A';\nconst payType     = profile['Pay Type'] || profile['pay_type'] || 'N/A';\nconst hourlyRate  = profile['Hourly Rate'] || profile['hourly_rate'] || null;\nconst clientRate  = profile['Client Rate'] || profile['client_rate'] || null;\nconst bank        = profile['Bank'] || profile['bank'] || 'N/A';\nconst flexiTime   = profile['Flexi time?'] || profile['Flexi Time'] || profile['flexi_time'] || 'N/A';\nconst clockedIn   = profile['Clocked In?'] ?? profile['clocked_in'] ?? null;\nconst timezone    = profile['Time zone'] || profile['timezone'] || 'CST';\n\n// \u2500\u2500 FORMAT START DATE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nlet startDateFormatted = 'N/A';\nif (startDateRaw) {\n  try {\n    const dt = new Date(startDateRaw);\n    startDateFormatted = dt.toLocaleDateString('en-US', {\n      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'\n    });\n  } catch(e) {\n    startDateFormatted = startDateRaw.split('T')[0];\n  }\n}\n\n// \u2500\u2500 PARSE BUBBLE SCHEDULE TIMES TO LOCAL \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nfunction parseTime(isoStr, tz) {\n  if (!isoStr || isoStr === 'N/A') return 'N/A';\n  try {\n    const offsets = { CST: -6, CDT: -5, EST: -5, EDT: -4, PST: -8, PDT: -7, PHT: 8 };\n    const dt = new Date(isoStr);\n    const offsetHrs = offsets[tz] ?? -6;\n    const local = new Date(dt.getTime() + offsetHrs * 3600 * 1000);\n    const h = local.getUTCHours();\n    const m = local.getUTCMinutes().toString().padStart(2, '0');\n    const ampm = h >= 12 ? 'PM' : 'AM';\n    const h12 = h % 12 || 12;\n    return `${h12}:${m} ${ampm} ${tz}`;\n  } catch(e) {\n    return isoStr.substring(11, 16);\n  }\n}\n\n// \u2500\u2500 BUILD SCHEDULE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];\nconst scheduleLines = [];\n\nfor (const day of days) {\n  const hoursVal = profile[`${day} Hours`] ?? profile[`${day} hours`] ?? null;\n  const lunchVal = profile[`${day} Lunch`] ?? profile[`${day} lunch`] ?? 'N/A';\n  const startRaw = profile[`${day} Start`];\n  const endRaw   = profile[`${day} End`];\n\n  if (startRaw && endRaw) {\n    const startStr = parseTime(startRaw, timezone);\n    const endStr   = parseTime(endRaw, timezone);\n    const hrs      = hoursVal !== null ? `${hoursVal}h` : '';\n    scheduleLines.push(`  ${day}: ${startStr} \u2013 ${endStr}${hrs ? ' (' + hrs + ')' : ''} | Lunch: ${lunchVal}`);\n  } else {\n    scheduleLines.push(`  ${day}: Schedule not set`);\n  }\n}\n\nconst restDaysRaw = profile['Rest day'] || profile['rest_day'] || profile['Rest Day'] || [];\nconst restDays = Array.isArray(restDaysRaw) ? restDaysRaw.join(', ') : String(restDaysRaw);\nif (restDays) scheduleLines.push(`  Rest Days: ${restDays}`);\n\n// \u2500\u2500 PTO BALANCE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst leaveCredit = profile['Leave Credit'] ?? profile['leave_credit'] ?? profile['Leave_credit'] ?? null;\nconst usedPTORaw  = profile['Used PTO'] ?? profile['used_PTO'] ?? profile['used_pto'] ?? null;\nconst usedPTO     = usedPTORaw !== null ? usedPTORaw : 0;\nconst totalCredits = leaveCredit !== null ? leaveCredit : 'N/A';\nconst availablePTO = (leaveCredit !== null && usedPTORaw !== null)\n  ? (leaveCredit - usedPTORaw)\n  : (leaveCredit ?? 'N/A');\n\nconst roleLabel = role === 'VA'\n  ? 'VA Contractor (Virtual Assistant) \u2014 PTO accumulates monthly while with a client'\n  : 'Support Team Contractor \u2014 PTO awarded in bulk at start of calendar year';\nconst roleOpposite = role === 'VA' ? 'Support Team' : 'VA';\n\n// \u2500\u2500 PTO REQUESTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// NOTE: Bryan's API returns plain arrays, NOT n8n item wrappers \u2014 no .json needed\nconst ptoItems = classifyData.pto || [];\n\nconst pendingPTO = ptoItems.filter(item => {\n  const s = (item['Status'] || item['status'] || '').toLowerCase().trim();\n  return s === 'pending' || s === 'submitted' || s === 'for approval' || s === 'pending approval';\n});\n\nconst pendingPTOLines = pendingPTO.length > 0\n  ? pendingPTO.map(item => {\n      const dateText = item['Date (text)'] || item['date_text'] || null;\n      const dateRaw  = item['Date'] || item['date'] || null;\n      const date = dateText || (dateRaw ? dateRaw.split('T')[0] : 'N/A');\n      const type = item['PTO Type'] || item['Type'] || item['pto_type'] || 'N/A';\n      return `  - ${date} | ${type} | PENDING APPROVAL`;\n    }).join('\\n')\n  : '  None pending';\n\nconst allPTOLines = ptoItems.length > 0\n  ? ptoItems.slice(0, 15).map(item => {\n      const dateText = item['Date (text)'] || item['date_text'] || null;\n      const dateRaw  = item['Date'] || item['date'] || item['Date requested'] || null;\n      const date = dateText || (dateRaw ? dateRaw.split('T')[0] : 'N/A');\n      const type    = item['PTO Type'] || item['Type'] || item['pto_type'] || 'N/A';\n      const s       = item['Status'] || item['status'] || 'N/A';\n      const reason  = item['Reason'] || item['reason'] || item['Notes'] || '';\n      const upcoming = new Date(date) >= new Date(new Date().setHours(0,0,0,0));\n      const tag = upcoming ? '[UPCOMING]' : '[PAST]';\n      return `  ${tag} ${date} | ${type} | ${s}${reason ? ' | ' + reason : ''}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 OT REQUESTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst otItems = classifyData.overtime || [];\nlet totalOTHours = 0;\n\nconst allOTLines = otItems.length > 0\n  ? otItems.slice(0, 10).map(item => {\n      const date = (item['Date'] || item['date'] || item['OT Date'] || item['Created Date'] || 'N/A').split('T')[0];\n      const s    = item['Status'] || item['status'] || 'N/A';\n      const hrs  = item['Overtime hours'] || item['overtime_hours'] || item['Hours'] || item['OT Hours'] || 0;\n      if (typeof hrs === 'number') totalOTHours += hrs;\n      return `  - ${date} | ${s} | ${hrs ? hrs + ' hrs' : 'hrs N/A'}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 COS / SCHEDULE REQUESTS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst cosItems = classifyData.cos || [];\n\nconst allCOSLines = cosItems.length > 0\n  ? cosItems.slice(0, 5).map(item => {\n      const date     = (item['COS 1 Date'] || item['Created Date'] || item['Created_Date'] || item['date'] || 'N/A').split('T')[0];\n      const s        = item['Status'] || item['status'] || 'N/A';\n      const reason   = item['Reason'] || item['reason'] || '';\n      const newSched = item['New Schedule'] || item['new_schedule'] || item['Requested Schedule'] || '';\n      return `  - ${date} | ${s}${newSched ? ' | New: ' + newSched : ''}${reason ? ' | Reason: ' + reason : ''}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 DISPUTES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst dispItems = classifyData.disputes || [];\nconst now = new Date();\nconst dispThisMonth = dispItems.filter(item => {\n  const d = new Date(item['Created Date'] || item['date'] || '');\n  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();\n});\n\nconst allDispLines = dispItems.length > 0\n  ? dispItems.slice(0, 5).map(item => {\n      const disputedDateRaw = item['Requested In'] || item['Date requested'] || item['Created Date'] || item['date'] || null;\n      const date      = disputedDateRaw ? disputedDateRaw.split('T')[0] : 'N/A';\n      const s         = item['Status'] || item['status'] || 'N/A';\n      const wholeHalf = item['Whole day/half day'] || item['Whole/half day'] || null;\n      const wholeHalfLabel = wholeHalf ? ` (${wholeHalf})` : '';\n      const reason    = item['Dispute Reason'] || item['dispute_reason'] || item['Reason'] || item['reason'] || '';\n      const filedDate = (item['Created Date'] || '').split('T')[0];\n      return `  - Disputed date: ${date}${wholeHalfLabel} | Status: ${s}${filedDate ? ' | Filed: ' + filedDate : ''}${reason ? '\\n    Reason: ' + reason : ''}`;\n    }).join('\\n')\n  : '  None on record';\n\n// \u2500\u2500 ASSEMBLE FULL CONTEXT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst bubbleData = [\n  '=== CONTRACTOR PERSONAL DATA ===',\n  '',\n  '--- PROFILE / IDENTITY ---',\n  `Name: ${name}`,\n  `Role: ${role}`,\n  `Email: ${email}`,\n  `Designation: ${designation}`,\n  `Department: ${department}`,\n  `Status: ${status}`,\n  `Contractor ID: ${contractorId}`,\n  `Profile ID: ${profileId}`,\n  `Start Date: ${startDateFormatted}`,\n  `Days Active: ${daysActive}`,\n  '',\n  '--- EMPLOYMENT DETAILS ---',\n  `Employment Type: ${ptFt}`,\n  `Pay Type: ${payType}`,\n  `Contractor Fee (Hourly Rate): ${hourlyRate !== null ? '$' + hourlyRate + '/hr' : 'N/A'}`,\n  `Client Rate: ${clientRate !== null ? '$' + clientRate + '/hr' : 'N/A'}`,\n  `Time Zone: ${timezone}`,\n  `Flexi Time: ${flexiTime}`,\n  `Bank: ${bank}`,\n  `Currently Clocked In: ${clockedIn === true ? 'Yes' : clockedIn === false ? 'No' : 'N/A'}`,\n  '',\n  '--- CURRENT SCHEDULE ---',\n  ...scheduleLines,\n  '',\n  '--- PTO / LEAVE CREDITS ---',\n  `Contractor Type for PTO Rules: ${roleLabel}`,\n  `IMPORTANT: This contractor is a ${role === 'VA' ? 'VA' : 'Support Team'} member.`,\n  `Apply ${role === 'VA' ? 'VA' : 'Support Team'} PTO rules ONLY.`,\n  `Do NOT describe ${roleOpposite} PTO rules to this user. They are not a ${roleOpposite} contractor.`,\n  `Total Credits This Year: ${totalCredits}`,\n  `Used PTO (SVPTO): ${usedPTO}`,\n  `Available PTO Credits: ${availablePTO}`,\n  `DIRECT ANSWER FOR PTO BALANCE: ${availablePTO} credits remaining.`,\n  `DO NOT volunteer how PTO accumulates unless specifically asked.`,\n  `DO NOT state annual credit amounts (10 or 12) when answering a balance question.`,\n  '',\n  'Pending PTO Requests:',\n  pendingPTOLines,\n  '',\n  'All PTO Request History (newest first):',\n  allPTOLines,\n  '',\n  '--- OVERTIME (OT) ---',\n  `Total OT Hours This Year: ${totalOTHours > 0 ? totalOTHours + ' hrs' : 'None filed or 0'}`,\n  'OT Request Records:',\n  allOTLines,\n  '',\n  '--- CHANGE OF SCHEDULE (COS) REQUESTS ---',\n  'NOTE: The Current Schedule section above is what is on file.',\n  'COS Records below are submitted requests (approved or pending):',\n  allCOSLines,\n  '',\n  '--- DISPUTES ---',\n  `Disputes Filed This Month: ${dispThisMonth.length}`,\n  'Recent Dispute Records (Disputed date = actual attendance date, Filed = submission date):',\n  allDispLines,\n  '',\n  '--- WHAT IS NOT AVAILABLE IN THIS DATA ---',\n  'Cannot answer from this context \u2014 redirect to the right resource:',\n  '  - Daily clock-in/clock-out logs \u2192 SV Portal > Attendance Logs',\n  '  - Attendance history / time logs \u2192 SV Portal > Attendance Logs',\n  '  - Payslip / Statement of Fees \u2192 finance@scalevirtually.com',\n  '  - Future PTO credit projections \u2192 Contractor Services',\n  '  - Bank account number \u2192 do not reveal, redirect to Contractor Services',\n  '',\n  '--- RESPONSE RULES ---',\n  '1. Use exact values from this data. Do not estimate or round.',\n  '2. Contractor fee = Hourly Rate field. Say \"Your contractor fee is $X/hr.\"',\n  '3. For schedule: read the Current Schedule section above, not the COS records.',\n  '4. For PTO balance: use the Available PTO Credits value. The pre-computed answer',\n  '   is in \"DIRECT ANSWER FOR PTO BALANCE\" above \u2014 use that exact number.',\n  '5. If data shows N/A: say \"That information is not on file \u2014 check the SV Portal.\"',\n  '6. Never reveal the Bank Account number to anyone.',\n  '7. For attendance logs \u2192 always redirect to SV Portal > Attendance Logs.',\n  '8. For payslip \u2192 redirect to Finance Team at finance@scalevirtually.com.',\n  '9. NEVER say \"I wasn\\'t able to pull that up\" for OT, COS, Dispute, or PTO.',\n  '   Those ARE pre-fetched. If they show \"None on record\" \u2014 say that instead.',\n  '   \"None on record\" = system fetched successfully, nothing exists.',\n  '   Only say \"I wasn\\'t able to pull\" for items in the NOT AVAILABLE section above.',\n  '10. For disputes: \"Disputed date\" is the actual attendance date. \"Filed\" is when submitted.',\n  '11. For \"what was my last dispute about\" \u2014 read the Reason field and state it.',\n  '12. For PTO role type: always use \"Contractor Type for PTO Rules\" field above.',\n  '    Never infer the role from PTO history or any other field.',\n].join('\\n');\n\nconst bubble_data_escaped = bubbleData\n  .replace(/\\\\/g, '\\\\\\\\')\n  .replace(/\"/g, '\\\\\"')\n  .replace(/\\n/g, '\\\\n')\n  .replace(/\\r/g, '\\\\r')\n  .replace(/\\t/g, '\\\\t');\n\nreturn [{ json: {\n  bubble_data: bubbleData,\n  bubble_data_escaped,\n  is_personal_data: true,\n  role,\n  profile_id: profileId,\n  email,\n  _debug_profile_keys: Object.keys(profile),\n  _debug_available_pto: availablePTO,\n  _debug_role_label: roleLabel,\n  _debug_hourly_rate: hourlyRate,\n  _debug_designation: designation,\n  _debug_department: department,\n  _debug_pto_count: ptoItems.length,\n  _debug_ot_count: otItems.length,\n  _debug_cos_count: cosItems.length,\n  _debug_disp_count: dispItems.length,\n} }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2240,
+          64
+        ],
+        "id": "7bc9c188-7ee9-4ff1-8e9c-eca968218d33",
+        "name": "Format user_data_context"
+      }
+    ],
+    "connections": {
+      "Event Identifier": {
+        "main": [
+          [
+            {
+              "node": "Edit Fields1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Edit Fields1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Parser for button",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Edit Fields1": {
+        "main": [
+          [
+            {
+              "node": "Get a user's profile",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parser for button": {
+        "main": [
+          [
+            {
+              "node": "Update Message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send Slack Message": {
+        "main": [
+          []
+        ]
+      },
+      "Get a user's profile": {
+        "main": [
+          [
+            {
+              "node": "POST: Bryan Classify",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "URL Verification1": {
+        "main": [
+          [
+            {
+              "node": "Event Identifier",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "URL Verification1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Update Message": {
+        "main": [
+          [
+            {
+              "node": "SB: Log Feedback",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "POST: Bryan API": {
+        "main": [
+          [
+            {
+              "node": "Parse API Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse API Response": {
+        "main": [
+          [
+            {
+              "node": "Send Slack Message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Build API Payload": {
+        "main": [
+          [
+            {
+              "node": "POST: Bryan API",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "POST: Bryan Classify": {
+        "main": [
+          [
+            {
+              "node": "Parse Classify Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Classify Response": {
+        "main": [
+          [
+            {
+              "node": "IF: Profile OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IF: Profile OK": {
+        "main": [
+          [
+            {
+              "node": "Format user_data_context",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Build API Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Format user_data_context": {
+        "main": [
+          [
+            {
+              "node": "Build API Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

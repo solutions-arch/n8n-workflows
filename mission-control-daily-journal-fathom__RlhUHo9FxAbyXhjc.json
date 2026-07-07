@@ -1,0 +1,426 @@
+{
+  "updatedAt": "2026-04-24T14:19:18.000Z",
+  "createdAt": "2026-04-23T18:10:48.359Z",
+  "id": "RlhUHo9FxAbyXhjc",
+  "name": "[Mission Control] Daily Journal: Fathom",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1760,
+        -80
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Run Daily Fathom Journal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1760,
+        96
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mission-control-daily-journal-fathom",
+        "options": {}
+      },
+      "webhookId": "mission-control-daily-journal-fathom"
+    },
+    {
+      "id": "n3",
+      "name": "Init Target Date",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1488,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const payload = $json.body ?? $json ?? {};\nconst timezone = 'America/Chicago';\nconst explicitDate = typeof payload.target_date === 'string' ? payload.target_date.trim() : '';\nfunction formatChicagoDate(date) {\n  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);\n}\nlet targetDate = explicitDate;\nif (!targetDate) {\n  const now = new Date();\n  const nowInChicago = new Date(now.toLocaleString('en-US', { timeZone: timezone }));\n  nowInChicago.setDate(nowInChicago.getDate() - 1);\n  targetDate = formatChicagoDate(nowInChicago);\n}\nreturn [{ json: { target_date: targetDate, unique_key: 'fathom_daily_summary_' + targetDate, run_reason: explicitDate ? 'manual_target_date' : 'scheduled_yesterday', requested_payload: payload } }];"
+      }
+    },
+    {
+      "id": "n5",
+      "name": "Fetch Fathom Journal Rows",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -944,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://zfewidusllwwparlxctr.supabase.co/rest/v1/journal_entries?select=id,journal_date,occurred_at,title,summary,details,links,project_name,team_name&entry_type=eq.meeting_note&journal_date=eq.' + $('Init Target Date').first().json.target_date + '&order=occurred_at.asc&limit=200' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {}
+    },
+    {
+      "id": "n6",
+      "name": "Build Daily Summary Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const init = $('Init Target Date').first().json;\nconst rows = $items('Fetch Fathom Journal Rows').map((item) => item.json).filter((row) => row?.details?.source_type === 'fathom_mom');\nif (rows.length === 0) return [];\nconst meetings = rows.map((row) => ({ occurred_at: row.occurred_at, title: row.title, summary: row.summary, project_name: row.project_name ?? null, team_name: row.team_name ?? null, meeting_url: row.links?.source_url ?? row.details?.meeting_url ?? null, external_source_id: row.details?.external_source_id ?? null, sections: row.details?.sections ?? null }));\nreturn [{ json: { target_date: init.target_date, unique_key: init.unique_key, meeting_count: meetings.length, meetings } }];"
+      }
+    },
+    {
+      "id": "n7",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"target_date\": {{$json.target_date ? JSON.stringify($json.target_date) : '\"TBD\"'}},\n  \"meeting_count\": {{$json.meeting_count ?? 0}},\n  \"meetings\": {{$json.meetings ? JSON.stringify($json.meetings) : '[]'}},\n  \"task\": \"Create a single daily journal summary for Fathom meeting notes for the given date. Use only the provided meetings. Return only the JSON object described in the system message.\"\n}",
+        "options": {
+          "systemMessage": "You summarize a single day of internal Fathom meeting notes into one journal entry for Mission Control.\nReturn ONLY one JSON object with exactly this structure:\n{\n  \"title\": \"string\",\n  \"summary\": \"string\",\n  \"details\": {\n    \"themes\": [\"string\"],\n    \"key_updates\": [\"string\"],\n    \"risks\": [\"string\"],\n    \"follow_ups\": [\"string\"]\n  }\n}\nRules:\n- Use ONLY the provided meetings.\n- Keep title concise and date-specific.\n- summary must be plain text, 2 to 4 short paragraphs, no markdown, no bullet characters.\n- details.themes should be 3 to 8 concise strings.\n- details.key_updates should list concrete progress or discussion points from the day.\n- details.risks should list blockers, open risks, or dependency issues. If none, return [\"None noted.\"]\n- details.follow_ups should list likely next actions. If none, return [\"No explicit follow-up captured.\"]\n- Do not invent facts, owners, dates, or metrics.\n- Treat this as an internal company summary.\n- Do not include commentary outside the JSON object."
+        }
+      }
+    },
+    {
+      "id": "n8",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        192
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "devstral-2512",
+          "mode": "list",
+          "cachedResultName": "devstral-2512"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "pmTl8tr3gScO6C5P",
+          "name": "Portkey"
+        }
+      }
+    },
+    {
+      "id": "n9",
+      "name": "Parse Summary for Supabase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const prompt = $('Build Daily Summary Prompt').first().json;\nlet raw = $json.output;\nlet parsed;\nif (raw && typeof raw === 'object') {\n  parsed = raw;\n} else {\n  raw = String(raw || '').trim();\n  const fence = String.fromCharCode(96, 96, 96);\n  if (raw.startsWith(fence + 'json')) raw = raw.slice((fence + 'json').length).trim();\n  if (raw.startsWith(fence)) raw = raw.slice(fence.length).trim();\n  if (raw.endsWith(fence)) raw = raw.slice(0, -fence.length).trim();\n  raw = raw.split('\\n').join(' ');\n  raw = raw.split('\\r').join(' ');\n  raw = raw.split('\\t').join(' ');\n  parsed = JSON.parse(raw);\n}\nconst title = parsed.title || ('Daily Journal - Fathom - ' + prompt.target_date);\nconst summary = parsed.summary || 'Daily Fathom summary generated from journal entries.';\nconst details = parsed.details || {};\nreturn [{ json: { source_id: null, journal_date: prompt.target_date, occurred_at: new Date(prompt.target_date + 'T23:59:00Z').toISOString(), entry_type: 'daily_summary', importance: 'normal', actor_name: null, project_id: null, project_name: null, team_name: 'Solution Architects', title, summary, details: { source_type: 'fathom_daily_summary', target_date: prompt.target_date, meeting_count: prompt.meeting_count, themes: Array.isArray(details.themes) ? details.themes : [], key_updates: Array.isArray(details.key_updates) ? details.key_updates : [], risks: Array.isArray(details.risks) ? details.risks : [], follow_ups: Array.isArray(details.follow_ups) ? details.follow_ups : [], meetings: prompt.meetings, raw_model_output: parsed }, links: { unique_key: prompt.unique_key, source_type: 'fathom_daily_summary' } } }];"
+      }
+    },
+    {
+      "id": "n10",
+      "name": "Write Journal Entry",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        144,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://zfewidusllwwparlxctr.supabase.co/rest/v1/journal_entries",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "n4",
+      "name": "Fetch Existing Daily Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1216,
+        -144
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://zfewidusllwwparlxctr.supabase.co/rest/v1/journal_entries?select=id,journal_date,entry_type,details,links&entry_type=eq.daily_summary&journal_date=eq.' + $('Init Target Date').first().json.target_date + '&details->>source_type=eq.fathom_daily_summary&limit=1' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_secret_XQpGuSpxWBOywaiiYooufQ_dKrtx3kK"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n11",
+      "name": "Skip Existing Daily Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        -144
+      ],
+      "parameters": {
+        "jsCode": "const row = items[0]?.json ?? {};\nif (row.id) {\n  return [];\n}\nreturn [{ json: $('Init Target Date').first().json }];"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Init Target Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Daily Fathom Journal": {
+      "main": [
+        [
+          {
+            "node": "Init Target Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Target Date": {
+      "main": [
+        [
+          {
+            "node": "Fetch Existing Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Existing Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Skip Existing Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Existing Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Fetch Fathom Journal Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Fathom Journal Rows": {
+      "main": [
+        [
+          {
+            "node": "Build Daily Summary Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Daily Summary Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Summary for Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Summary for Supabase": {
+      "main": [
+        [
+          {
+            "node": "Write Journal Entry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": null,
+  "versionId": "f609e02a-b0f7-4644-abb5-1d94a56df5bc",
+  "activeVersionId": null,
+  "versionCounter": 31,
+  "triggerCount": 2,
+  "shared": [
+    {
+      "updatedAt": "2026-04-24T07:24:08.970Z",
+      "createdAt": "2026-04-24T07:24:08.970Z",
+      "role": "workflow:owner",
+      "workflowId": "RlhUHo9FxAbyXhjc",
+      "projectId": "dIeucgELIM397KsV",
+      "project": {
+        "updatedAt": "2026-04-09T17:38:39.186Z",
+        "createdAt": "2026-04-09T17:34:54.051Z",
+        "id": "dIeucgELIM397KsV",
+        "name": "Aja Mojica <aja@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2026-04-09T17:34:54.054Z",
+            "createdAt": "2026-04-09T17:34:54.054Z",
+            "userId": "d5b3a708-6697-402c-a670-49beebeaf80f",
+            "projectId": "dIeucgELIM397KsV",
+            "user": {
+              "updatedAt": "2026-06-07T23:58:55.000Z",
+              "createdAt": "2026-04-09T17:34:54.040Z",
+              "id": "d5b3a708-6697-402c-a670-49beebeaf80f",
+              "email": "aja@scalevirtually.com",
+              "firstName": "Aja",
+              "lastName": "Mojica",
+              "personalizationAnswers": null,
+              "settings": {
+                "easyAIWorkflowOnboarded": true
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-06-07",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

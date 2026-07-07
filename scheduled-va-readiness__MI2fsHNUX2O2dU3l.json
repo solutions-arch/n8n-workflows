@@ -1,0 +1,678 @@
+{
+  "updatedAt": "2026-07-04T13:20:12.450Z",
+  "createdAt": "2025-09-16T18:32:57.307Z",
+  "id": "MI2fsHNUX2O2dU3l",
+  "name": "[Scheduled] VA Readiness",
+  "description": "Emails the weekly VA Readiness Form to Bench, Bench-PT, and Bench-On-Call VAs, then waits 48 hours before sending a Slack reminder with the link to review VAs ready for client interviews.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "/***** Build bulk BCC list (safe string outputs) *****/\nconst STATIC_CC = 'your.cc@domain.com';\n\nconst isEmail = (s) => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(s).trim());\n\nconst collected = [];\nconst skipped = [];\n\nfor (const item of items) {\n  const raw = item.json?.['B2P Email'];\n  if (!raw) { skipped.push({ id: item.json?.id ?? null, reason: 'missing B2P Email' }); continue; }\n\n  const parts = String(raw).split(/[,; \\n]+/).map(s => s.trim()).filter(Boolean);\n  for (const p of parts) {\n    if (isEmail(p)) collected.push(p.toLowerCase());\n    else skipped.push({ id: item.json?.id ?? null, value: p, reason: 'invalid email format' });\n  }\n}\n\n// de-dupe\nconst seen = new Set();\nconst bccArray = collected.filter(e => (seen.has(e) ? false : (seen.add(e), true)));\n\nif (bccArray.length === 0) throw new Error('No valid recipients for BCC.');\n\nreturn [{\n  json: {\n    // Option A: set yourself as To (simplest)\n    to: 'placements.sv@scalevirtually.com',          // <-- string (or remove this key entirely if you prefer no \"To\")\n    cc: STATIC_CC,                            // <-- string\n    bcc: bccArray.join(','),                  // <-- STRING, not array\n    total_recipients: bccArray.length,\n    skipped,\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "7e186ea0-d8c5-450f-bf1b-7cd30af8803f",
+      "name": "Email Collector"
+    },
+    {
+      "parameters": {
+        "sendTo": "=placements@scalevirtually.com",
+        "subject": "Important: Fill Out the Readiness Form to Stay Shortlisted!",
+        "message": "<p>Good day!</p>\n\n<p><strong>THIS IS A WEEKLY FORM. NO RESPONSE IN 48 HOURS MEANS NOT READY FOR CI SCHEDULE THIS WEEK.</strong></p>\n\n<p>We hope you\u2019re doing well. As part of our commitment to helping you land the best opportunities, please complete our Readiness Form. This helps us confirm if you\u2019re available and ready to be shortlisted for our clients.</p>\n\n<p><strong>Why this matters:</strong></p>\n<ul>\n  <li><strong>Keeps You in the Running</strong> \u2013 Stay active in our shortlist for potential clients.</li>\n  <li><strong>Faster Matching</strong> \u2013 We can pair you with roles that fit your skills and availability.</li>\n  <li><strong>Better Opportunities</strong> \u2013 Share any updates to your experience, preferences, or availability.</li>\n  <li><strong>Stronger Support</strong> \u2013 Get the right guidance and assistance in securing a role.</li>\n</ul>\n\n<p><strong>Please take a few minutes to complete the form:</strong>\n  <a href=\"https://airtable.com/apptuAm73VyH7pcHA/pagXcUoGPxIxG1pI4/form\" target=\"_blank\">CLICK HERE</a>\n</p>\n\n<p>This step keeps your profile active in our system, so we highly encourage you to complete it as soon as possible. If you have any questions or need assistance, feel free to reply to this email.</p>\n\n<p>Kindly reply once you\u2019ve completed the Readiness Form.</p>\n\n<p>We\u2019re here to support you every step of the way!</p>\n",
+        "options": {
+          "appendAttribution": false,
+          "bccList": "={{ $json.bcc }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "7048f1c4-7ba2-475e-84c4-e866a744d1f5",
+      "name": "Send a message",
+      "webhookId": "01f997e0-8c52-4240-a3bf-20565266f5ec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C03MZJZU687",
+          "mode": "id"
+        },
+        "text": "Hi <!channel> \u2013 48 hours have passed since the sending of the VA Readiness Form. Check this <https://airtable.com/apptuAm73VyH7pcHA/pagn05MkVnh7KlQ8h|link> to see the VAs ready for client interviews.\n",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "unfurl_links": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "34812eb4-5be4-4497-bd31-c7d85936f0fd",
+      "name": "Send reminder",
+      "webhookId": "9418f5a6-07fe-4f68-85d2-99800f9ca650",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl5uteWre548NeMZ",
+          "mode": "id"
+        },
+        "filterByFormula": "OR(   {VA Status} = 'Bench',   {VA Status} = 'Bench - PT',   {VA Status} = 'Bench - On Call' )",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "d21ef096-9110-4459-b21d-2eed2dd6698f",
+      "name": "Search VA Emails",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "U3gBjpF0dhVqmzWx",
+          "name": "Airtable Personal Access Token account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 48,
+        "unit": "hours"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "7d2a67f7-4c55-4c3b-8fb6-61059ee5d202",
+      "name": "Wait 48 Hours",
+      "webhookId": "fecb46fc-1dfb-45fb-9b8e-e94f659a8162"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 21
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2707a7ec-4305-450a-852c-bc2a9d0cc3ff",
+      "name": "Monday SOS"
+    },
+    {
+      "parameters": {
+        "content": "Scheduled every Monday, 9 PM.",
+        "height": 96,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -64
+      ],
+      "id": "b1b54518-7b4b-4a14-9973-1e0932414ad2",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Fetches VA records in Airtable that are in Bench, Bench - PT, and Bench - Oncall.",
+        "height": 144,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -112
+      ],
+      "id": "25159840-9b94-40ba-98f4-a572c35383a9",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Collects the emails of the VA that will be used as a recipient of the form link.",
+        "height": 144,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -112
+      ],
+      "id": "412cf283-2e79-4334-b837-f0c1b878bb72",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Sends the email that has the link of the form.",
+        "height": 112,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        -80
+      ],
+      "id": "a74a20ed-1694-4e41-b54c-f28d945ca1b7",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Waits for 48 hours before sending the Slack message.",
+        "height": 112,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        -80
+      ],
+      "id": "d77f57a7-e355-4ed6-a5b0-1d398ad2c808",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Sends a Slack message to the cs-app-stakeholders that contains the link of the VA Readiness interface.",
+        "width": 166
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        -128
+      ],
+      "id": "aee8d463-43e3-4a57-a56b-cc9a7d03e0b0",
+      "name": "Sticky Note5"
+    }
+  ],
+  "connections": {
+    "Email Collector": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Wait 48 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search VA Emails": {
+      "main": [
+        [
+          {
+            "node": "Email Collector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 48 Hours": {
+      "main": [
+        [
+          {
+            "node": "Send reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monday SOS": {
+      "main": [
+        [
+          {
+            "node": "Search VA Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "timeSavedPerExecution": 20,
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Monday SOS": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "b793800b-5aa3-41ce-b0a3-ea44d4040786",
+  "activeVersionId": "b793800b-5aa3-41ce-b0a3-ea44d4040786",
+  "versionCounter": 167,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-11-10T20:48:39.364Z",
+      "createdAt": "2025-11-10T20:48:39.364Z",
+      "role": "workflow:owner",
+      "workflowId": "MI2fsHNUX2O2dU3l",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:20:12.451Z",
+    "createdAt": "2026-07-04T13:20:12.451Z",
+    "versionId": "b793800b-5aa3-41ce-b0a3-ea44d4040786",
+    "workflowId": "MI2fsHNUX2O2dU3l",
+    "nodes": [
+      {
+        "parameters": {
+          "jsCode": "/***** Build bulk BCC list (safe string outputs) *****/\nconst STATIC_CC = 'your.cc@domain.com';\n\nconst isEmail = (s) => /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(s).trim());\n\nconst collected = [];\nconst skipped = [];\n\nfor (const item of items) {\n  const raw = item.json?.['B2P Email'];\n  if (!raw) { skipped.push({ id: item.json?.id ?? null, reason: 'missing B2P Email' }); continue; }\n\n  const parts = String(raw).split(/[,; \\n]+/).map(s => s.trim()).filter(Boolean);\n  for (const p of parts) {\n    if (isEmail(p)) collected.push(p.toLowerCase());\n    else skipped.push({ id: item.json?.id ?? null, value: p, reason: 'invalid email format' });\n  }\n}\n\n// de-dupe\nconst seen = new Set();\nconst bccArray = collected.filter(e => (seen.has(e) ? false : (seen.add(e), true)));\n\nif (bccArray.length === 0) throw new Error('No valid recipients for BCC.');\n\nreturn [{\n  json: {\n    // Option A: set yourself as To (simplest)\n    to: 'placements.sv@scalevirtually.com',          // <-- string (or remove this key entirely if you prefer no \"To\")\n    cc: STATIC_CC,                            // <-- string\n    bcc: bccArray.join(','),                  // <-- STRING, not array\n    total_recipients: bccArray.length,\n    skipped,\n  },\n}];\n"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          448,
+          0
+        ],
+        "id": "7e186ea0-d8c5-450f-bf1b-7cd30af8803f",
+        "name": "Email Collector"
+      },
+      {
+        "parameters": {
+          "sendTo": "=placements@scalevirtually.com",
+          "subject": "Important: Fill Out the Readiness Form to Stay Shortlisted!",
+          "message": "<p>Good day!</p>\n\n<p><strong>THIS IS A WEEKLY FORM. NO RESPONSE IN 48 HOURS MEANS NOT READY FOR CI SCHEDULE THIS WEEK.</strong></p>\n\n<p>We hope you\u2019re doing well. As part of our commitment to helping you land the best opportunities, please complete our Readiness Form. This helps us confirm if you\u2019re available and ready to be shortlisted for our clients.</p>\n\n<p><strong>Why this matters:</strong></p>\n<ul>\n  <li><strong>Keeps You in the Running</strong> \u2013 Stay active in our shortlist for potential clients.</li>\n  <li><strong>Faster Matching</strong> \u2013 We can pair you with roles that fit your skills and availability.</li>\n  <li><strong>Better Opportunities</strong> \u2013 Share any updates to your experience, preferences, or availability.</li>\n  <li><strong>Stronger Support</strong> \u2013 Get the right guidance and assistance in securing a role.</li>\n</ul>\n\n<p><strong>Please take a few minutes to complete the form:</strong>\n  <a href=\"https://airtable.com/apptuAm73VyH7pcHA/pagXcUoGPxIxG1pI4/form\" target=\"_blank\">CLICK HERE</a>\n</p>\n\n<p>This step keeps your profile active in our system, so we highly encourage you to complete it as soon as possible. If you have any questions or need assistance, feel free to reply to this email.</p>\n\n<p>Kindly reply once you\u2019ve completed the Readiness Form.</p>\n\n<p>We\u2019re here to support you every step of the way!</p>\n",
+          "options": {
+            "appendAttribution": false,
+            "bccList": "={{ $json.bcc }}"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          672,
+          0
+        ],
+        "id": "7048f1c4-7ba2-475e-84c4-e866a744d1f5",
+        "name": "Send a message",
+        "webhookId": "01f997e0-8c52-4240-a3bf-20565266f5ec",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C03MZJZU687",
+            "mode": "id"
+          },
+          "text": "Hi <!channel> \u2013 48 hours have passed since the sending of the VA Readiness Form. Check this <https://airtable.com/apptuAm73VyH7pcHA/pagn05MkVnh7KlQ8h|link> to see the VAs ready for client interviews.\n",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "unfurl_links": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          1120,
+          0
+        ],
+        "id": "34812eb4-5be4-4497-bd31-c7d85936f0fd",
+        "name": "Send reminder",
+        "webhookId": "9418f5a6-07fe-4f68-85d2-99800f9ca650",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "id"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tbl5uteWre548NeMZ",
+            "mode": "id"
+          },
+          "filterByFormula": "OR(   {VA Status} = 'Bench',   {VA Status} = 'Bench - PT',   {VA Status} = 'Bench - On Call' )",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          224,
+          0
+        ],
+        "id": "d21ef096-9110-4459-b21d-2eed2dd6698f",
+        "name": "Search VA Emails",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "U3gBjpF0dhVqmzWx",
+            "name": "Airtable Personal Access Token account 2"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "amount": 48,
+          "unit": "hours"
+        },
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1.1,
+        "position": [
+          896,
+          0
+        ],
+        "id": "7d2a67f7-4c55-4c3b-8fb6-61059ee5d202",
+        "name": "Wait 48 Hours",
+        "webhookId": "fecb46fc-1dfb-45fb-9b8e-e94f659a8162"
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  1
+                ],
+                "triggerAtHour": 21
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.2,
+        "position": [
+          0,
+          0
+        ],
+        "id": "2707a7ec-4305-450a-852c-bc2a9d0cc3ff",
+        "name": "Monday SOS"
+      },
+      {
+        "parameters": {
+          "content": "Scheduled every Monday, 9 PM.",
+          "height": 96,
+          "width": 150
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -16,
+          -64
+        ],
+        "id": "b1b54518-7b4b-4a14-9973-1e0932414ad2",
+        "name": "Sticky Note"
+      },
+      {
+        "parameters": {
+          "content": "Fetches VA records in Airtable that are in Bench, Bench - PT, and Bench - Oncall.",
+          "height": 144,
+          "width": 150
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          192,
+          -112
+        ],
+        "id": "25159840-9b94-40ba-98f4-a572c35383a9",
+        "name": "Sticky Note1"
+      },
+      {
+        "parameters": {
+          "content": "Collects the emails of the VA that will be used as a recipient of the form link.",
+          "height": 144,
+          "width": 150
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          416,
+          -112
+        ],
+        "id": "412cf283-2e79-4334-b837-f0c1b878bb72",
+        "name": "Sticky Note2"
+      },
+      {
+        "parameters": {
+          "content": "Sends the email that has the link of the form.",
+          "height": 112,
+          "width": 150
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          640,
+          -80
+        ],
+        "id": "a74a20ed-1694-4e41-b54c-f28d945ca1b7",
+        "name": "Sticky Note3"
+      },
+      {
+        "parameters": {
+          "content": "Waits for 48 hours before sending the Slack message.",
+          "height": 112,
+          "width": 150
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          864,
+          -80
+        ],
+        "id": "d77f57a7-e355-4ed6-a5b0-1d398ad2c808",
+        "name": "Sticky Note4"
+      },
+      {
+        "parameters": {
+          "content": "Sends a Slack message to the cs-app-stakeholders that contains the link of the VA Readiness interface.",
+          "width": 166
+        },
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1088,
+          -128
+        ],
+        "id": "aee8d463-43e3-4a57-a56b-cc9a7d03e0b0",
+        "name": "Sticky Note5"
+      }
+    ],
+    "connections": {
+      "Email Collector": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send a message": {
+        "main": [
+          [
+            {
+              "node": "Wait 48 Hours",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search VA Emails": {
+        "main": [
+          [
+            {
+              "node": "Email Collector",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait 48 Hours": {
+        "main": [
+          [
+            {
+              "node": "Send reminder",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Monday SOS": {
+        "main": [
+          [
+            {
+              "node": "Search VA Emails",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

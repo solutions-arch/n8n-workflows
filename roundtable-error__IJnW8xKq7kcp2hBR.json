@@ -1,0 +1,442 @@
+{
+  "updatedAt": "2026-05-05T20:38:19.907Z",
+  "createdAt": "2026-04-29T19:08:10.210Z",
+  "id": "IJnW8xKq7kcp2hBR",
+  "name": "Roundtable Error",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f5a10144-98c5-4c2f-a78c-e8a9931b86bb",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9014746495",
+        "space": "90143173047",
+        "folder": "90148940429",
+        "list": "901415882887",
+        "name": "={{ $json.workflow_name }} - {{ $json.last_node_executed }} Error",
+        "additionalFields": {
+          "assignees": [
+            95098109
+          ],
+          "content": "=Error Details:\n{{ $json.error_message }}"
+        }
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "d7f0fcd8-c184-4e2d-9095-695c138256d4",
+      "name": "Bugs (Per Folder)",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "pov43Hd26gF6W6Cp",
+          "name": "ClickUp OAuth2 Sol"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const execution = item.json.execution ?? {};\n  const workflow = item.json.workflow ?? {};\n  const error = execution.error ?? {};\n\n  const timestamp = error.timestamp;\n\n  let readableTimestamp = \"N/A\";\n  let errorTimestamp = null;\n\n  if (timestamp) {\n    const date = new Date(timestamp);\n\n    errorTimestamp = date.toISOString();\n\n    const formatter = new Intl.DateTimeFormat(\"en-US\", {\n      timeZone: \"Asia/Manila\",\n      month: \"long\",\n      day: \"2-digit\",\n      year: \"numeric\",\n      hour: \"2-digit\",\n      minute: \"2-digit\",\n      second: \"2-digit\",\n      hour12: false\n    });\n\n    readableTimestamp = formatter.format(date);\n  }\n\n  return {\n    json: {\n      // n8n execution details\n      execution_id: String(execution.id ?? \"\"),\n      execution_url: execution.url ?? null,\n\n      // workflow details\n      workflow_id: workflow.id ?? null,\n      workflow_name: workflow.name ?? null,\n\n      // execution metadata\n      mode: execution.mode ?? null,\n      last_node_executed: execution.lastNodeExecuted ?? null,\n\n      // error details\n      error_name: error.name ?? null,\n      error_message: error.message ?? null,\n      error_timestamp: errorTimestamp,\n\n      // for ClickUp/Slack only\n      readableTimestamp,\n\n      // bug tracking\n      status: \"reported\",\n      severity: error.name === \"WorkflowCrashedError\" ? \"high\" : \"medium\",\n      source: \"n8n_error_trigger\",\n\n      // raw/debug fields\n      error_context: error.context ?? {},\n      raw_payload: item.json\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "e3d34cb8-6d17-4334-acc0-7b39ac27e296",
+      "name": "Normalize Bug Metadata"
+    },
+    {
+      "parameters": {
+        "tableId": "workflow_bug_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "execution_id",
+              "fieldValue": "={{ $json.execution_id }}"
+            },
+            {
+              "fieldId": "workflow_id",
+              "fieldValue": "={{ $json.workflow_id }}"
+            },
+            {
+              "fieldId": "workflow_name",
+              "fieldValue": "={{ $json.workflow_name }}"
+            },
+            {
+              "fieldId": "execution_url",
+              "fieldValue": "={{ $json.execution_url }}"
+            },
+            {
+              "fieldId": "mode",
+              "fieldValue": "={{ $json.mode }}"
+            },
+            {
+              "fieldId": "last_node_executed",
+              "fieldValue": "={{ $json.last_node_executed }}"
+            },
+            {
+              "fieldId": "error_name",
+              "fieldValue": "={{ $json.error_name }}"
+            },
+            {
+              "fieldId": "error_message",
+              "fieldValue": "={{ $json.error_message }}"
+            },
+            {
+              "fieldId": "error_timestamp",
+              "fieldValue": "={{ $json.error_timestamp }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "severity",
+              "fieldValue": "={{ $json.severity }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $json.source }}"
+            },
+            {
+              "fieldId": "error_context",
+              "fieldValue": "={{ $json.error_context }}"
+            },
+            {
+              "fieldId": "raw_payload",
+              "fieldValue": "={{ $json.raw_payload }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "b71c7375-f643-4a3f-a51c-29188fb019a2",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_bug_logs",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create a row').item.json.execution_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "clickup_task_id",
+              "fieldValue": "={{ $('Bugs (Per Folder)').item.json.id }}"
+            },
+            {
+              "fieldId": "clickup_task_url",
+              "fieldValue": "={{ $('Bugs (Per Folder)').item.json.url }}"
+            },
+            {
+              "fieldId": "clickup_task_status",
+              "fieldValue": "REPORTED"
+            },
+            {
+              "fieldId": "clickup_task_created_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "clickup_response",
+              "fieldValue": "={{ JSON.stringify($('Bugs (Per Folder)').item.json) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "b550a6ca-b40c-4203-af16-9c48d3fe315f",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "=A *Roundtable workflow* encountered an error. \n\nError Message: \n{{ $('Normalize Bug Metadata').first().json.error_message }}\n\nTimestamp: {{ $('Normalize Bug Metadata').first().json.readableTimestamp }}\n\nLast Node Executed: {{ $('Normalize Bug Metadata').first().json.last_node_executed }}\n\nPlease investigate the failure here: <{{ $('Normalize Bug Metadata').first().json.raw_payload.execution.url }}|View Execution Details>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "bf629d7c-f3e9-458d-b5b2-64de214391b0",
+      "name": "Send a message1",
+      "webhookId": "b90cb9e5-ad3a-4ada-b8ba-ff903eae04f3",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Bug Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Bug Metadata": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Bugs (Per Folder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bugs (Per Folder)": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": "38150",
+            "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/uyyZd7q3eJUOlid4/executions/38150",
+            "error": {
+              "level": "warning",
+              "tags": {},
+              "description": "Request failed with status code 503",
+              "timestamp": 1777996621006,
+              "context": {},
+              "functionality": "regular",
+              "name": "NodeApiError",
+              "node": {
+                "parameters": {
+                  "preBuiltAgentsCalloutGoogleSheets": "",
+                  "authentication": "oAuth2",
+                  "resource": "sheet",
+                  "operation": "read",
+                  "documentId": {
+                    "__rl": true,
+                    "value": "1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo",
+                    "mode": "list",
+                    "cachedResultName": "Roundtable Leads",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit?usp=drivesdk"
+                  },
+                  "sheetName": {
+                    "__rl": true,
+                    "value": 1250724519,
+                    "mode": "list",
+                    "cachedResultName": "Roundtable Attendee",
+                    "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1FyY_owCNEUxbHAwLel3ZUZLK7tQMvuCAL_70BgBu5Mo/edit#gid=1250724519"
+                  },
+                  "filtersUI": {
+                    "values": [
+                      {
+                        "lookupColumn": "Email",
+                        "lookupValue": "={{ $json.payload.object.participant.email }}"
+                      }
+                    ]
+                  },
+                  "combineFilters": "AND",
+                  "options": {}
+                },
+                "type": "n8n-nodes-base.googleSheets",
+                "typeVersion": 4.7,
+                "position": [
+                  960,
+                  16
+                ],
+                "id": "5c6cec7e-593e-4a07-951e-a6ab01ccdff3",
+                "name": "Check if Lead in Sheets",
+                "credentials": {
+                  "googleSheetsOAuth2Api": {
+                    "id": "7pY5bB7lSFChbAjI",
+                    "name": "Google Sheets account 2"
+                  }
+                }
+              },
+              "messages": [
+                "Request failed with status code 503"
+              ],
+              "httpCode": "503",
+              "message": "Service unavailable - try again later or consider setting this node to retry automatically (in the node settings)",
+              "stack": "NodeApiError: Service unavailable - try again later or consider setting this node to retry automatically (in the node settings)\n    at ExecuteContext.apiRequest (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Google/Sheet/v2/transport/index.ts:78:9)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at GoogleSheet.spreadsheetGetSheet (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Google/Sheet/v2/helpers/GoogleSheet.ts:129:21)\n    at ExecuteContext.router (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Google/Sheet/v2/actions/router.ts:43:20)\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_8da18263ca0574b0db58d4fefd8173ce/node_modules/n8n-nodes-base/nodes/Google/Sheet/v2/GoogleSheetsV2.node.ts:30:10)\n    at WorkflowExecute.executeNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1045:8)\n    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1226:11)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1662:27\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_24a3228104b5da398564ecc498d597f6/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:2274:11"
+            },
+            "lastNodeExecuted": "Check if Lead in Sheets",
+            "mode": "webhook",
+            "executionContext": {
+              "version": 1,
+              "establishedAt": 1777996615198,
+              "source": "webhook"
+            }
+          },
+          "workflow": {
+            "id": "uyyZd7q3eJUOlid4",
+            "name": "Post Meeting"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "d0afc17a-4d67-4f2a-b82d-c8ca9b296d84",
+  "activeVersionId": null,
+  "versionCounter": 18,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-04-29T19:08:10.216Z",
+      "createdAt": "2026-04-29T19:08:10.216Z",
+      "role": "workflow:owner",
+      "workflowId": "IJnW8xKq7kcp2hBR",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": null
+}

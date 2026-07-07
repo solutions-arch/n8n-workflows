@@ -1,0 +1,5038 @@
+{
+  "updatedAt": "2026-07-04T13:11:25.993Z",
+  "createdAt": "2026-06-16T13:33:45.268Z",
+  "id": "9bThaBKL404N05N7",
+  "name": "[AT] Send Cal invite",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-cal-invite",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        -112
+      ],
+      "id": "8aa120c2-dce0-4a96-92b2-8ca4d617353f",
+      "name": "Webhook",
+      "webhookId": "0d99a817-f786-4900-81de-3b053d6a87d6"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.fields[\"JD + C\"][0].url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        432,
+        176
+      ],
+      "id": "739b97e1-7520-4c05-9f46-4fb3ef2bd69f",
+      "name": "Download JD"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "placements.sv@scalevirtually.com",
+          "mode": "list",
+          "cachedResultName": "placements.sv@scalevirtually.com"
+        },
+        "start": "={{ $('Webhook').item.json.body.fields[\"VA Prep Start Time\"] }}",
+        "end": "={{ $('Webhook').item.json.body.fields[\"VA Prep End Time\"] }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $json.body.fields[\"SV Email (from CI Facilitator)\"]?.[0] || \"\" }}"
+          ],
+          "guestsCanInviteOthers": true,
+          "location": "={{ $('Webhook').item.json.body.fields[\"Zoom Link\"] }}",
+          "sendUpdates": "all",
+          "summary": "=VA Prep: {{ $('Webhook').item.json.body.fields[\"Company\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        880,
+        -112
+      ],
+      "id": "6ffc55de-491f-4092-b2e0-1135ee8f38f8",
+      "name": "Create VA Prep",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "z6ibxXqWahGCziEi",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "placements.sv@scalevirtually.com",
+          "mode": "list",
+          "cachedResultName": "placements.sv@scalevirtually.com"
+        },
+        "start": "={{ $json.body.fields[\"Interview Schedule\"] }}",
+        "end": "={{ $json.body.fields[\"Interview End Time\"] }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $json.body.fields[\"SV Email (from CI Facilitator)\"]?.[0] || \"\" }}"
+          ],
+          "guestsCanInviteOthers": true,
+          "location": "={{ $json.body.fields[\"Zoom Link\"] }}",
+          "sendUpdates": "all",
+          "summary": "=VA Interview: {{ $json.body.fields[\"Company\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        880,
+        80
+      ],
+      "id": "7bb0c875-e0e5-4b3b-9cd5-263a420d3ff8",
+      "name": "Create CI",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "z6ibxXqWahGCziEi",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ [\n  $json.body.fields[\"Candidates' Personal Email\"],\n  $json.body.fields[\"Candidates' SV Email\"]\n].filter(email => email && String(email).trim() !== '').join(', ') }}",
+        "subject": "=Client Interview for {{ $json.body.fields.Company }}",
+        "message": "=<div style=\"margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif; color:#222222;\">\n  <div style=\"max-width:680px; margin:0 auto; padding:32px 16px;\">\n\n<div style=\"background-color:#ffffff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;\">\n\n  <!-- Header -->\n  <div style=\"background-color:#f47c12; padding:28px 32px;\">\n    <h1 style=\"margin:0; color:#ffffff; font-size:26px; line-height:1.3; font-weight:700;\">\n      You've Been Shortlisted for a Client Interview \u2714\n    </h1>\n  </div>\n\n  <!-- Body -->\n  <div style=\"padding:32px;\">\n\n    <p style=\"margin:0 0 18px; font-size:16px; line-height:1.6;\">\n      Greetings!\n    </p>\n\n    <p style=\"margin:0 0 24px; font-size:16px; line-height:1.6;\">\n      Congratulations! You have been shortlisted for a client interview. Please review the details below and prepare accordingly.\n    </p>\n\n    <!-- Position Details -->\n    <h2 style=\"margin:0 0 16px; color:#f47c12; font-size:20px; line-height:1.4;\">\n      Interview Details\n    </h2>\n\n    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"border-collapse:collapse; margin-bottom:28px;\">\n      <tr>\n        <td style=\"padding:8px 0; width:170px; color:#6b7280; font-size:15px; vertical-align:top;\">\n          Position\n        </td>\n        <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n          {{ $json.body.fields[\"Role\"]?.[0] || \"Not specified\" }}\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n          Client / Company\n        </td>\n        <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n          {{ $json.body.fields[\"Company\"]?.[0] || $json.body.fields[\"Client\"]?.[0] || \"Not specified\" }}\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n          JD + Client Profile\n        </td>\n        <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n          Please refer to the attached file.\n        </td>\n      </tr>\n    </table>\n\n    <!-- Schedule Box -->\n    <div style=\"background-color:#f9fafb; border-radius:10px; padding:24px; margin-bottom:28px;\">\n      <h3 style=\"margin:0 0 16px; color:#222222; font-size:18px; line-height:1.4;\">\n        Important Schedule\n      </h3>\n\n      <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"border-collapse:collapse;\">\n        <tr>\n          <td style=\"padding:8px 0; width:170px; color:#6b7280; font-size:15px; vertical-align:top;\">\n            VA Prep\n          </td>\n          <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n            {{ DateTime.fromISO($json.body.fields[\"VA Prep Start Time\"]).setZone('America/Chicago').toFormat('EEEE, LLLL d, yyyy \u00b7 h:mma') }}\n            \u2013\n            {{ DateTime.fromISO($json.body.fields[\"VA Prep End Time\"]).setZone('America/Chicago').toFormat('h:mma ZZZZ') }}\n          </td>\n        </tr>\n        <tr>\n          <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n            Client Interview\n          </td>\n          <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n            {{ DateTime.fromISO($json.body.fields[\"Interview Schedule\"]).setZone('America/Chicago').toFormat('EEEE, LLLL d, yyyy \u00b7 h:mma') }}\n            \u2013\n            {{ DateTime.fromISO($json.body.fields[\"Interview End Time\"]).setZone('America/Chicago').toFormat('h:mma ZZZZ') }}\n          </td>\n        </tr>\n        <tr>\n          <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n            Interview Room\n          </td>\n          <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n            <a href=\"{{ $json.body.fields[\"Zoom Link\"] }}\" style=\"color:#f47c12; text-decoration:underline;\">\n              Join Zoom Meeting\n            </a>\n          </td>\n        </tr>\n      </table>\n    </div>\n\n    <!-- Reminders -->\n    <h2 style=\"margin:0 0 16px; color:#f47c12; font-size:20px; line-height:1.4;\">\n      Important Reminders\n    </h2>\n\n    <ol style=\"margin:0 0 24px 22px; padding:0; color:#374151; font-size:15px; line-height:1.7;\">\n      <li>Please review the attached JD and Client Profile before your interview.</li>\n      <li>Attend the VA Prep session before the client interview.</li>\n      <li>Prepare specific examples from your experience that match the client\u2019s needs.</li>\n      <li>Join the Zoom room on time and make sure your camera, audio, and internet connection are working.</li>\n    </ol>\n\n    <div style=\"background-color:#fff7ed; border-left:4px solid #f47c12; padding:16px 18px; border-radius:8px; margin-bottom:28px;\">\n      <p style=\"margin:0; color:#374151; font-size:15px; line-height:1.6;\">\n        Linked <a href=\"https://drive.google.com/drive/folders/16JCrUkprskXxElePmofchjrXMxOtK4rc\" style=\"color:#f47c12; text-decoration:underline;\">here</a> are tips on preparing for your Client Interview and the\n        <a href=\"https://drive.google.com/drive/folders/16JCrUkprskXxElePmofchjrXMxOtK4rc\" style=\"color:#f47c12; text-decoration:underline;\">Get Hired Look</a> outfits for you to choose from.\n      </p>\n    </div>\n\n    <p style=\"margin:0 0 24px; font-size:15px; line-height:1.6; color:#374151;\">\n      Please lodge all of your questions before the Client Interview Orientation using this\n      <a href=\"https://airtable.com/apptuAm73VyH7pcHA/pagUWQQYta6BNuWq6/form\" style=\"color:#f47c12; text-decoration:underline;\">form</a>.\n    </p>\n\n    <p style=\"margin:0 0 6px; font-size:15px; line-height:1.6;\">\n      Best Regards,\n    </p>\n\n    <p style=\"margin:0; font-size:15px; line-height:1.6; font-weight:700;\">\n      Placements Team\n    </p>\n\n  </div>\n</div>\n\n  </div>\n</div>\n",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          },
+          "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        272
+      ],
+      "id": "3056a780-04ba-4ebb-9279-e1ebcc97a7cb",
+      "name": "Send a message",
+      "webhookId": "4e3105b5-cf1c-440f-b266-3b6ebe9a5d4b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblExucLLn2EkZEKC",
+          "mode": "list",
+          "cachedResultName": "PL - CI Batches",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
+            "VA Prep Calendar Event ID": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "CI Batch ID",
+              "displayName": "CI Batch ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Batch #",
+              "displayName": "Batch #",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL STAGE (from PLACEMENTS Requirements)",
+              "displayName": "PL STAGE (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+              "displayName": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C",
+              "displayName": "JD + C",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C Link",
+              "displayName": "JD + C Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client's Email",
+              "displayName": "Client's Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Accepted VAs",
+              "displayName": "Accepted VAs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidates' Email",
+              "displayName": "Candidates' Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Interview Schedule",
+              "displayName": "Interview Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Interview End Time",
+              "displayName": "Interview End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Zoom Link",
+              "displayName": "Zoom Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Done",
+              "displayName": "Done",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL - Client Interviews",
+              "displayName": "PL - Client Interviews",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI - Status (from PL - Client Interviews)",
+              "displayName": "CI - Status (from PL - Client Interviews)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Status",
+              "displayName": "CI Invite Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Sent?",
+              "displayName": "CI Invite Sent?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Sent At",
+              "displayName": "CI Invite Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Resend CI Invite?",
+              "displayName": "Resend CI Invite?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Reschedule CI Invite?",
+              "displayName": "Reschedule CI Invite?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled Date",
+              "displayName": "Rescheduled Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled End Time",
+              "displayName": "Rescheduled End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VAP Action Log",
+              "displayName": "VAP Action Log",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Other Interviewer Contact Details",
+              "displayName": "Other Interviewer Contact Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "For Scrubbing?",
+              "displayName": "For Scrubbing?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fields with Missing Data",
+              "displayName": "Fields with Missing Data",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Scrubbed At",
+              "displayName": "Last Scrubbed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL - Shortlisting",
+              "displayName": "PL - Shortlisting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidates' SV Email",
+              "displayName": "Candidates' SV Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Candidates' Personal Email",
+              "displayName": "Candidates' Personal Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Prep Start Time",
+              "displayName": "VA Prep Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Prep End Time",
+              "displayName": "VA Prep End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled VA Prep Start Time",
+              "displayName": "Rescheduled VA Prep Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled VA Prep End Time",
+              "displayName": "Rescheduled VA Prep End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Thread ID",
+              "displayName": "Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI VA Follow-up Status",
+              "displayName": "CI VA Follow-up Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Needs Follow-up",
+                  "value": "Needs Follow-up"
+                },
+                {
+                  "name": "VA Confirmed",
+                  "value": "VA Confirmed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Scheduled?",
+              "displayName": "CI Scheduled?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CI Client Follow-up Status",
+              "displayName": "CI Client Follow-up Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Needs Follow-up",
+                  "value": "Needs Follow-up"
+                },
+                {
+                  "name": "Client Confirmed",
+                  "value": "Client Confirmed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Preferred CI Date (VA Marketplace)",
+              "displayName": "Preferred CI Date (VA Marketplace)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placement Timeline",
+              "displayName": "Placement Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Marketplace Notes",
+              "displayName": "VA Marketplace Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Facilitator",
+              "displayName": "CI Facilitator",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Name (from CI Facilitator)",
+              "displayName": "Name (from CI Facilitator)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SV Email (from CI Facilitator)",
+              "displayName": "SV Email (from CI Facilitator)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Prep Calendar Event ID",
+              "displayName": "VA Prep Calendar Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CI Calendar Event ID",
+              "displayName": "CI Calendar Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1104,
+        -112
+      ],
+      "id": "ba02c74f-ed3d-46d3-8566-4b4ef774ef1d",
+      "name": "Append VA Prep Event ID",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblExucLLn2EkZEKC",
+          "mode": "list",
+          "cachedResultName": "PL - CI Batches",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
+            "CI Calendar Event ID": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "CI Batch ID",
+              "displayName": "CI Batch ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Batch #",
+              "displayName": "Batch #",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL STAGE (from PLACEMENTS Requirements)",
+              "displayName": "PL STAGE (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+              "displayName": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C",
+              "displayName": "JD + C",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C Link",
+              "displayName": "JD + C Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client's Email",
+              "displayName": "Client's Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Accepted VAs",
+              "displayName": "Accepted VAs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidates' Email",
+              "displayName": "Candidates' Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Interview Schedule",
+              "displayName": "Interview Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Interview End Time",
+              "displayName": "Interview End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Zoom Link",
+              "displayName": "Zoom Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Done",
+              "displayName": "Done",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL - Client Interviews",
+              "displayName": "PL - Client Interviews",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI - Status (from PL - Client Interviews)",
+              "displayName": "CI - Status (from PL - Client Interviews)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Status",
+              "displayName": "CI Invite Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Sent?",
+              "displayName": "CI Invite Sent?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Sent At",
+              "displayName": "CI Invite Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Resend CI Invite?",
+              "displayName": "Resend CI Invite?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Reschedule CI Invite?",
+              "displayName": "Reschedule CI Invite?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled Date",
+              "displayName": "Rescheduled Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled End Time",
+              "displayName": "Rescheduled End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VAP Action Log",
+              "displayName": "VAP Action Log",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Other Interviewer Contact Details",
+              "displayName": "Other Interviewer Contact Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "For Scrubbing?",
+              "displayName": "For Scrubbing?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fields with Missing Data",
+              "displayName": "Fields with Missing Data",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Scrubbed At",
+              "displayName": "Last Scrubbed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL - Shortlisting",
+              "displayName": "PL - Shortlisting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidates' SV Email",
+              "displayName": "Candidates' SV Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Candidates' Personal Email",
+              "displayName": "Candidates' Personal Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Prep Start Time",
+              "displayName": "VA Prep Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Prep End Time",
+              "displayName": "VA Prep End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled VA Prep Start Time",
+              "displayName": "Rescheduled VA Prep Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled VA Prep End Time",
+              "displayName": "Rescheduled VA Prep End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Thread ID",
+              "displayName": "Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI VA Follow-up Status",
+              "displayName": "CI VA Follow-up Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Needs Follow-up",
+                  "value": "Needs Follow-up"
+                },
+                {
+                  "name": "VA Confirmed",
+                  "value": "VA Confirmed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Scheduled?",
+              "displayName": "CI Scheduled?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CI Client Follow-up Status",
+              "displayName": "CI Client Follow-up Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Needs Follow-up",
+                  "value": "Needs Follow-up"
+                },
+                {
+                  "name": "Client Confirmed",
+                  "value": "Client Confirmed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Preferred CI Date (VA Marketplace)",
+              "displayName": "Preferred CI Date (VA Marketplace)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placement Timeline",
+              "displayName": "Placement Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Marketplace Notes",
+              "displayName": "VA Marketplace Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Facilitator",
+              "displayName": "CI Facilitator",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Name (from CI Facilitator)",
+              "displayName": "Name (from CI Facilitator)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SV Email (from CI Facilitator)",
+              "displayName": "SV Email (from CI Facilitator)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Prep Calendar Event ID",
+              "displayName": "VA Prep Calendar Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Calendar Event ID",
+              "displayName": "CI Calendar Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1104,
+        80
+      ],
+      "id": "70b2222d-bd9d-4c34-8830-887c5e027c9f",
+      "name": "Append CI Event ID",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d2ef7aad-6fd1-4756-8e3f-ba968f439c6a",
+              "leftValue": "={{ $json.body.fields[\"CI Invite Sent?\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        -112
+      ],
+      "id": "38ccea92-4e90-48a8-9096-5b1598c3eb5d",
+      "name": "Invite Sent?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblExucLLn2EkZEKC",
+          "mode": "list",
+          "cachedResultName": "PL - CI Batches",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+        },
+        "filterByFormula": "={Record ID} =  '{{ $json.body.recordId }}'",
+        "options": {
+          "fields": [
+            "VA Prep Calendar Event ID",
+            "CI Calendar Event ID",
+            "Rescheduled VA Prep Start Time",
+            "Rescheduled VA Prep End Time",
+            "Rescheduled Date",
+            "Rescheduled End Time"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        432,
+        -208
+      ],
+      "id": "c8a0242a-d489-4f19-bd4f-abe6b7a7bb89",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "placements.sv@scalevirtually.com",
+          "mode": "list",
+          "cachedResultName": "placements.sv@scalevirtually.com"
+        },
+        "eventId": "={{ $json[\"VA Prep Calendar Event ID\"] }}",
+        "updateFields": {
+          "end": "={{ $json[\"Rescheduled VA Prep End Time\"] }}",
+          "sendUpdates": "all",
+          "start": "={{ $json[\"Rescheduled VA Prep Start Time\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        -400
+      ],
+      "id": "51ef5583-b787-490d-8d00-3f297dc08b2f",
+      "name": "Update VA Prep",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "z6ibxXqWahGCziEi",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "placements.sv@scalevirtually.com",
+          "mode": "list",
+          "cachedResultName": "placements.sv@scalevirtually.com"
+        },
+        "eventId": "={{ $json[\"CI Calendar Event ID\"] }}",
+        "updateFields": {
+          "end": "={{ $json[\"Rescheduled End Time\"] }}",
+          "sendUpdates": "all",
+          "start": "={{ $json[\"Rescheduled Date\"] }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        -208
+      ],
+      "id": "796538ba-463a-4a43-b88f-da7d4592fc89",
+      "name": "Update CI",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "z6ibxXqWahGCziEi",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  return {\n    json: {\n      ...item.json,\n    },\n    binary: {\n      ...item.binary,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        176
+      ],
+      "id": "d2918edc-bc45-4b3f-8a27-8bb2402910c7",
+      "name": "Append Body + Attachment"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblExucLLn2EkZEKC",
+          "mode": "list",
+          "cachedResultName": "PL - CI Batches",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').first().json.body.recordId }}",
+            "CI Invite Sent?": true,
+            "CI Invite Sent At": "={{ $now.setZone('America/Chicago').toISO() }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "CI Batch ID",
+              "displayName": "CI Batch ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Batch #",
+              "displayName": "Batch #",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL STAGE (from PLACEMENTS Requirements)",
+              "displayName": "PL STAGE (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+              "displayName": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C",
+              "displayName": "JD + C",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "JD + C Link",
+              "displayName": "JD + C Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client's Email",
+              "displayName": "Client's Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Accepted VAs",
+              "displayName": "Accepted VAs",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidates' Email",
+              "displayName": "Candidates' Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Interview Schedule",
+              "displayName": "Interview Schedule",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Interview End Time",
+              "displayName": "Interview End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Zoom Link",
+              "displayName": "Zoom Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Done",
+              "displayName": "Done",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PL - Client Interviews",
+              "displayName": "PL - Client Interviews",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI - Status (from PL - Client Interviews)",
+              "displayName": "CI - Status (from PL - Client Interviews)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Status",
+              "displayName": "CI Invite Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Invite Sent?",
+              "displayName": "CI Invite Sent?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "CI Invite Sent At",
+              "displayName": "CI Invite Sent At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Resend CI Invite?",
+              "displayName": "Resend CI Invite?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Reschedule CI Invite?",
+              "displayName": "Reschedule CI Invite?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled Date",
+              "displayName": "Rescheduled Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled End Time",
+              "displayName": "Rescheduled End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VAP Action Log",
+              "displayName": "VAP Action Log",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Other Interviewer Contact Details",
+              "displayName": "Other Interviewer Contact Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "For Scrubbing?",
+              "displayName": "For Scrubbing?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Fields with Missing Data",
+              "displayName": "Fields with Missing Data",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Last Scrubbed At",
+              "displayName": "Last Scrubbed At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "PL - Shortlisting",
+              "displayName": "PL - Shortlisting",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Candidates' SV Email",
+              "displayName": "Candidates' SV Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Candidates' Personal Email",
+              "displayName": "Candidates' Personal Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Prep Start Time",
+              "displayName": "VA Prep Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Prep End Time",
+              "displayName": "VA Prep End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled VA Prep Start Time",
+              "displayName": "Rescheduled VA Prep Start Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Rescheduled VA Prep End Time",
+              "displayName": "Rescheduled VA Prep End Time",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Thread ID",
+              "displayName": "Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI VA Follow-up Status",
+              "displayName": "CI VA Follow-up Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Needs Follow-up",
+                  "value": "Needs Follow-up"
+                },
+                {
+                  "name": "VA Confirmed",
+                  "value": "VA Confirmed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Scheduled?",
+              "displayName": "CI Scheduled?",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "CI Client Follow-up Status",
+              "displayName": "CI Client Follow-up Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Needs Follow-up",
+                  "value": "Needs Follow-up"
+                },
+                {
+                  "name": "Client Confirmed",
+                  "value": "Client Confirmed"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Preferred CI Date (VA Marketplace)",
+              "displayName": "Preferred CI Date (VA Marketplace)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Placement Timeline",
+              "displayName": "Placement Timeline",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "VA Marketplace Notes",
+              "displayName": "VA Marketplace Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Facilitator",
+              "displayName": "CI Facilitator",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Name (from CI Facilitator)",
+              "displayName": "Name (from CI Facilitator)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "SV Email (from CI Facilitator)",
+              "displayName": "SV Email (from CI Facilitator)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "VA Prep Calendar Event ID",
+              "displayName": "VA Prep Calendar Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "CI Calendar Event ID",
+              "displayName": "CI Calendar Event ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1104,
+        272
+      ],
+      "id": "3bf71b4b-9bb7-43d8-b847-9cd0f1e006fd",
+      "name": "Append CI Sent Status",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Invite Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download JD": {
+      "main": [
+        [
+          {
+            "node": "Append Body + Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create VA Prep": {
+      "main": [
+        [
+          {
+            "node": "Append VA Prep Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create CI": {
+      "main": [
+        [
+          {
+            "node": "Append CI Event ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invite Sent?": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download JD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Update VA Prep",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update CI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Body + Attachment": {
+      "main": [
+        [
+          {
+            "node": "Create VA Prep",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create CI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Append CI Sent Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
+            "content-length": "4211",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "100.29.189.67",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "a0e44f58af2528ae-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-airtable-source": "apptuAm73VyH7pcHA/wflIIdl2Py1LBFLsG",
+            "x-forwarded-for": "100.29.189.67, 172.71.222.60",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-58786f47b8-svtx8",
+            "x-is-trusted": "yes",
+            "x-real-ip": "100.29.189.67"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "tableName": "PL - CI Batches",
+            "recordId": "recMMqRkP1jORkdMi",
+            "fields": {
+              "CI Batch ID": "CI Batch #3 - Jack Khalifeh \u2013 Executive Assistant \u2013 Marketing & Business Development Specialist \u2013 First - 1",
+              "PLACEMENTS Requirements": [
+                {
+                  "id": "recafEWBIWRJ3TqYw",
+                  "name": "Jack Khalifeh \u2013 Executive Assistant \u2013 Marketing & Business Development Specialist \u2013 First - 1"
+                }
+              ],
+              "Accepted VAs": [
+                {
+                  "id": "recKKOaVlJBJ3g0Bj",
+                  "name": "Generoso Fadriga"
+                }
+              ],
+              "Interview Schedule": "2026-06-19T18:30:00.000Z",
+              "Done": null,
+              "Batch #": 3,
+              "Client's Email": [
+                "jack@khalifehassociates.com"
+              ],
+              "JD + C": [
+                {
+                  "id": "att9xQW73iVjb8nrf",
+                  "url": "https://v5.airtableusercontent.com/v3/u/54/54/1781899200000/BY5H5-GZEHohFTg60z59rA/Vr-1nDNZ93ubIZzHfMArng94JBXkJ0N2Gs3o-6osrrcingJgEfEZPcHEwJ0G6X8rUo3q4xJNyW9fxHJIRKTon40wzoExWqZ7SrLIgwM4ha8vLUqvqqEm9aCp6F2PNwBE1ehaj94ku7nX3O_hqm3it1vzPnj6dw0h3AtV3IZEU9v0icEK5p9I5xEsdIMZPjAL/mHP_TLxpu4ItaEd6tv-c3FmfG9errlcAuBmUGt24MoI",
+                  "filename": "JD+Client Profile_Executive VA.docx.pdf",
+                  "size": 465824,
+                  "type": "application/pdf",
+                  "thumbnails": {
+                    "small": {
+                      "url": "https://v5.airtableusercontent.com/v3/u/54/54/1781899200000/vlbtAsEGlBNgHOICXCdG-g/XAPkqdeFj5HQNh-cuua1okC2alVNdI9wgnJWv0sckyIqiWsZQ_q4Frvv9S30XrRFTDckxDbAB3PgNTSf2aqQq3fPS7n1sJYYd0Op4etbDdWRY3UYbFo0hG0j3qvhFBMqWraq00C8B1ffgOMPKo3I9A/1NFoIZ7BwEPvPrLeozLYuUunNlLmjD9bigji7VxhPTE",
+                      "width": 28,
+                      "height": 36
+                    },
+                    "large": {
+                      "url": "https://v5.airtableusercontent.com/v3/u/54/54/1781899200000/DYTLEDY3q-5ZbYN9cfI97g/Gd-M7RP2br9VqpKsba0Y2hstkB9QuCrnQ_vsvsHy0HsbRIo5a9zV_82OmiE7lnYLuagy7ldrRldeRnaWqoBc2jeuhgoJXmzlKba8Ug54BWeP4hpGY7-YU_NNTMuqXVhTUlwpv11SwucMO0SXQhuwZA/Eu3ffy6yW4vxAAd_12HGajH3cbdjGII4wb3aZAW2Tao",
+                      "width": 512,
+                      "height": 663
+                    }
+                  }
+                }
+              ],
+              "Role": [
+                "Executive Assistant \u2013 Marketing & Business Development Specialist"
+              ],
+              "Company": [
+                "Khalifeh and Associates"
+              ],
+              "Client": [
+                "Jack Khalifeh"
+              ],
+              "Candidates' Email": [
+                "gen.mibc@gmail.com"
+              ],
+              "Interview End Time": "2026-06-19T19:00:00.000Z",
+              "Zoom Link": "https://scalevirtually.zoom.us/j/2912496658?pwd=dSVGXZQRvYcZljEGhxkXbsGOZaN4vp.1",
+              "Created": "2026-06-16T21:48:03.000Z",
+              "PL - Client Interviews": [
+                {
+                  "id": "recwTS3Ckv5m38HUC",
+                  "name": "Generoso Fadriga - CI Batch #3 - Jack Khalifeh \u2013 Executive Assistant \u2013 Marketing & Business Development Specialist \u2013 First - 1"
+                }
+              ],
+              "CI - Status (from PL - Client Interviews)": [
+                "Awaiting CI"
+              ],
+              "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)": null,
+              "CI Invite Status": null,
+              "CI Invite Sent?": true,
+              "CI Invite Sent At": "2026-06-17",
+              "Resend CI Invite?": null,
+              "PL STAGE (from PLACEMENTS Requirements)": [
+                "PL - Ongoing"
+              ],
+              "Reschedule CI Invite?": true,
+              "Rescheduled Date": "2026-06-22T20:30:00.000Z",
+              "Rescheduled End Time": "2026-06-22T21:00:00.000Z",
+              "VAP Action Log": null,
+              "Created By": {
+                "id": "usrWORKFLOWEXESVC",
+                "email": "automations@noreply.airtable.com",
+                "permissionLevel": "none",
+                "name": "Automations",
+                "profilePicUrl": "https://static.airtable.com/images/userIcons/workflows_icon@2x.png"
+              },
+              "Other Interviewer Contact Details": null,
+              "For Scrubbing?": null,
+              "Fields with Missing Data": null,
+              "Last Scrubbed At": null,
+              "PL - Shortlisting": [
+                {
+                  "id": "recUsLEedpjSdqfQz",
+                  "name": "Generoso Fadriga for ShortBatch #3 \u2013 Jack Khalifeh \u2013 Executive Assistant \u2013 Marketing & Business Development Specialist \u2013 First - 1"
+                }
+              ],
+              "Candidates' SV Email": null,
+              "Candidates' Personal Email": [
+                "gen.mibc@gmail.com"
+              ],
+              "VA Prep Start Time": "2026-06-19T18:00:00.000Z",
+              "VA Prep End Time": "2026-06-19T18:30:00.000Z",
+              "Message ID": null,
+              "Thread ID": null,
+              "CI VA Follow-up Status": null,
+              "CI Scheduled?": true,
+              "CI Client Follow-up Status": null,
+              "Rescheduled VA Prep Start Time": "2026-06-22T20:00:00.000Z",
+              "Rescheduled VA Prep End Time": "2026-06-22T20:30:00.000Z",
+              "JD + C Link": [
+                "https://docs.google.com/document/d/1ufFE4qCEtH85Mrc4mGKwaycILIo1tdiB/edit?usp=sharing&ouid=110640837164965395862&rtpof=true&sd=true"
+              ],
+              "Preferred CI Date (VA Marketplace)": null,
+              "Placement Timeline": null,
+              "VA Marketplace Notes": null,
+              "CI Facilitator": [
+                {
+                  "id": "recO4o5AJkId1yHZG",
+                  "name": "Bhel Alfred Marc Alota"
+                }
+              ],
+              "SV Email (from CI Facilitator)": [
+                "bam@scalevirtually.com"
+              ],
+              "Name (from CI Facilitator)": [
+                "Bhel Alfred Marc Alota"
+              ],
+              "VA Prep Calendar Event ID": "31d6crs8p4mbanbmqe3uacvfls",
+              "CI Calendar Event ID": "u0ifn3a78qq37vd0hktru7biq0",
+              "Record ID": "recMMqRkP1jORkdMi"
+            }
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/send-cal-invite",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "84b254d8-f7af-459c-8117-73e391ce4166",
+  "activeVersionId": "84b254d8-f7af-459c-8117-73e391ce4166",
+  "versionCounter": 54,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-16T13:33:45.275Z",
+      "createdAt": "2026-06-16T13:33:45.275Z",
+      "role": "workflow:owner",
+      "workflowId": "9bThaBKL404N05N7",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:11:25.994Z",
+    "createdAt": "2026-07-04T13:11:25.994Z",
+    "versionId": "84b254d8-f7af-459c-8117-73e391ce4166",
+    "workflowId": "9bThaBKL404N05N7",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "send-cal-invite",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -16,
+          -112
+        ],
+        "id": "8aa120c2-dce0-4a96-92b2-8ca4d617353f",
+        "name": "Webhook",
+        "webhookId": "0d99a817-f786-4900-81de-3b053d6a87d6"
+      },
+      {
+        "parameters": {
+          "url": "={{ $json.body.fields[\"JD + C\"][0].url }}",
+          "options": {
+            "response": {
+              "response": {
+                "responseFormat": "file"
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.3,
+        "position": [
+          432,
+          176
+        ],
+        "id": "739b97e1-7520-4c05-9f46-4fb3ef2bd69f",
+        "name": "Download JD"
+      },
+      {
+        "parameters": {
+          "calendar": {
+            "__rl": true,
+            "value": "placements.sv@scalevirtually.com",
+            "mode": "list",
+            "cachedResultName": "placements.sv@scalevirtually.com"
+          },
+          "start": "={{ $('Webhook').item.json.body.fields[\"VA Prep Start Time\"] }}",
+          "end": "={{ $('Webhook').item.json.body.fields[\"VA Prep End Time\"] }}",
+          "additionalFields": {
+            "attendees": [
+              "={{ $json.body.fields[\"SV Email (from CI Facilitator)\"]?.[0] || \"\" }}"
+            ],
+            "guestsCanInviteOthers": true,
+            "location": "={{ $('Webhook').item.json.body.fields[\"Zoom Link\"] }}",
+            "sendUpdates": "all",
+            "summary": "=VA Prep: {{ $('Webhook').item.json.body.fields[\"Company\"] }}"
+          }
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          880,
+          -112
+        ],
+        "id": "6ffc55de-491f-4092-b2e0-1135ee8f38f8",
+        "name": "Create VA Prep",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "z6ibxXqWahGCziEi",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "calendar": {
+            "__rl": true,
+            "value": "placements.sv@scalevirtually.com",
+            "mode": "list",
+            "cachedResultName": "placements.sv@scalevirtually.com"
+          },
+          "start": "={{ $json.body.fields[\"Interview Schedule\"] }}",
+          "end": "={{ $json.body.fields[\"Interview End Time\"] }}",
+          "additionalFields": {
+            "attendees": [
+              "={{ $json.body.fields[\"SV Email (from CI Facilitator)\"]?.[0] || \"\" }}"
+            ],
+            "guestsCanInviteOthers": true,
+            "location": "={{ $json.body.fields[\"Zoom Link\"] }}",
+            "sendUpdates": "all",
+            "summary": "=VA Interview: {{ $json.body.fields[\"Company\"] }}"
+          }
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          880,
+          80
+        ],
+        "id": "7bb0c875-e0e5-4b3b-9cd5-263a420d3ff8",
+        "name": "Create CI",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "z6ibxXqWahGCziEi",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ [\n  $json.body.fields[\"Candidates' Personal Email\"],\n  $json.body.fields[\"Candidates' SV Email\"]\n].filter(email => email && String(email).trim() !== '').join(', ') }}",
+          "subject": "=Client Interview for {{ $json.body.fields.Company }}",
+          "message": "=<div style=\"margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif; color:#222222;\">\n  <div style=\"max-width:680px; margin:0 auto; padding:32px 16px;\">\n\n<div style=\"background-color:#ffffff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;\">\n\n  <!-- Header -->\n  <div style=\"background-color:#f47c12; padding:28px 32px;\">\n    <h1 style=\"margin:0; color:#ffffff; font-size:26px; line-height:1.3; font-weight:700;\">\n      You've Been Shortlisted for a Client Interview \u2714\n    </h1>\n  </div>\n\n  <!-- Body -->\n  <div style=\"padding:32px;\">\n\n    <p style=\"margin:0 0 18px; font-size:16px; line-height:1.6;\">\n      Greetings!\n    </p>\n\n    <p style=\"margin:0 0 24px; font-size:16px; line-height:1.6;\">\n      Congratulations! You have been shortlisted for a client interview. Please review the details below and prepare accordingly.\n    </p>\n\n    <!-- Position Details -->\n    <h2 style=\"margin:0 0 16px; color:#f47c12; font-size:20px; line-height:1.4;\">\n      Interview Details\n    </h2>\n\n    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"border-collapse:collapse; margin-bottom:28px;\">\n      <tr>\n        <td style=\"padding:8px 0; width:170px; color:#6b7280; font-size:15px; vertical-align:top;\">\n          Position\n        </td>\n        <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n          {{ $json.body.fields[\"Role\"]?.[0] || \"Not specified\" }}\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n          Client / Company\n        </td>\n        <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n          {{ $json.body.fields[\"Company\"]?.[0] || $json.body.fields[\"Client\"]?.[0] || \"Not specified\" }}\n        </td>\n      </tr>\n      <tr>\n        <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n          JD + Client Profile\n        </td>\n        <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n          Please refer to the attached file.\n        </td>\n      </tr>\n    </table>\n\n    <!-- Schedule Box -->\n    <div style=\"background-color:#f9fafb; border-radius:10px; padding:24px; margin-bottom:28px;\">\n      <h3 style=\"margin:0 0 16px; color:#222222; font-size:18px; line-height:1.4;\">\n        Important Schedule\n      </h3>\n\n      <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"border-collapse:collapse;\">\n        <tr>\n          <td style=\"padding:8px 0; width:170px; color:#6b7280; font-size:15px; vertical-align:top;\">\n            VA Prep\n          </td>\n          <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n            {{ DateTime.fromISO($json.body.fields[\"VA Prep Start Time\"]).setZone('America/Chicago').toFormat('EEEE, LLLL d, yyyy \u00b7 h:mma') }}\n            \u2013\n            {{ DateTime.fromISO($json.body.fields[\"VA Prep End Time\"]).setZone('America/Chicago').toFormat('h:mma ZZZZ') }}\n          </td>\n        </tr>\n        <tr>\n          <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n            Client Interview\n          </td>\n          <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n            {{ DateTime.fromISO($json.body.fields[\"Interview Schedule\"]).setZone('America/Chicago').toFormat('EEEE, LLLL d, yyyy \u00b7 h:mma') }}\n            \u2013\n            {{ DateTime.fromISO($json.body.fields[\"Interview End Time\"]).setZone('America/Chicago').toFormat('h:mma ZZZZ') }}\n          </td>\n        </tr>\n        <tr>\n          <td style=\"padding:8px 0; color:#6b7280; font-size:15px; vertical-align:top;\">\n            Interview Room\n          </td>\n          <td style=\"padding:8px 0; color:#222222; font-size:15px; font-weight:700; vertical-align:top;\">\n            <a href=\"{{ $json.body.fields[\"Zoom Link\"] }}\" style=\"color:#f47c12; text-decoration:underline;\">\n              Join Zoom Meeting\n            </a>\n          </td>\n        </tr>\n      </table>\n    </div>\n\n    <!-- Reminders -->\n    <h2 style=\"margin:0 0 16px; color:#f47c12; font-size:20px; line-height:1.4;\">\n      Important Reminders\n    </h2>\n\n    <ol style=\"margin:0 0 24px 22px; padding:0; color:#374151; font-size:15px; line-height:1.7;\">\n      <li>Please review the attached JD and Client Profile before your interview.</li>\n      <li>Attend the VA Prep session before the client interview.</li>\n      <li>Prepare specific examples from your experience that match the client\u2019s needs.</li>\n      <li>Join the Zoom room on time and make sure your camera, audio, and internet connection are working.</li>\n    </ol>\n\n    <div style=\"background-color:#fff7ed; border-left:4px solid #f47c12; padding:16px 18px; border-radius:8px; margin-bottom:28px;\">\n      <p style=\"margin:0; color:#374151; font-size:15px; line-height:1.6;\">\n        Linked <a href=\"https://drive.google.com/drive/folders/16JCrUkprskXxElePmofchjrXMxOtK4rc\" style=\"color:#f47c12; text-decoration:underline;\">here</a> are tips on preparing for your Client Interview and the\n        <a href=\"https://drive.google.com/drive/folders/16JCrUkprskXxElePmofchjrXMxOtK4rc\" style=\"color:#f47c12; text-decoration:underline;\">Get Hired Look</a> outfits for you to choose from.\n      </p>\n    </div>\n\n    <p style=\"margin:0 0 24px; font-size:15px; line-height:1.6; color:#374151;\">\n      Please lodge all of your questions before the Client Interview Orientation using this\n      <a href=\"https://airtable.com/apptuAm73VyH7pcHA/pagUWQQYta6BNuWq6/form\" style=\"color:#f47c12; text-decoration:underline;\">form</a>.\n    </p>\n\n    <p style=\"margin:0 0 6px; font-size:15px; line-height:1.6;\">\n      Best Regards,\n    </p>\n\n    <p style=\"margin:0; font-size:15px; line-height:1.6; font-weight:700;\">\n      Placements Team\n    </p>\n\n  </div>\n</div>\n\n  </div>\n</div>\n",
+          "options": {
+            "appendAttribution": false,
+            "attachmentsUi": {
+              "attachmentsBinary": [
+                {}
+              ]
+            },
+            "ccList": "placements@scalevirtually.com, pdev@scalevirtually.com, coach@scalevirtually.com"
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          880,
+          272
+        ],
+        "id": "3056a780-04ba-4ebb-9279-e1ebcc97a7cb",
+        "name": "Send a message",
+        "webhookId": "4e3105b5-cf1c-440f-b266-3b6ebe9a5d4b",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblExucLLn2EkZEKC",
+            "mode": "list",
+            "cachedResultName": "PL - CI Batches",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $('Webhook').first().json.body.recordId }}",
+              "VA Prep Calendar Event ID": "={{ $json.id }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": false
+              },
+              {
+                "id": "CI Batch ID",
+                "displayName": "CI Batch ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Batch #",
+                "displayName": "Batch #",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PLACEMENTS Requirements",
+                "displayName": "PLACEMENTS Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL STAGE (from PLACEMENTS Requirements)",
+                "displayName": "PL STAGE (from PLACEMENTS Requirements)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+                "displayName": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client",
+                "displayName": "Client",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company",
+                "displayName": "Company",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Role",
+                "displayName": "Role",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + C",
+                "displayName": "JD + C",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + C Link",
+                "displayName": "JD + C Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client's Email",
+                "displayName": "Client's Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Accepted VAs",
+                "displayName": "Accepted VAs",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidates' Email",
+                "displayName": "Candidates' Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Interview Schedule",
+                "displayName": "Interview Schedule",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Interview End Time",
+                "displayName": "Interview End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Zoom Link",
+                "displayName": "Zoom Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Done",
+                "displayName": "Done",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PL - Client Interviews",
+                "displayName": "PL - Client Interviews",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI - Status (from PL - Client Interviews)",
+                "displayName": "CI - Status (from PL - Client Interviews)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Status",
+                "displayName": "CI Invite Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Sent?",
+                "displayName": "CI Invite Sent?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Sent At",
+                "displayName": "CI Invite Sent At",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Resend CI Invite?",
+                "displayName": "Resend CI Invite?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Reschedule CI Invite?",
+                "displayName": "Reschedule CI Invite?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled Date",
+                "displayName": "Rescheduled Date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled End Time",
+                "displayName": "Rescheduled End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VAP Action Log",
+                "displayName": "VAP Action Log",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created By",
+                "displayName": "Created By",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Other Interviewer Contact Details",
+                "displayName": "Other Interviewer Contact Details",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "For Scrubbing?",
+                "displayName": "For Scrubbing?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Fields with Missing Data",
+                "displayName": "Fields with Missing Data",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Last Scrubbed At",
+                "displayName": "Last Scrubbed At",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL - Shortlisting",
+                "displayName": "PL - Shortlisting",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidates' SV Email",
+                "displayName": "Candidates' SV Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Candidates' Personal Email",
+                "displayName": "Candidates' Personal Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "VA Prep Start Time",
+                "displayName": "VA Prep Start Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Prep End Time",
+                "displayName": "VA Prep End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled VA Prep Start Time",
+                "displayName": "Rescheduled VA Prep Start Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled VA Prep End Time",
+                "displayName": "Rescheduled VA Prep End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Message ID",
+                "displayName": "Message ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Thread ID",
+                "displayName": "Thread ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI VA Follow-up Status",
+                "displayName": "CI VA Follow-up Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Needs Follow-up",
+                    "value": "Needs Follow-up"
+                  },
+                  {
+                    "name": "VA Confirmed",
+                    "value": "VA Confirmed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Scheduled?",
+                "displayName": "CI Scheduled?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CI Client Follow-up Status",
+                "displayName": "CI Client Follow-up Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Needs Follow-up",
+                    "value": "Needs Follow-up"
+                  },
+                  {
+                    "name": "Client Confirmed",
+                    "value": "Client Confirmed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Preferred CI Date (VA Marketplace)",
+                "displayName": "Preferred CI Date (VA Marketplace)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Placement Timeline",
+                "displayName": "Placement Timeline",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Marketplace Notes",
+                "displayName": "VA Marketplace Notes",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Facilitator",
+                "displayName": "CI Facilitator",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Name (from CI Facilitator)",
+                "displayName": "Name (from CI Facilitator)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "SV Email (from CI Facilitator)",
+                "displayName": "SV Email (from CI Facilitator)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "VA Prep Calendar Event ID",
+                "displayName": "VA Prep Calendar Event ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "CI Calendar Event ID",
+                "displayName": "CI Calendar Event ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1104,
+          -112
+        ],
+        "id": "ba02c74f-ed3d-46d3-8566-4b4ef774ef1d",
+        "name": "Append VA Prep Event ID",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblExucLLn2EkZEKC",
+            "mode": "list",
+            "cachedResultName": "PL - CI Batches",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $('Webhook').first().json.body.recordId }}",
+              "CI Calendar Event ID": "={{ $json.id }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": false
+              },
+              {
+                "id": "CI Batch ID",
+                "displayName": "CI Batch ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Batch #",
+                "displayName": "Batch #",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PLACEMENTS Requirements",
+                "displayName": "PLACEMENTS Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL STAGE (from PLACEMENTS Requirements)",
+                "displayName": "PL STAGE (from PLACEMENTS Requirements)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+                "displayName": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client",
+                "displayName": "Client",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company",
+                "displayName": "Company",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Role",
+                "displayName": "Role",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + C",
+                "displayName": "JD + C",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + C Link",
+                "displayName": "JD + C Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client's Email",
+                "displayName": "Client's Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Accepted VAs",
+                "displayName": "Accepted VAs",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidates' Email",
+                "displayName": "Candidates' Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Interview Schedule",
+                "displayName": "Interview Schedule",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Interview End Time",
+                "displayName": "Interview End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Zoom Link",
+                "displayName": "Zoom Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Done",
+                "displayName": "Done",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PL - Client Interviews",
+                "displayName": "PL - Client Interviews",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI - Status (from PL - Client Interviews)",
+                "displayName": "CI - Status (from PL - Client Interviews)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Status",
+                "displayName": "CI Invite Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Sent?",
+                "displayName": "CI Invite Sent?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Sent At",
+                "displayName": "CI Invite Sent At",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Resend CI Invite?",
+                "displayName": "Resend CI Invite?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Reschedule CI Invite?",
+                "displayName": "Reschedule CI Invite?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled Date",
+                "displayName": "Rescheduled Date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled End Time",
+                "displayName": "Rescheduled End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VAP Action Log",
+                "displayName": "VAP Action Log",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created By",
+                "displayName": "Created By",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Other Interviewer Contact Details",
+                "displayName": "Other Interviewer Contact Details",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "For Scrubbing?",
+                "displayName": "For Scrubbing?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Fields with Missing Data",
+                "displayName": "Fields with Missing Data",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Last Scrubbed At",
+                "displayName": "Last Scrubbed At",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL - Shortlisting",
+                "displayName": "PL - Shortlisting",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidates' SV Email",
+                "displayName": "Candidates' SV Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Candidates' Personal Email",
+                "displayName": "Candidates' Personal Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "VA Prep Start Time",
+                "displayName": "VA Prep Start Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Prep End Time",
+                "displayName": "VA Prep End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled VA Prep Start Time",
+                "displayName": "Rescheduled VA Prep Start Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled VA Prep End Time",
+                "displayName": "Rescheduled VA Prep End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Message ID",
+                "displayName": "Message ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Thread ID",
+                "displayName": "Thread ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI VA Follow-up Status",
+                "displayName": "CI VA Follow-up Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Needs Follow-up",
+                    "value": "Needs Follow-up"
+                  },
+                  {
+                    "name": "VA Confirmed",
+                    "value": "VA Confirmed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Scheduled?",
+                "displayName": "CI Scheduled?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CI Client Follow-up Status",
+                "displayName": "CI Client Follow-up Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Needs Follow-up",
+                    "value": "Needs Follow-up"
+                  },
+                  {
+                    "name": "Client Confirmed",
+                    "value": "Client Confirmed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Preferred CI Date (VA Marketplace)",
+                "displayName": "Preferred CI Date (VA Marketplace)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Placement Timeline",
+                "displayName": "Placement Timeline",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Marketplace Notes",
+                "displayName": "VA Marketplace Notes",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Facilitator",
+                "displayName": "CI Facilitator",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Name (from CI Facilitator)",
+                "displayName": "Name (from CI Facilitator)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "SV Email (from CI Facilitator)",
+                "displayName": "SV Email (from CI Facilitator)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "VA Prep Calendar Event ID",
+                "displayName": "VA Prep Calendar Event ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Calendar Event ID",
+                "displayName": "CI Calendar Event ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1104,
+          80
+        ],
+        "id": "70b2222d-bd9d-4c34-8830-887c5e027c9f",
+        "name": "Append CI Event ID",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "d2ef7aad-6fd1-4756-8e3f-ba968f439c6a",
+                "leftValue": "={{ $json.body.fields[\"CI Invite Sent?\"] }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          208,
+          -112
+        ],
+        "id": "38ccea92-4e90-48a8-9096-5b1598c3eb5d",
+        "name": "Invite Sent?"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblExucLLn2EkZEKC",
+            "mode": "list",
+            "cachedResultName": "PL - CI Batches",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+          },
+          "filterByFormula": "={Record ID} =  '{{ $json.body.recordId }}'",
+          "options": {
+            "fields": [
+              "VA Prep Calendar Event ID",
+              "CI Calendar Event ID",
+              "Rescheduled VA Prep Start Time",
+              "Rescheduled VA Prep End Time",
+              "Rescheduled Date",
+              "Rescheduled End Time"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          432,
+          -208
+        ],
+        "id": "c8a0242a-d489-4f19-bd4f-abe6b7a7bb89",
+        "name": "Search records",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "calendar": {
+            "__rl": true,
+            "value": "placements.sv@scalevirtually.com",
+            "mode": "list",
+            "cachedResultName": "placements.sv@scalevirtually.com"
+          },
+          "eventId": "={{ $json[\"VA Prep Calendar Event ID\"] }}",
+          "updateFields": {
+            "end": "={{ $json[\"Rescheduled VA Prep End Time\"] }}",
+            "sendUpdates": "all",
+            "start": "={{ $json[\"Rescheduled VA Prep Start Time\"] }}"
+          }
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          672,
+          -400
+        ],
+        "id": "51ef5583-b787-490d-8d00-3f297dc08b2f",
+        "name": "Update VA Prep",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "z6ibxXqWahGCziEi",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "calendar": {
+            "__rl": true,
+            "value": "placements.sv@scalevirtually.com",
+            "mode": "list",
+            "cachedResultName": "placements.sv@scalevirtually.com"
+          },
+          "eventId": "={{ $json[\"CI Calendar Event ID\"] }}",
+          "updateFields": {
+            "end": "={{ $json[\"Rescheduled End Time\"] }}",
+            "sendUpdates": "all",
+            "start": "={{ $json[\"Rescheduled Date\"] }}"
+          }
+        },
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.3,
+        "position": [
+          672,
+          -208
+        ],
+        "id": "796538ba-463a-4a43-b88f-da7d4592fc89",
+        "name": "Update CI",
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "z6ibxXqWahGCziEi",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return $input.all().map(item => {\n  return {\n    json: {\n      ...item.json,\n    },\n    binary: {\n      ...item.binary,\n    },\n  };\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          656,
+          176
+        ],
+        "id": "d2918edc-bc45-4b3f-8a27-8bb2402910c7",
+        "name": "Append Body + Attachment"
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblExucLLn2EkZEKC",
+            "mode": "list",
+            "cachedResultName": "PL - CI Batches",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblExucLLn2EkZEKC"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $('Webhook').first().json.body.recordId }}",
+              "CI Invite Sent?": true,
+              "CI Invite Sent At": "={{ $now.setZone('America/Chicago').toISO() }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": false
+              },
+              {
+                "id": "CI Batch ID",
+                "displayName": "CI Batch ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Batch #",
+                "displayName": "Batch #",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "number",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PLACEMENTS Requirements",
+                "displayName": "PLACEMENTS Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL STAGE (from PLACEMENTS Requirements)",
+                "displayName": "PL STAGE (from PLACEMENTS Requirements)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+                "displayName": "Photo (from CLIENTS) (from PDEV Requirement) (from PLACEMENTS Requirements)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client",
+                "displayName": "Client",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Company",
+                "displayName": "Company",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Role",
+                "displayName": "Role",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + C",
+                "displayName": "JD + C",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "JD + C Link",
+                "displayName": "JD + C Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client's Email",
+                "displayName": "Client's Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Accepted VAs",
+                "displayName": "Accepted VAs",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidates' Email",
+                "displayName": "Candidates' Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Interview Schedule",
+                "displayName": "Interview Schedule",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Interview End Time",
+                "displayName": "Interview End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Zoom Link",
+                "displayName": "Zoom Link",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Done",
+                "displayName": "Done",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PL - Client Interviews",
+                "displayName": "PL - Client Interviews",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI - Status (from PL - Client Interviews)",
+                "displayName": "CI - Status (from PL - Client Interviews)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Status",
+                "displayName": "CI Invite Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Invite Sent?",
+                "displayName": "CI Invite Sent?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "CI Invite Sent At",
+                "displayName": "CI Invite Sent At",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Resend CI Invite?",
+                "displayName": "Resend CI Invite?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Reschedule CI Invite?",
+                "displayName": "Reschedule CI Invite?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled Date",
+                "displayName": "Rescheduled Date",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled End Time",
+                "displayName": "Rescheduled End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VAP Action Log",
+                "displayName": "VAP Action Log",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created By",
+                "displayName": "Created By",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Other Interviewer Contact Details",
+                "displayName": "Other Interviewer Contact Details",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "For Scrubbing?",
+                "displayName": "For Scrubbing?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "boolean",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Fields with Missing Data",
+                "displayName": "Fields with Missing Data",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Last Scrubbed At",
+                "displayName": "Last Scrubbed At",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "PL - Shortlisting",
+                "displayName": "PL - Shortlisting",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Candidates' SV Email",
+                "displayName": "Candidates' SV Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Candidates' Personal Email",
+                "displayName": "Candidates' Personal Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "VA Prep Start Time",
+                "displayName": "VA Prep Start Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Prep End Time",
+                "displayName": "VA Prep End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled VA Prep Start Time",
+                "displayName": "Rescheduled VA Prep Start Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Rescheduled VA Prep End Time",
+                "displayName": "Rescheduled VA Prep End Time",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Message ID",
+                "displayName": "Message ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Thread ID",
+                "displayName": "Thread ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI VA Follow-up Status",
+                "displayName": "CI VA Follow-up Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Needs Follow-up",
+                    "value": "Needs Follow-up"
+                  },
+                  {
+                    "name": "VA Confirmed",
+                    "value": "VA Confirmed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Scheduled?",
+                "displayName": "CI Scheduled?",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "CI Client Follow-up Status",
+                "displayName": "CI Client Follow-up Status",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "Needs Follow-up",
+                    "value": "Needs Follow-up"
+                  },
+                  {
+                    "name": "Client Confirmed",
+                    "value": "Client Confirmed"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Preferred CI Date (VA Marketplace)",
+                "displayName": "Preferred CI Date (VA Marketplace)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "dateTime",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Placement Timeline",
+                "displayName": "Placement Timeline",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "VA Marketplace Notes",
+                "displayName": "VA Marketplace Notes",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Facilitator",
+                "displayName": "CI Facilitator",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Name (from CI Facilitator)",
+                "displayName": "Name (from CI Facilitator)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "SV Email (from CI Facilitator)",
+                "displayName": "SV Email (from CI Facilitator)",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "VA Prep Calendar Event ID",
+                "displayName": "VA Prep Calendar Event ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "CI Calendar Event ID",
+                "displayName": "CI Calendar Event ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {
+            "typecast": true
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1104,
+          272
+        ],
+        "id": "3bf71b4b-9bb7-43d8-b847-9cd0f1e006fd",
+        "name": "Append CI Sent Status",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Invite Sent?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Download JD": {
+        "main": [
+          [
+            {
+              "node": "Append Body + Attachment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create VA Prep": {
+        "main": [
+          [
+            {
+              "node": "Append VA Prep Event ID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create CI": {
+        "main": [
+          [
+            {
+              "node": "Append CI Event ID",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Invite Sent?": {
+        "main": [
+          [
+            {
+              "node": "Search records",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Download JD",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search records": {
+        "main": [
+          [
+            {
+              "node": "Update VA Prep",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Update CI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append Body + Attachment": {
+        "main": [
+          [
+            {
+              "node": "Create VA Prep",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Create CI",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Send a message": {
+        "main": [
+          [
+            {
+              "node": "Append CI Sent Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

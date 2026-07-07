@@ -1,0 +1,1930 @@
+{
+  "updatedAt": "2026-07-06T14:19:15.947Z",
+  "createdAt": "2026-04-28T16:39:19.806Z",
+  "id": "OrfogvLjxIXp3dRD",
+  "name": "LinkedIn \u2014 Reply Capture & Classification",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "97126bd6-2152-4585-83a2-aa2ead2931c1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0cab3c20-a89a-4459-865b-8e7b2d27e44f",
+      "name": "Webhook",
+      "webhookId": "97126bd6-2152-4585-83a2-aa2ead2931c1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content[0].text }}",
+                    "rightValue": "HOT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "02179066-9a1a-4d46-9722-20176ca6ced7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "HOT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "805688fb-9919-40a1-899a-4aafde8cce5a",
+                    "leftValue": "={{ $json.content[0].text }}",
+                    "rightValue": "WARM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WARM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "26275643-7cf4-4fa0-a1b5-2af9281899c2",
+                    "leftValue": "={{ $json.content[0].text }}",
+                    "rightValue": "LOW WARM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "LOW WARM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "df30f2cd-8ccb-4c2e-bd8d-d2d969e16208",
+                    "leftValue": "={{ $json.content[0].text }}",
+                    "rightValue": "IGNORE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "IGNORE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1248,
+        -32
+      ],
+      "id": "676dc896-8512-4096-9bb9-ad9ef5853782",
+      "name": "Lead Status"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\n\n// \u2500\u2500\u2500 EXTRACT LATEST REPLY \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst campaignName = body.campaign?.name || '';\nconst messages = body.recent_messages || [];\nconst latestReply = messages.find(m => m.is_reply === true);\nconst messageText = latestReply?.message || '';\nconst messageTimestamp = latestReply?.creation_time || body.timestamp || '';\n\n// \u2500\u2500\u2500 FORMAT DATES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst replyDate = new Date(messageTimestamp);\n\nconst dateFormatted = (replyDate.getMonth() + 1).toString().padStart(2, '0') + '/' +\n                       replyDate.getDate().toString().padStart(2, '0') + '/' +\n                       replyDate.getFullYear();\n\nconst fullTimestamp = replyDate.toISOString().replace('T', ' ').split('.')[0];\n\n// Month \u2192 YYYY-MM (for Looker Studio filter)\nconst monthFormatted = replyDate.getFullYear() + '-' +\n  (replyDate.getMonth() + 1).toString().padStart(2, '0');\n\n// Week start (Monday) \u2192 YYYY-MM-DD\nconst dayOfWeek = replyDate.getDay();\nconst diff = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);\nconst weekStart = new Date(replyDate);\nweekStart.setDate(replyDate.getDate() + diff);\nconst weekFormatted = weekStart.getFullYear() + '-' +\n  (weekStart.getMonth() + 1).toString().padStart(2, '0') + '-' +\n  weekStart.getDate().toString().padStart(2, '0');\n\n// \u2500\u2500\u2500 TYPE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst messageType = body.is_inmail === true ? 'InMail' : 'Connect';\n\nreturn {\n  prospect_name:        body.lead?.full_name || '',\n  prospect_linkedin:    body.lead?.profile_url || '',\n  prospect_company:     body.lead?.company_name || '',\n  prospect_position:    body.lead?.position || '',\n  prospect_email:       body.lead?.email_address || body.lead?.enriched_email || body.lead?.custom_email || '',\n  prospect_phone:       '',\n  prospect_first_name:  body.lead?.first_name || '',\n  prospect_last_name:   body.lead?.last_name || '',\n  prospect_location:    body.lead?.location || '',\n  prospect_summary:     body.lead?.summary || '',\n\n  setter_name:          body.sender?.full_name || '',\n  setter_email:         body.sender?.email_address || '',\n  setter_linkedin:      body.sender?.profile_url || '',\n  setter_id:            body.sender?.id || '',\n\n  campaign_name:        campaignName,\n  campaign_name_lower:  campaignName.toLowerCase(),   // \u2190 NEW: used for matching\n  campaign_id:          body.campaign?.id || '',\n  campaign_status:      body.campaign?.status || '',\n\n  message_type:         messageType,\n  notes_replies:        messageText,\n  status_warm:          'Interested (Warm)',\n  status_booked:        'DC Booked',\n\n  date:                 dateFormatted,\n  month:                monthFormatted,               // \u2190 NEW\n  week:                 weekFormatted,                // \u2190 NEW\n  timestamp:            fullTimestamp,\n  raw_timestamp:        body.timestamp || '',\n\n  is_inmail:            body.is_inmail || false,\n  event_type:           body.event_type || '',\n  conversation_id:      body.conversation_id || '',\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "50a50b81-c48d-42f6-bf62-25482035d4c6",
+      "name": "Set Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8d59f471-c742-45f8-9a07-747362158fc2",
+              "leftValue": "={{ $json[\"LinkedIn Page\"] }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1920,
+        0
+      ],
+      "id": "27480f7c-14b4-4b94-a3a0-5f0e5d61ad6a",
+      "name": "Only continue if user does not exist"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Client Config').first().json.sheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Warm Leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "LinkedIn Page",
+              "lookupValue": "={{ $('Client Config').first().json.prospect_linkedin }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "039a1c51-2d57-4a03-b63d-6bf90fda8238",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
+          "mode": "list",
+          "cachedResultName": "claude-sonnet-4-5-20250929"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.notes_replies || '[no message content]' }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "system": "You are a LinkedIn reply classifier for a B2B lead generation agency called Scale Virtually. Your job is to read a prospect's reply to a LinkedIn outreach message and classify it into exactly ONE category.\n\nThe context: Setters are reaching out to investors, family offices, and real estate professionals on behalf of clients. The goal is to book discovery calls with qualified prospects.\n\nCATEGORIES:\n\nHOT\nThe prospect shows clear intent to book a meeting or take an immediate next step. This includes:\n- Asking about availability or scheduling (\"Are you free?\", \"What does your calendar look like?\")\n- Requesting to book or set up a call directly\n- Sharing their Calendly or booking link\n- Confirming a meeting has been booked on the calendar\n- Asking to send details, a deck, or a proposal before committing to a call\n- Any reply where the next logical action is booking a meeting\nReal examples: \"Let's schedule\" \"Are you free this week?\" \"Send me more details and let's set something up\" \"Happy to set up a call\" \"Appointment booked. It's on your calendar.\" \"You are booked until May 5th!\" \"Shaun let's connect on a call. How's your calendar next week?\" \"Let's chat, Shaun!\" \"Sure. What do you propose?\"\n\nWARM\nThe prospect shows genuine interest or curiosity but has not indicated a clear next step toward booking. This includes:\n- Asking questions about the offer, company, or investment thesis\n- Expressing that the topic sounds relevant or interesting\n- Sharing their email or contact info without scheduling intent\n- Open-ended positive engagement that needs further nurturing\nReal examples: \"This is interesting, how does it work?\" \"Tell me more\" \"What are you focused on?\" \"Great to connect. Sounds interesting! What are you focused on?\" \"I'm open to a conversation. What are you thinking?\" \"Good to be connected, please send info to [email]\" \"Hi Shaun, thanks for reaching out. I'd like to learn more. Can you email me?\" \"Happy to chat - We do a fair amount of work with real estate companies\" \"I'd love to connect and learn more about your work\"\n\nLOW WARM\nThe prospect responds positively but with no real interest or intent to engage further. This includes:\n- Generic polite replies with no question or follow-up\n- Acknowledgements that don't invite further conversation\n- Vague positivity with no substance\nReal examples: \"Thanks for reaching out\" \"Looks good\" \"Appreciate it\" \"Thanks!\" \"Hi Shaun, thanks for connecting. Looking forward to sharing ideas!\"\n\nIGNORE\nThe prospect is declining, unsubscribing, expressing clear disinterest, sending an out-of-office reply, the message is irrelevant/spam, or the message content is empty or contains only an attachment with no readable text. This includes:\n- Clear rejections or removal requests\n- Out-of-office or vacation auto-replies\n- Mentions of already having a solution in place\n- Spam, gibberish, or completely unrelated replies\n- Empty messages or messages that contain only an image, file, or attachment with no text\nReal examples: \"Not interested\" \"Please remove me from your list\" \"We already have something in place\" \"Not for us at this time\" \"Thank you for reaching out but I am not in need of anything at the moment\" \"I am out of the office until [date]\" \"Auto-reply: I will respond when I return\" \"[no message content]\"\n\nRULES:\n- HOT takes priority \u2014 if there is ANY booking intent or next-step action, classify as HOT even if mixed with hesitation\n- WARM is for genuine interest without clear next step \u2014 not just politeness\n- LOW WARM is only for polite-but-empty replies with no real engagement\n- IGNORE covers everything negative, neutral, OOO, irrelevant, and empty \u2014 one bucket, not written to sheet\n- If the message content is empty, blank, or contains only \"[no message content]\", always classify as IGNORE\n- Respond with ONLY the category label in all caps: HOT, WARM, LOW WARM, or IGNORE\n- No explanation, no punctuation, no extra text"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        896,
+        0
+      ],
+      "id": "a7c25236-fcd7-4fc7-ab0d-a29f2bb56fd9",
+      "name": "Message a model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "MPuGnXML3kAMrZgk",
+          "name": "LinkedIn Outreach"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B1L126873",
+          "mode": "id"
+        },
+        "text": "= *{{ $('Message a model').first().json.content[0].text }} Lead from {{ $('Client Config').first().json.client }}*\n\n*Name:* {{ $('Client Config').first().json.prospect_first_name }} {{ $('Client Config').first().json.prospect_last_name }}\n*Company:* {{ $('Client Config').first().json.prospect_company }}\n*LinkedIn:* {{ $('Client Config').first().json.prospect_linkedin }}\n*Setter:* {{ $('Client Config').first().json.setter_name }}\n*Campaign:* {{ $('Client Config').first().json.campaign_name }}\n*Date:* {{ $('Client Config').first().json.timestamp }}\n\n*Their message:*\n{{ $('Client Config').first().json.notes_replies }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true,
+          "unfurl_links": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2592,
+        0
+      ],
+      "id": "162020c3-d4d2-4053-8673-6af9b9efb785",
+      "name": "Send a message",
+      "webhookId": "6f0ccfb2-4538-4e0b-b222-6b99448b8238",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Client Config').first().json.sheet_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Warm Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prospect Name": "={{ $('Client Config').first().json.prospect_name }}",
+            "LinkedIn Page": "={{ $('Client Config').first().json.prospect_linkedin }}",
+            "Status": "Interested (Warm)",
+            "LinkedIn Contact": "={{ $('Client Config').first().json.setter_name }}",
+            "Date": "={{ $('Client Config').first().json.timestamp }}",
+            "Campaign": "={{ $('Client Config').first().json.campaign_name }}",
+            "Email": "={{ $('Client Config').first().json.prospect_email }}",
+            "Phone": "={{ $('Client Config').first().json.prospect_phone }}",
+            "Notes/ Replies": "={{ $('Client Config').first().json.notes_replies }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "LinkedIn Page",
+              "displayName": "LinkedIn Page",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "LinkedIn Contact",
+              "displayName": "LinkedIn Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Notes/ Replies",
+              "displayName": "Notes/ Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2144,
+        0
+      ],
+      "id": "fbefee8c-a472-45d8-901b-10ac5aa2aeaf",
+      "name": "Append row in Client sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI",
+          "mode": "list",
+          "cachedResultName": "Master Sheet LinkedIn Lead Tracker ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1190028589,
+          "mode": "list",
+          "cachedResultName": "Warm Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit#gid=1190028589"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Client": "={{ $('Client Config').first().json.client }}",
+            "Prospect Name": "={{ $('Client Config').first().json.prospect_name }}",
+            "LinkedIn Page (Lead)": "={{ $('Client Config').first().json.prospect_linkedin }}",
+            "LinkedIn Page (Setter)": "={{ $('Client Config').first().json.setter_linkedin }}",
+            "Status": "Interested (Warm)",
+            "Setter Name": "={{ $('Client Config').first().json.setter_name }}",
+            "Date": "={{ $('Client Config').first().json.raw_timestamp }}",
+            "Campaign": "={{ $('Client Config').first().json.campaign_name }}",
+            "Phone": "={{ $('Client Config').first().json.prospect_phone }}",
+            "Prospect Email": "={{ $('Webhook').first().json.body.lead.email_address }}",
+            "Notes/ Replies": "={{ $('Webhook').first().json.body.recent_messages[0].message }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prospect Name",
+              "displayName": "Prospect Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page (Lead)",
+              "displayName": "LinkedIn Page (Lead)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn Page (Setter)",
+              "displayName": "LinkedIn Page (Setter)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Setter Name",
+              "displayName": "Setter Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Week",
+              "displayName": "Week",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prospect Email",
+              "displayName": "Prospect Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes/ Replies",
+              "displayName": "Notes/ Replies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2368,
+        0
+      ],
+      "id": "c50760be-6e49-409c-89e4-a98d9b6289b7",
+      "name": "Append row in Master sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// \u2500\u2500\u2500 DYNAMIC CLIENT LOOKUP FROM MASTER SHEET \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// Previous node (Get Clients from Master Sheet) passes all rows from the\n// Clients tab. Each row: Client | Sheet ID | Status\n// We match campaign name against client name keywords.\n\nconst setData       = $('Set Data').first().json;\nconst clientRows    = $input.all();\nconst campaignLower = setData.campaign_name_lower || '';\n\nconst MASTER_SHEET_ID = '1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI';\nconst MASTER_WARM_TAB = 'Warm Leads';\nconst MASTER_DC_TAB   = 'DC Booked';\n\n// \u2500\u2500\u2500 MATCH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nlet matchedClient = null;\n\nfor (const row of clientRows) {\n  const clientName = (row.json['Client'] || '').trim();\n  const status     = (row.json['Status'] || '').trim().toLowerCase();\n  const sheetId    = (row.json['Sheet ID'] || '').trim();\n\n  if (status !== 'active') continue;\n  if (!clientName || !sheetId) continue;\n\n  const keywords = clientName.toLowerCase()\n    .split(' ')\n    .filter(w => w.length > 2 && !['the','and','for','llc','inc'].includes(w));\n\n  const allMatch = keywords.every(kw => campaignLower.includes(kw));\n\n  if (allMatch) {\n    matchedClient = { clientName, sheetId };\n    break;\n  }\n}\n\n// \u2500\u2500\u2500 OUTPUT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (!matchedClient) {\n  return {\n    client_found:    false,\n    client:          'Unknown \u2014 ' + setData.campaign_name,\n    sheet_id:        null,\n    warm_tab:        'Warm Leads',\n    dc_booked_tab:   'DC Booked',\n    master_sheet_id: MASTER_SHEET_ID,\n    master_warm_tab: MASTER_WARM_TAB,\n    master_dc_tab:   MASTER_DC_TAB,\n    ...setData,\n  };\n}\n\nreturn {\n  client_found:    true,\n  client:          matchedClient.clientName,\n  sheet_id:        matchedClient.sheetId,\n  warm_tab:        'Warm Leads',\n  dc_booked_tab:   'DC Booked',\n  master_sheet_id: MASTER_SHEET_ID,\n  master_warm_tab: MASTER_WARM_TAB,\n  master_dc_tab:   MASTER_DC_TAB,\n  ...setData,\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "57d9c166-dd66-47a2-8a9a-2fca03b145f6",
+      "name": "Client Config"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI",
+          "mode": "list",
+          "cachedResultName": "Master Sheet LinkedIn Lead Tracker ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1216347196,
+          "mode": "list",
+          "cachedResultName": "Clients",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit#gid=1216347196"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "id": "681a2aad-1e6b-4bf7-bee6-c8fa9eef8d24",
+      "name": "Get Clients",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0a6b831c-1886-4744-9582-68568f92b74d",
+              "leftValue": "={{ $('Client Config').first().json.client_found }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "9f359dab-881e-4fbf-a40e-95f7d3374979",
+      "name": "Filter"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Data": {
+      "main": [
+        [
+          {
+            "node": "Get Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Only continue if user does not exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only continue if user does not exist": {
+      "main": [
+        [
+          {
+            "node": "Append row in Client sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in Client sheet": {
+      "main": [
+        [
+          {
+            "node": "Append row in Master sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in Master sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client Config": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Clients": {
+      "main": [
+        [
+          {
+            "node": "Client Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "tnvUdj9j5awE0Raw",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "RestSharp/110.2.0.0",
+            "content-length": "1396",
+            "accept": "application/json, text/json, text/x-json, text/javascript, application/xml, text/xml",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "63.180.119.255",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "DE",
+            "cf-ray": "a16b0491fdcf194b-FRA",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "traceparent": "00-17b93a5d9ae507deeb83433f81effc83-20d8b651db8938e8-01",
+            "x-forwarded-for": "63.180.119.255, 162.158.95.187",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-58786f47b8-td8qx",
+            "x-is-trusted": "yes",
+            "x-real-ip": "63.180.119.255"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "is_inmail": false,
+            "recent_messages": [
+              {
+                "creation_time": "2026-07-06T01:49:41.26Z",
+                "message": "Hey James, thanks for connecting. I would love to hear and learn more. I want to see us all be successful, so let's talk this week or next ",
+                "is_reply": true
+              }
+            ],
+            "conversation_id": "2-Zjg2N2YxZDEtZTJkNS00MmRiLWI0MjQtZjM2ODg3NDlkMWJjXzEwMA==",
+            "campaign": {
+              "name": "Bedrock Investment Property Expanded Titles Invites - James Greco",
+              "id": 494595,
+              "status": 1
+            },
+            "sender": {
+              "id": 211147,
+              "first_name": "James",
+              "last_name": "Greco, MBA",
+              "full_name": "James Greco, MBA",
+              "email_address": "jgreco1001@gmail.com",
+              "profile_url": "https://www.linkedin.com/in/jamesfgreco"
+            },
+            "lead": {
+              "id": "712203233",
+              "profile_url": "https://www.linkedin.com/in/rylostaylor",
+              "first_name": "Rylos",
+              "last_name": "Taylor",
+              "full_name": "Rylos Taylor",
+              "location": null,
+              "summary": "Strategic planning to help families and business owners toward their financial goals. Taking away the financial stress to allow you to focus on the more exciting aspects of life.",
+              "company_url": null,
+              "company_name": null,
+              "position": null,
+              "about": null,
+              "email_address": null,
+              "enriched_email": null,
+              "custom_email": null,
+              "tags": [],
+              "lists": [
+                {
+                  "name": "Bedrock Investment Property Expanded Titles Invites - James Greco",
+                  "id": 768116,
+                  "custom_fields": {}
+                }
+              ]
+            },
+            "timestamp": "2026-07-06T02:00:47.5272168Z",
+            "event_type": "every_message_reply_received",
+            "correlation_id": "cc4ee4cd-42fd-4e6e-99c9-9ddb45d52c36"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/97126bd6-2152-4585-83a2-aa2ead2931c1",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "55187b48-9060-4777-b4b5-6cdca2d5fac2",
+  "activeVersionId": "55187b48-9060-4777-b4b5-6cdca2d5fac2",
+  "versionCounter": 138,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-24T14:16:51.199Z",
+      "createdAt": "2026-06-24T14:16:51.199Z",
+      "role": "workflow:owner",
+      "workflowId": "OrfogvLjxIXp3dRD",
+      "projectId": "wEx7mbDTcuapG4oz",
+      "project": {
+        "updatedAt": "2026-06-24T14:15:14.000Z",
+        "createdAt": "2026-06-24T14:13:58.747Z",
+        "id": "wEx7mbDTcuapG4oz",
+        "name": "LinkedIn Outreach",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "user-check"
+        },
+        "description": "LinkedIn Outreach Workflows",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-06-24T14:13:58.749Z",
+            "createdAt": "2026-06-24T14:13:58.749Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "wEx7mbDTcuapG4oz",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          },
+          {
+            "updatedAt": "2026-06-24T14:14:08.703Z",
+            "createdAt": "2026-06-24T14:14:08.703Z",
+            "userId": "069738b0-7493-4514-8e28-6d999c2cdb1e",
+            "projectId": "wEx7mbDTcuapG4oz",
+            "user": {
+              "updatedAt": "2026-07-03T19:00:06.000Z",
+              "createdAt": "2026-06-23T19:48:02.183Z",
+              "id": "069738b0-7493-4514-8e28-6d999c2cdb1e",
+              "email": "sam@scalevirtually.com",
+              "firstName": "Sam",
+              "lastName": "Peterson",
+              "personalizationAnswers": null,
+              "settings": null,
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-03",
+              "isPending": false
+            }
+          },
+          {
+            "updatedAt": "2026-06-24T14:14:33.246Z",
+            "createdAt": "2026-06-24T14:14:33.246Z",
+            "userId": "18e9efa4-131e-4ef0-bf66-99bbaa47c61f",
+            "projectId": "wEx7mbDTcuapG4oz",
+            "user": {
+              "updatedAt": "2026-07-02T16:12:02.000Z",
+              "createdAt": "2026-04-09T17:37:55.790Z",
+              "id": "18e9efa4-131e-4ef0-bf66-99bbaa47c61f",
+              "email": "jenn@scalevirtually.com",
+              "firstName": "Jenneiline",
+              "lastName": "Manuel",
+              "personalizationAnswers": null,
+              "settings": {
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "cvOi0g9fl0PcWFt0",
+                "userActivated": true,
+                "userActivatedAt": 1776884151639,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1777936404035
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-02",
+              "isPending": false
+            }
+          },
+          {
+            "updatedAt": "2026-06-24T14:14:36.941Z",
+            "createdAt": "2026-06-24T14:14:36.941Z",
+            "userId": "4d09549c-f03e-4828-a78e-790552fed192",
+            "projectId": "wEx7mbDTcuapG4oz",
+            "user": {
+              "updatedAt": "2026-07-07T07:00:00.000Z",
+              "createdAt": "2026-04-09T17:37:24.339Z",
+              "id": "4d09549c-f03e-4828-a78e-790552fed192",
+              "email": "pj@scalevirtually.com",
+              "firstName": "Patrick Jansen",
+              "lastName": "Villanueva",
+              "personalizationAnswers": null,
+              "settings": {
+                "easyAIWorkflowOnboarded": true
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T02:39:48.849Z",
+      "createdAt": "2026-04-29T02:39:48.849Z",
+      "id": "PEeL9xSBFkGsagXN",
+      "name": "Development"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-06T14:19:15.948Z",
+    "createdAt": "2026-07-06T14:19:15.948Z",
+    "versionId": "55187b48-9060-4777-b4b5-6cdca2d5fac2",
+    "workflowId": "OrfogvLjxIXp3dRD",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "97126bd6-2152-4585-83a2-aa2ead2931c1",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          0
+        ],
+        "id": "0cab3c20-a89a-4459-865b-8e7b2d27e44f",
+        "name": "Webhook",
+        "webhookId": "97126bd6-2152-4585-83a2-aa2ead2931c1"
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.content[0].text }}",
+                      "rightValue": "HOT",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      },
+                      "id": "02179066-9a1a-4d46-9722-20176ca6ced7"
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "HOT"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "805688fb-9919-40a1-899a-4aafde8cce5a",
+                      "leftValue": "={{ $json.content[0].text }}",
+                      "rightValue": "WARM",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "WARM"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "26275643-7cf4-4fa0-a1b5-2af9281899c2",
+                      "leftValue": "={{ $json.content[0].text }}",
+                      "rightValue": "LOW WARM",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "LOW WARM"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 3
+                  },
+                  "conditions": [
+                    {
+                      "id": "df30f2cd-8ccb-4c2e-bd8d-d2d969e16208",
+                      "leftValue": "={{ $json.content[0].text }}",
+                      "rightValue": "IGNORE",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "IGNORE"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.4,
+        "position": [
+          1248,
+          -32
+        ],
+        "id": "676dc896-8512-4096-9bb9-ad9ef5853782",
+        "name": "Lead Status"
+      },
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body;\n\n// \u2500\u2500\u2500 EXTRACT LATEST REPLY \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst campaignName = body.campaign?.name || '';\nconst messages = body.recent_messages || [];\nconst latestReply = messages.find(m => m.is_reply === true);\nconst messageText = latestReply?.message || '';\nconst messageTimestamp = latestReply?.creation_time || body.timestamp || '';\n\n// \u2500\u2500\u2500 FORMAT DATES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst replyDate = new Date(messageTimestamp);\n\nconst dateFormatted = (replyDate.getMonth() + 1).toString().padStart(2, '0') + '/' +\n                       replyDate.getDate().toString().padStart(2, '0') + '/' +\n                       replyDate.getFullYear();\n\nconst fullTimestamp = replyDate.toISOString().replace('T', ' ').split('.')[0];\n\n// Month \u2192 YYYY-MM (for Looker Studio filter)\nconst monthFormatted = replyDate.getFullYear() + '-' +\n  (replyDate.getMonth() + 1).toString().padStart(2, '0');\n\n// Week start (Monday) \u2192 YYYY-MM-DD\nconst dayOfWeek = replyDate.getDay();\nconst diff = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);\nconst weekStart = new Date(replyDate);\nweekStart.setDate(replyDate.getDate() + diff);\nconst weekFormatted = weekStart.getFullYear() + '-' +\n  (weekStart.getMonth() + 1).toString().padStart(2, '0') + '-' +\n  weekStart.getDate().toString().padStart(2, '0');\n\n// \u2500\u2500\u2500 TYPE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nconst messageType = body.is_inmail === true ? 'InMail' : 'Connect';\n\nreturn {\n  prospect_name:        body.lead?.full_name || '',\n  prospect_linkedin:    body.lead?.profile_url || '',\n  prospect_company:     body.lead?.company_name || '',\n  prospect_position:    body.lead?.position || '',\n  prospect_email:       body.lead?.email_address || body.lead?.enriched_email || body.lead?.custom_email || '',\n  prospect_phone:       '',\n  prospect_first_name:  body.lead?.first_name || '',\n  prospect_last_name:   body.lead?.last_name || '',\n  prospect_location:    body.lead?.location || '',\n  prospect_summary:     body.lead?.summary || '',\n\n  setter_name:          body.sender?.full_name || '',\n  setter_email:         body.sender?.email_address || '',\n  setter_linkedin:      body.sender?.profile_url || '',\n  setter_id:            body.sender?.id || '',\n\n  campaign_name:        campaignName,\n  campaign_name_lower:  campaignName.toLowerCase(),   // \u2190 NEW: used for matching\n  campaign_id:          body.campaign?.id || '',\n  campaign_status:      body.campaign?.status || '',\n\n  message_type:         messageType,\n  notes_replies:        messageText,\n  status_warm:          'Interested (Warm)',\n  status_booked:        'DC Booked',\n\n  date:                 dateFormatted,\n  month:                monthFormatted,               // \u2190 NEW\n  week:                 weekFormatted,                // \u2190 NEW\n  timestamp:            fullTimestamp,\n  raw_timestamp:        body.timestamp || '',\n\n  is_inmail:            body.is_inmail || false,\n  event_type:           body.event_type || '',\n  conversation_id:      body.conversation_id || '',\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          0
+        ],
+        "id": "50a50b81-c48d-42f6-bf62-25482035d4c6",
+        "name": "Set Data"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "8d59f471-c742-45f8-9a07-747362158fc2",
+                "leftValue": "={{ $json[\"LinkedIn Page\"] }}",
+                "rightValue": "=",
+                "operator": {
+                  "type": "string",
+                  "operation": "notExists",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          1920,
+          0
+        ],
+        "id": "27480f7c-14b4-4b94-a3a0-5f0e5d61ad6a",
+        "name": "Only continue if user does not exist"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "={{ $('Client Config').first().json.sheet_id }}",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "Warm Leads",
+            "mode": "name"
+          },
+          "filtersUI": {
+            "values": [
+              {
+                "lookupColumn": "LinkedIn Page",
+                "lookupValue": "={{ $('Client Config').first().json.prospect_linkedin }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          1696,
+          0
+        ],
+        "id": "039a1c51-2d57-4a03-b63d-6bf90fda8238",
+        "name": "Get row(s) in sheet",
+        "alwaysOutputData": true,
+        "executeOnce": false,
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "claude-sonnet-4-5-20250929",
+            "mode": "list",
+            "cachedResultName": "claude-sonnet-4-5-20250929"
+          },
+          "messages": {
+            "values": [
+              {
+                "content": "={{ $json.notes_replies || '[no message content]' }}"
+              }
+            ]
+          },
+          "simplify": false,
+          "options": {
+            "system": "You are a LinkedIn reply classifier for a B2B lead generation agency called Scale Virtually. Your job is to read a prospect's reply to a LinkedIn outreach message and classify it into exactly ONE category.\n\nThe context: Setters are reaching out to investors, family offices, and real estate professionals on behalf of clients. The goal is to book discovery calls with qualified prospects.\n\nCATEGORIES:\n\nHOT\nThe prospect shows clear intent to book a meeting or take an immediate next step. This includes:\n- Asking about availability or scheduling (\"Are you free?\", \"What does your calendar look like?\")\n- Requesting to book or set up a call directly\n- Sharing their Calendly or booking link\n- Confirming a meeting has been booked on the calendar\n- Asking to send details, a deck, or a proposal before committing to a call\n- Any reply where the next logical action is booking a meeting\nReal examples: \"Let's schedule\" \"Are you free this week?\" \"Send me more details and let's set something up\" \"Happy to set up a call\" \"Appointment booked. It's on your calendar.\" \"You are booked until May 5th!\" \"Shaun let's connect on a call. How's your calendar next week?\" \"Let's chat, Shaun!\" \"Sure. What do you propose?\"\n\nWARM\nThe prospect shows genuine interest or curiosity but has not indicated a clear next step toward booking. This includes:\n- Asking questions about the offer, company, or investment thesis\n- Expressing that the topic sounds relevant or interesting\n- Sharing their email or contact info without scheduling intent\n- Open-ended positive engagement that needs further nurturing\nReal examples: \"This is interesting, how does it work?\" \"Tell me more\" \"What are you focused on?\" \"Great to connect. Sounds interesting! What are you focused on?\" \"I'm open to a conversation. What are you thinking?\" \"Good to be connected, please send info to [email]\" \"Hi Shaun, thanks for reaching out. I'd like to learn more. Can you email me?\" \"Happy to chat - We do a fair amount of work with real estate companies\" \"I'd love to connect and learn more about your work\"\n\nLOW WARM\nThe prospect responds positively but with no real interest or intent to engage further. This includes:\n- Generic polite replies with no question or follow-up\n- Acknowledgements that don't invite further conversation\n- Vague positivity with no substance\nReal examples: \"Thanks for reaching out\" \"Looks good\" \"Appreciate it\" \"Thanks!\" \"Hi Shaun, thanks for connecting. Looking forward to sharing ideas!\"\n\nIGNORE\nThe prospect is declining, unsubscribing, expressing clear disinterest, sending an out-of-office reply, the message is irrelevant/spam, or the message content is empty or contains only an attachment with no readable text. This includes:\n- Clear rejections or removal requests\n- Out-of-office or vacation auto-replies\n- Mentions of already having a solution in place\n- Spam, gibberish, or completely unrelated replies\n- Empty messages or messages that contain only an image, file, or attachment with no text\nReal examples: \"Not interested\" \"Please remove me from your list\" \"We already have something in place\" \"Not for us at this time\" \"Thank you for reaching out but I am not in need of anything at the moment\" \"I am out of the office until [date]\" \"Auto-reply: I will respond when I return\" \"[no message content]\"\n\nRULES:\n- HOT takes priority \u2014 if there is ANY booking intent or next-step action, classify as HOT even if mixed with hesitation\n- WARM is for genuine interest without clear next step \u2014 not just politeness\n- LOW WARM is only for polite-but-empty replies with no real engagement\n- IGNORE covers everything negative, neutral, OOO, irrelevant, and empty \u2014 one bucket, not written to sheet\n- If the message content is empty, blank, or contains only \"[no message content]\", always classify as IGNORE\n- Respond with ONLY the category label in all caps: HOT, WARM, LOW WARM, or IGNORE\n- No explanation, no punctuation, no extra text"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.anthropic",
+        "typeVersion": 1,
+        "position": [
+          896,
+          0
+        ],
+        "id": "a7c25236-fcd7-4fc7-ab0d-a29f2bb56fd9",
+        "name": "Message a model",
+        "credentials": {
+          "anthropicApi": {
+            "id": "MPuGnXML3kAMrZgk",
+            "name": "LinkedIn Outreach"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0B1L126873",
+            "mode": "id"
+          },
+          "text": "= *{{ $('Message a model').first().json.content[0].text }} Lead from {{ $('Client Config').first().json.client }}*\n\n*Name:* {{ $('Client Config').first().json.prospect_first_name }} {{ $('Client Config').first().json.prospect_last_name }}\n*Company:* {{ $('Client Config').first().json.prospect_company }}\n*LinkedIn:* {{ $('Client Config').first().json.prospect_linkedin }}\n*Setter:* {{ $('Client Config').first().json.setter_name }}\n*Campaign:* {{ $('Client Config').first().json.campaign_name }}\n*Date:* {{ $('Client Config').first().json.timestamp }}\n\n*Their message:*\n{{ $('Client Config').first().json.notes_replies }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true,
+            "unfurl_links": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          2592,
+          0
+        ],
+        "id": "162020c3-d4d2-4053-8673-6af9b9efb785",
+        "name": "Send a message",
+        "webhookId": "6f0ccfb2-4538-4e0b-b222-6b99448b8238",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "={{ $('Client Config').first().json.sheet_id }}",
+            "mode": "id"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "Warm Leads",
+            "mode": "name"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Prospect Name": "={{ $('Client Config').first().json.prospect_name }}",
+              "LinkedIn Page": "={{ $('Client Config').first().json.prospect_linkedin }}",
+              "Status": "Interested (Warm)",
+              "LinkedIn Contact": "={{ $('Client Config').first().json.setter_name }}",
+              "Date": "={{ $('Client Config').first().json.timestamp }}",
+              "Campaign": "={{ $('Client Config').first().json.campaign_name }}",
+              "Email": "={{ $('Client Config').first().json.prospect_email }}",
+              "Phone": "={{ $('Client Config').first().json.prospect_phone }}",
+              "Notes/ Replies": "={{ $('Client Config').first().json.notes_replies }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "LinkedIn Page",
+                "displayName": "LinkedIn Page",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Type",
+                "displayName": "Type",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "LinkedIn Contact",
+                "displayName": "LinkedIn Contact",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Campaign",
+                "displayName": "Campaign",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Email",
+                "displayName": "Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Notes/ Replies",
+                "displayName": "Notes/ Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          2144,
+          0
+        ],
+        "id": "fbefee8c-a472-45d8-901b-10ac5aa2aeaf",
+        "name": "Append row in Client sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI",
+            "mode": "list",
+            "cachedResultName": "Master Sheet LinkedIn Lead Tracker ",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1190028589,
+            "mode": "list",
+            "cachedResultName": "Warm Leads",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit#gid=1190028589"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Client": "={{ $('Client Config').first().json.client }}",
+              "Prospect Name": "={{ $('Client Config').first().json.prospect_name }}",
+              "LinkedIn Page (Lead)": "={{ $('Client Config').first().json.prospect_linkedin }}",
+              "LinkedIn Page (Setter)": "={{ $('Client Config').first().json.setter_linkedin }}",
+              "Status": "Interested (Warm)",
+              "Setter Name": "={{ $('Client Config').first().json.setter_name }}",
+              "Date": "={{ $('Client Config').first().json.raw_timestamp }}",
+              "Campaign": "={{ $('Client Config').first().json.campaign_name }}",
+              "Phone": "={{ $('Client Config').first().json.prospect_phone }}",
+              "Prospect Email": "={{ $('Webhook').first().json.body.lead.email_address }}",
+              "Notes/ Replies": "={{ $('Webhook').first().json.body.recent_messages[0].message }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Client",
+                "displayName": "Client",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Prospect Name",
+                "displayName": "Prospect Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page (Lead)",
+                "displayName": "LinkedIn Page (Lead)",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "LinkedIn Page (Setter)",
+                "displayName": "LinkedIn Page (Setter)",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Setter Name",
+                "displayName": "Setter Name",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Type",
+                "displayName": "Type",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Status",
+                "displayName": "Status",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Date",
+                "displayName": "Date",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Month",
+                "displayName": "Month",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Week",
+                "displayName": "Week",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Campaign",
+                "displayName": "Campaign",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Prospect Email",
+                "displayName": "Prospect Email",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Phone",
+                "displayName": "Phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Notes/ Replies",
+                "displayName": "Notes/ Replies",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          2368,
+          0
+        ],
+        "id": "c50760be-6e49-409c-89e4-a98d9b6289b7",
+        "name": "Append row in Master sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// \u2500\u2500\u2500 DYNAMIC CLIENT LOOKUP FROM MASTER SHEET \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n// Previous node (Get Clients from Master Sheet) passes all rows from the\n// Clients tab. Each row: Client | Sheet ID | Status\n// We match campaign name against client name keywords.\n\nconst setData       = $('Set Data').first().json;\nconst clientRows    = $input.all();\nconst campaignLower = setData.campaign_name_lower || '';\n\nconst MASTER_SHEET_ID = '1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI';\nconst MASTER_WARM_TAB = 'Warm Leads';\nconst MASTER_DC_TAB   = 'DC Booked';\n\n// \u2500\u2500\u2500 MATCH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nlet matchedClient = null;\n\nfor (const row of clientRows) {\n  const clientName = (row.json['Client'] || '').trim();\n  const status     = (row.json['Status'] || '').trim().toLowerCase();\n  const sheetId    = (row.json['Sheet ID'] || '').trim();\n\n  if (status !== 'active') continue;\n  if (!clientName || !sheetId) continue;\n\n  const keywords = clientName.toLowerCase()\n    .split(' ')\n    .filter(w => w.length > 2 && !['the','and','for','llc','inc'].includes(w));\n\n  const allMatch = keywords.every(kw => campaignLower.includes(kw));\n\n  if (allMatch) {\n    matchedClient = { clientName, sheetId };\n    break;\n  }\n}\n\n// \u2500\u2500\u2500 OUTPUT \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\nif (!matchedClient) {\n  return {\n    client_found:    false,\n    client:          'Unknown \u2014 ' + setData.campaign_name,\n    sheet_id:        null,\n    warm_tab:        'Warm Leads',\n    dc_booked_tab:   'DC Booked',\n    master_sheet_id: MASTER_SHEET_ID,\n    master_warm_tab: MASTER_WARM_TAB,\n    master_dc_tab:   MASTER_DC_TAB,\n    ...setData,\n  };\n}\n\nreturn {\n  client_found:    true,\n  client:          matchedClient.clientName,\n  sheet_id:        matchedClient.sheetId,\n  warm_tab:        'Warm Leads',\n  dc_booked_tab:   'DC Booked',\n  master_sheet_id: MASTER_SHEET_ID,\n  master_warm_tab: MASTER_WARM_TAB,\n  master_dc_tab:   MASTER_DC_TAB,\n  ...setData,\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          672,
+          0
+        ],
+        "id": "57d9c166-dd66-47a2-8a9a-2fca03b145f6",
+        "name": "Client Config"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI",
+            "mode": "list",
+            "cachedResultName": "Master Sheet LinkedIn Lead Tracker ",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1216347196,
+            "mode": "list",
+            "cachedResultName": "Clients",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QdTaEMlMR5jbiVKX_cIAZU-Efoc5LhQHftmPIrb0GrI/edit#gid=1216347196"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          448,
+          0
+        ],
+        "id": "681a2aad-1e6b-4bf7-bee6-c8fa9eef8d24",
+        "name": "Get Clients",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "0a6b831c-1886-4744-9582-68568f92b74d",
+                "leftValue": "={{ $('Client Config').first().json.client_found }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          1472,
+          0
+        ],
+        "id": "9f359dab-881e-4fbf-a40e-95f7d3374979",
+        "name": "Filter"
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Set Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Lead Status": {
+        "main": [
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Data": {
+        "main": [
+          [
+            {
+              "node": "Get Clients",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get row(s) in sheet": {
+        "main": [
+          [
+            {
+              "node": "Only continue if user does not exist",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Message a model": {
+        "main": [
+          [
+            {
+              "node": "Lead Status",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Only continue if user does not exist": {
+        "main": [
+          [
+            {
+              "node": "Append row in Client sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append row in Client sheet": {
+        "main": [
+          [
+            {
+              "node": "Append row in Master sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append row in Master sheet": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Client Config": {
+        "main": [
+          [
+            {
+              "node": "Message a model",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Clients": {
+        "main": [
+          [
+            {
+              "node": "Client Config",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter": {
+        "main": [
+          [
+            {
+              "node": "Get row(s) in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Patrick Jansen Villanueva",
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,372 @@
+{
+  "updatedAt": "2026-07-04T13:12:23.968Z",
+  "createdAt": "2026-05-26T18:51:56.886Z",
+  "id": "Jd1pPnGUVh5lttQ7",
+  "name": "VA Marketplace Email Automation",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "va-marketplace-email",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        96
+      ],
+      "id": "c453576a-43c6-4b01-8cfc-b30d3af33737",
+      "name": "Webhook",
+      "webhookId": "f40466d7-4b80-4d0a-85f4-9d658ef523e7"
+    },
+    {
+      "parameters": {
+        "jsCode": "  const body = $input.first().json.body;\n\n    // VA list items (plain strings \u2014 assembled into HTML inside this node)\n    const vaItems = (body.vas || [])\n      .map(va => `<li><strong>${va.name}</strong> \u2014 ${va.role}</li>`)\n      .join('');\n\n    // Preferred interview date\n    let ciDate = 'Not specified';\n    const raw = body.form?.preferredStartDate;\n    if (raw && raw.includes('T')) {\n      const [datePart, timePart] = raw.split('T');\n      const [year, month, day] = datePart.split('-').map(Number);\n      const [hour, min] = timePart.split(':').map(Number);\n      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\n      const ampm = hour >= 12 ? 'PM' : 'AM';\n      const h = hour % 12 || 12;\n      const m = String(min).padStart(2, '0');\n      ciDate = `${months[month-1]} ${day}, ${year} \u00b7 ${h}:${m} ${ampm} CT`;\n    }\n\n    // Submission timestamp\n    let submittedDate = body.submittedAt;\n    try {\n      submittedDate = new Date(body.submittedAt).toLocaleString('en-US', {\n        timeZone: 'America/Chicago',\n        month: 'short', day: 'numeric', year: 'numeric',\n        hour: 'numeric', minute: '2-digit',\n      }) + ' CT';\n    } catch(e) {}\n\n    // Airtable interface links (point to interface views, not raw records)\n    const baseId         = 'apptuAm73VyH7pcHA';\n    const batchPageId    = 'pagqgq7JK3HNWfi09';\n    const batchParam     = 'CXUiX';\n    const ciBatchPageId  = 'pagNbmoqa0auEggS0';\n    const ciBatchParam   = 'vCaFR';\n    const batchUrl       = `https://airtable.com/${baseId}/${batchPageId}?${batchParam}=${body.batchId}`;\n    const ciBatchUrl     = `https://airtable.com/${baseId}/${ciBatchPageId}?${ciBatchParam}=${body.ciBatchId}`;\n\n    const clientName      = body.clientName || '';\n    const clientFirstName = clientName.split(' ')[0];\n    const vaCount         = (body.vas || []).length;\n    const timelineLabel   = body.timelineLabel || '';\n    const notesText       = body.form?.notes?.trim() || '';\n\n    const notesRowHTML = notesText\n      ? `<tr><td style=\"padding:8px 0;color:#6b7280;width:160px;\">Notes</td><td style=\"padding:8px 0;\">${notesText}</td></tr>`\n      : '';\n    const notesSectionHTML = notesText\n      ? `<p style=\"margin:4px 0;\"><strong>Notes:</strong> ${notesText}</p>`\n      : '';\n\n    // \u2500\u2500 Email 1: Client confirmation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n    const clientEmailBody = `\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto;\">\n      <div style=\"background:#f07d19;padding:24px;border-radius:8px 8px 0 0;\">\n        <h1 style=\"color:white;margin:0;font-size:20px;\">Your VA Interview Request Has Been Submitted \u2713</h1>\n      </div>\n      <div style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px;\">\n        <p>Hi ${clientFirstName},</p>\n        <p>We've received your interview request and the Placements team is on it. Here's a summary of what was submitted:</p>\n        <h3 style=\"color:#f07d19;margin-bottom:8px;\">Your Selected Candidates (${vaCount})</h3>\n        <ul style=\"padding-left:20px;\">${vaItems}</ul>\n        <h3 style=\"color:#f07d19;margin-bottom:8px;\">Request Details</h3>\n        <table style=\"width:100%;border-collapse:collapse;\">\n          <tr><td style=\"padding:8px 0;color:#6b7280;width:160px;\">Timeline</td><td style=\"padding:8px 0;\"><strong>${timelineLabel}</strong></td></tr>\n          <tr><td style=\"padding:8px 0;color:#6b7280;\">Preferred Interview Date</td><td style=\"padding:8px 0;\"><strong>${ciDate}</strong></td></tr>\n          ${notesRowHTML}\n        </table>\n        <div style=\"background:#f9fafb;border-radius:6px;padding:16px;margin-top:24px;\">\n          <h4 style=\"margin:0 0 8px 0;\">What happens next</h4>\n          <ol style=\"margin:0;padding-left:20px;color:#374151;line-height:1.8;\">\n            <li>The Placements team reviews your selections</li>\n            <li>They'll coordinate interview slots with your chosen VAs</li>\n            <li>You'll hear back within 1\u20132 business days to confirm times</li>\n          </ol>\n        </div>\n        <p style=\"margin-top:24px;color:#6b7280;font-size:13px;\">Questions? Reply to this email or reach out to <a href=\"mailto:placements@scalevirtually.com\" \n  style=\"color:#f07d19;\">placements@scalevirtually.com</a>.</p>\n      </div>\n    </div>`;\n\n    // \u2500\u2500 Email 2: Placements internal alert \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n    const placementsEmailBody = `\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto;\">\n      <div style=\"background:#1e293b;padding:24px;border-radius:8px 8px 0 0;\">\n        <h1 style=\"color:white;margin:0;font-size:20px;\">\ud83d\udd14 New VA Marketplace Request</h1>\n        <p style=\"color:#94a3b8;margin:6px 0 0;font-size:13px;\">Submitted ${submittedDate}</p>\n      </div>\n      <div style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px;\">\n        <div style=\"background:#f8fafc;border-left:3px solid #f07d19;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:24px;\">\n          <p style=\"margin:0;font-size:15px;\"><strong>Client:</strong> ${clientName}</p>\n        </div>\n        <h3 style=\"color:#1e293b;margin-top:0;\">Selected VAs (${vaCount})</h3>\n        <ul style=\"padding-left:20px;\">${vaItems}</ul>\n        <h3 style=\"color:#1e293b;\">Request Details</h3>\n        <p style=\"margin:4px 0;\"><strong>Timeline:</strong> ${timelineLabel}</p>\n        <p style=\"margin:4px 0;\"><strong>Preferred Interview Date:</strong> ${ciDate}</p>\n        ${notesSectionHTML}\n        <h3 style=\"color:#1e293b;\">Airtable Records</h3>\n        <table style=\"border-collapse:collapse;width:100%;\">\n          <tr><td style=\"padding:8px 12px;background:#f1f5f9;border-radius:6px;\">\n            <a href=\"${batchUrl}\" style=\"color:#f07d19;text-decoration:none;font-weight:600;\">\ud83d\udccb Open Shortlisting Batch \u2192</a>\n          </td></tr>\n          <tr><td style=\"padding:4px;\"></td></tr>\n          <tr><td style=\"padding:8px 12px;background:#f1f5f9;border-radius:6px;\">\n            <a href=\"${ciBatchUrl}\" style=\"color:#f07d19;text-decoration:none;font-weight:600;\">\ud83d\udcc5 Open CI Batch \u2192</a>\n          </td></tr>\n        </table>\n      </div>\n    </div>`;\n\n    return [{ json: { clientEmailBody, placementsEmailBody, clientName, clientFirstName } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        96
+      ],
+      "id": "f2615039-79ee-4a54-97ce-8aff4a836bc8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com, jianna@scalevirtually.com, placements@scalevirtually.com",
+        "subject": "=VA Interview Request Submitted \u2014 {{ $json.clientName }}",
+        "message": "={{ $json.clientEmailBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "009532a1-bdb2-4384-a85e-c3657db68da9",
+      "name": "Confirmation receipt",
+      "webhookId": "3acb7a60-2528-42c2-94ee-b7987eea59b4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "pj@scalevirtually.com, jianna@scalevirtually.com, placements@scalevirtually.com",
+        "subject": "=[VA Marketplace] New Request \u2014 {{ $json.clientName }}",
+        "message": "={{ $json.placementsEmailBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        192
+      ],
+      "id": "d4d9ab1f-915b-4c1f-a3a1-1e8054de34b1",
+      "name": "Placements alert",
+      "webhookId": "3acb7a60-2528-42c2-94ee-b7987eea59b4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V7UmuhutGZTjFjs2",
+          "name": "Placements.SV"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Confirmation receipt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Placements alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "node",
+            "content-length": "485",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "accept-language": "*",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "136.158.65.51",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "PH",
+            "cf-ray": "a02627924dcf122b-SIN",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "sec-fetch-mode": "cors",
+            "x-forwarded-for": "136.158.65.51, 104.22.66.60",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-58786f47b8-h4m5w",
+            "x-is-trusted": "yes",
+            "x-real-ip": "136.158.65.51"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "va_marketplace_submission",
+            "clientId": "recAOYoEwnL0ZrL1m",
+            "clientName": "Adam Menoni \u2014 Qualitech Computers",
+            "vaIds": [
+              "recXPLaYa70Fm90s7"
+            ],
+            "vas": [
+              {
+                "id": "recXPLaYa70Fm90s7",
+                "name": "Mariella David",
+                "role": "Marketing Coordinator"
+              }
+            ],
+            "batchId": "recJrzQuxJnJxu6Q6",
+            "shortlistingIds": [
+              "recL0bplvEdccpSHi"
+            ],
+            "ciBatchId": "rec5PQ8WMOb7RF3hk",
+            "form": {
+              "preferredStartDate": "2026-06-02T10:00",
+              "timeline": "asap",
+              "notes": ""
+            },
+            "timelineLabel": "Urgent",
+            "submittedAt": "2026-05-27T15:46:49.165Z"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/va-marketplace-email",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "a68bae52-3f2c-4342-bd1d-41622ff5837b",
+  "activeVersionId": "a68bae52-3f2c-4342-bd1d-41622ff5837b",
+  "versionCounter": 34,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-05-26T18:51:56.891Z",
+      "createdAt": "2026-05-26T18:51:56.891Z",
+      "role": "workflow:owner",
+      "workflowId": "Jd1pPnGUVh5lttQ7",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:12:23.969Z",
+    "createdAt": "2026-07-04T13:12:23.969Z",
+    "versionId": "a68bae52-3f2c-4342-bd1d-41622ff5837b",
+    "workflowId": "Jd1pPnGUVh5lttQ7",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "va-marketplace-email",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          96
+        ],
+        "id": "c453576a-43c6-4b01-8cfc-b30d3af33737",
+        "name": "Webhook",
+        "webhookId": "f40466d7-4b80-4d0a-85f4-9d658ef523e7"
+      },
+      {
+        "parameters": {
+          "jsCode": "  const body = $input.first().json.body;\n\n    // VA list items (plain strings \u2014 assembled into HTML inside this node)\n    const vaItems = (body.vas || [])\n      .map(va => `<li><strong>${va.name}</strong> \u2014 ${va.role}</li>`)\n      .join('');\n\n    // Preferred interview date\n    let ciDate = 'Not specified';\n    const raw = body.form?.preferredStartDate;\n    if (raw && raw.includes('T')) {\n      const [datePart, timePart] = raw.split('T');\n      const [year, month, day] = datePart.split('-').map(Number);\n      const [hour, min] = timePart.split(':').map(Number);\n      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\n      const ampm = hour >= 12 ? 'PM' : 'AM';\n      const h = hour % 12 || 12;\n      const m = String(min).padStart(2, '0');\n      ciDate = `${months[month-1]} ${day}, ${year} \u00b7 ${h}:${m} ${ampm} CT`;\n    }\n\n    // Submission timestamp\n    let submittedDate = body.submittedAt;\n    try {\n      submittedDate = new Date(body.submittedAt).toLocaleString('en-US', {\n        timeZone: 'America/Chicago',\n        month: 'short', day: 'numeric', year: 'numeric',\n        hour: 'numeric', minute: '2-digit',\n      }) + ' CT';\n    } catch(e) {}\n\n    // Airtable interface links (point to interface views, not raw records)\n    const baseId         = 'apptuAm73VyH7pcHA';\n    const batchPageId    = 'pagqgq7JK3HNWfi09';\n    const batchParam     = 'CXUiX';\n    const ciBatchPageId  = 'pagNbmoqa0auEggS0';\n    const ciBatchParam   = 'vCaFR';\n    const batchUrl       = `https://airtable.com/${baseId}/${batchPageId}?${batchParam}=${body.batchId}`;\n    const ciBatchUrl     = `https://airtable.com/${baseId}/${ciBatchPageId}?${ciBatchParam}=${body.ciBatchId}`;\n\n    const clientName      = body.clientName || '';\n    const clientFirstName = clientName.split(' ')[0];\n    const vaCount         = (body.vas || []).length;\n    const timelineLabel   = body.timelineLabel || '';\n    const notesText       = body.form?.notes?.trim() || '';\n\n    const notesRowHTML = notesText\n      ? `<tr><td style=\"padding:8px 0;color:#6b7280;width:160px;\">Notes</td><td style=\"padding:8px 0;\">${notesText}</td></tr>`\n      : '';\n    const notesSectionHTML = notesText\n      ? `<p style=\"margin:4px 0;\"><strong>Notes:</strong> ${notesText}</p>`\n      : '';\n\n    // \u2500\u2500 Email 1: Client confirmation \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n    const clientEmailBody = `\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto;\">\n      <div style=\"background:#f07d19;padding:24px;border-radius:8px 8px 0 0;\">\n        <h1 style=\"color:white;margin:0;font-size:20px;\">Your VA Interview Request Has Been Submitted \u2713</h1>\n      </div>\n      <div style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px;\">\n        <p>Hi ${clientFirstName},</p>\n        <p>We've received your interview request and the Placements team is on it. Here's a summary of what was submitted:</p>\n        <h3 style=\"color:#f07d19;margin-bottom:8px;\">Your Selected Candidates (${vaCount})</h3>\n        <ul style=\"padding-left:20px;\">${vaItems}</ul>\n        <h3 style=\"color:#f07d19;margin-bottom:8px;\">Request Details</h3>\n        <table style=\"width:100%;border-collapse:collapse;\">\n          <tr><td style=\"padding:8px 0;color:#6b7280;width:160px;\">Timeline</td><td style=\"padding:8px 0;\"><strong>${timelineLabel}</strong></td></tr>\n          <tr><td style=\"padding:8px 0;color:#6b7280;\">Preferred Interview Date</td><td style=\"padding:8px 0;\"><strong>${ciDate}</strong></td></tr>\n          ${notesRowHTML}\n        </table>\n        <div style=\"background:#f9fafb;border-radius:6px;padding:16px;margin-top:24px;\">\n          <h4 style=\"margin:0 0 8px 0;\">What happens next</h4>\n          <ol style=\"margin:0;padding-left:20px;color:#374151;line-height:1.8;\">\n            <li>The Placements team reviews your selections</li>\n            <li>They'll coordinate interview slots with your chosen VAs</li>\n            <li>You'll hear back within 1\u20132 business days to confirm times</li>\n          </ol>\n        </div>\n        <p style=\"margin-top:24px;color:#6b7280;font-size:13px;\">Questions? Reply to this email or reach out to <a href=\"mailto:placements@scalevirtually.com\" \n  style=\"color:#f07d19;\">placements@scalevirtually.com</a>.</p>\n      </div>\n    </div>`;\n\n    // \u2500\u2500 Email 2: Placements internal alert \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n    const placementsEmailBody = `\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto;\">\n      <div style=\"background:#1e293b;padding:24px;border-radius:8px 8px 0 0;\">\n        <h1 style=\"color:white;margin:0;font-size:20px;\">\ud83d\udd14 New VA Marketplace Request</h1>\n        <p style=\"color:#94a3b8;margin:6px 0 0;font-size:13px;\">Submitted ${submittedDate}</p>\n      </div>\n      <div style=\"background:#fff;border:1px solid #e5e7eb;border-top:none;padding:24px;border-radius:0 0 8px 8px;\">\n        <div style=\"background:#f8fafc;border-left:3px solid #f07d19;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:24px;\">\n          <p style=\"margin:0;font-size:15px;\"><strong>Client:</strong> ${clientName}</p>\n        </div>\n        <h3 style=\"color:#1e293b;margin-top:0;\">Selected VAs (${vaCount})</h3>\n        <ul style=\"padding-left:20px;\">${vaItems}</ul>\n        <h3 style=\"color:#1e293b;\">Request Details</h3>\n        <p style=\"margin:4px 0;\"><strong>Timeline:</strong> ${timelineLabel}</p>\n        <p style=\"margin:4px 0;\"><strong>Preferred Interview Date:</strong> ${ciDate}</p>\n        ${notesSectionHTML}\n        <h3 style=\"color:#1e293b;\">Airtable Records</h3>\n        <table style=\"border-collapse:collapse;width:100%;\">\n          <tr><td style=\"padding:8px 12px;background:#f1f5f9;border-radius:6px;\">\n            <a href=\"${batchUrl}\" style=\"color:#f07d19;text-decoration:none;font-weight:600;\">\ud83d\udccb Open Shortlisting Batch \u2192</a>\n          </td></tr>\n          <tr><td style=\"padding:4px;\"></td></tr>\n          <tr><td style=\"padding:8px 12px;background:#f1f5f9;border-radius:6px;\">\n            <a href=\"${ciBatchUrl}\" style=\"color:#f07d19;text-decoration:none;font-weight:600;\">\ud83d\udcc5 Open CI Batch \u2192</a>\n          </td></tr>\n        </table>\n      </div>\n    </div>`;\n\n    return [{ json: { clientEmailBody, placementsEmailBody, clientName, clientFirstName } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          224,
+          96
+        ],
+        "id": "f2615039-79ee-4a54-97ce-8aff4a836bc8",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "sendTo": "pj@scalevirtually.com, jianna@scalevirtually.com, placements@scalevirtually.com",
+          "subject": "=VA Interview Request Submitted \u2014 {{ $json.clientName }}",
+          "message": "={{ $json.clientEmailBody }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          448,
+          0
+        ],
+        "id": "009532a1-bdb2-4384-a85e-c3657db68da9",
+        "name": "Confirmation receipt",
+        "webhookId": "3acb7a60-2528-42c2-94ee-b7987eea59b4",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "pj@scalevirtually.com, jianna@scalevirtually.com, placements@scalevirtually.com",
+          "subject": "=[VA Marketplace] New Request \u2014 {{ $json.clientName }}",
+          "message": "={{ $json.placementsEmailBody }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.2,
+        "position": [
+          448,
+          192
+        ],
+        "id": "d4d9ab1f-915b-4c1f-a3a1-1e8054de34b1",
+        "name": "Placements alert",
+        "webhookId": "3acb7a60-2528-42c2-94ee-b7987eea59b4",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "V7UmuhutGZTjFjs2",
+            "name": "Placements.SV"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Confirmation receipt",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Placements alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

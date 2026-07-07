@@ -1,0 +1,2332 @@
+{
+  "updatedAt": "2026-07-04T13:07:38.450Z",
+  "createdAt": "2026-02-04T16:28:23.083Z",
+  "id": "MKxENn2ylNS2ejBM",
+  "name": "[Gmail] MoM Fetcher",
+  "description": "Turns MoM-related Gmail threads into structured Airtable meeting summaries, making it easier to track discussion points and milestones per PDEV requirement.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "subject: \"MoM\""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        432
+      ],
+      "id": "e84ff8af-8ed3-4baa-9d89-9888228caa5d",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "UJOF7gMKW80Euvj8",
+          "name": "PJ SV Project"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Parse the following payload into the defined JSON schema. Ensure the Discussion Points are dense and technical, and the Milestones accurately reflect the project roadmap.\n\n### DATA SOURCE:\n{{ $json.narrative_context }}\n{{ $json.structured_tabular_data }}\n\n### REFERENCE:\nSubject: {{ $json.metadata.subject }}\nDate: {{ $json.metadata.date }}",
+        "options": {
+          "systemMessage": "## Role\nYou are a Context-Aware Information Architect. Your objective is to extract and categorize meeting intelligence into a structured JSON schema optimized for a modular UI.\n\n## Instructions\n1. Separate strategic Discussion Points from temporal Milestones.\n2. Identify Process Updates and Future Commitments regardless of industry.\n3. Return only valid JSON that can be parsed using JavaScript JSON.parse().\n4. Do not include raw line breaks inside string values. All line breaks inside string values must be escaped as \\\\n.\n5. Do not wrap the output in Markdown code blocks.\n6. Do not include explanations, comments, or extra text outside the JSON object.\n\n## Field Requirements\n- metadata: Object containing \"subject\" and \"date\".\n- discussion_points: One string only. Start with one high-level introductory sentence, followed by two escaped line breaks, then bullet points using \"-\" markers. Use \\\\n\\\\n before the first bullet and \\\\n between bullets.\n- milestones: One string only. Each milestone must be separated using escaped newline characters: \\\\n. Do not use bullet points.\n\n## Formatting Protocol\n- Apply Markdown bolding using **Text** to Stakeholders, Systems, and Dates.\n- Markdown bolding is allowed inside string values.\n- All newline characters must appear as literal escaped newline sequences: \\\\n.\n\n## Output Format\nReturn ONLY this raw JSON object structure:\n\n{\n  \"metadata\": {\n    \"subject\": \"string\",\n    \"date\": \"string\"\n  },\n  \"discussion_points\": \"string\",\n  \"milestones\": [\n    {\n      \"date\": \"string\",\n      \"task\": \"string\"\n    }\n  ]\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        3280,
+        1024
+      ],
+      "id": "06611519-bf40-4c8e-93a4-af9ad2098dcb",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "devstral-latest",
+          "mode": "list",
+          "cachedResultName": "devstral-latest"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3136,
+        1280
+      ],
+      "id": "f2393f6e-0798-43fe-b886-698b00faf34c",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "pmTl8tr3gScO6C5P",
+          "name": "Portkey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  try {\n    const rawOutput = item.json.output || \"\";\n\n    const jsonStart = rawOutput.indexOf(\"{\");\n    const jsonEnd = rawOutput.lastIndexOf(\"}\") + 1;\n\n    if (jsonStart === -1 || jsonEnd === 0) {\n      throw new Error(\"No JSON object found\");\n    }\n\n    let jsonText = rawOutput.substring(jsonStart, jsonEnd)\n      .replace(/```json/g, \"\")\n      .replace(/```/g, \"\")\n      .trim();\n\n    // Repair raw line breaks inside JSON strings\n    let repaired = \"\";\n    let inString = false;\n    let escaped = false;\n\n    for (const char of jsonText) {\n      if (escaped) {\n        repaired += char;\n        escaped = false;\n        continue;\n      }\n\n      if (char === \"\\\\\") {\n        repaired += char;\n        escaped = true;\n        continue;\n      }\n\n      if (char === '\"') {\n        repaired += char;\n        inString = !inString;\n        continue;\n      }\n\n      if (inString && char === \"\\n\") {\n        repaired += \"\\\\n\";\n        continue;\n      }\n\n      if (inString && char === \"\\r\") {\n        repaired += \"\\\\r\";\n        continue;\n      }\n\n      repaired += char;\n    }\n\n    const aiData = JSON.parse(repaired);\n\n    return {\n      json: {\n        metadata: aiData.metadata,\n        discussion_points: aiData.discussion_points,\n        milestones: aiData.milestones\n      }\n    };\n\n  } catch (error) {\n    return {\n      json: {\n        error: \"JSON Parsing Failed\",\n        message: error.message,\n        raw: item.json.output\n      }\n    };\n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3632,
+        1024
+      ],
+      "id": "7b2d7905-802f-4498-bf7b-9deeeb87bc99",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl8SG6egDHofQRur",
+          "mode": "list",
+          "cachedResultName": "MoM Output",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl8SG6egDHofQRur"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email Subject": "={{ $('Cleaner').item.json.metadata.subject }}",
+            "Meeting Summary": "={{ $json.discussion_points }}",
+            "Milestones": "={{ $json.Milestones_Text }}",
+            "PDEV Requirements": "={{ [$json[\"Requirement ID\"]]}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Email Subject",
+              "displayName": "Email Subject",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Output",
+              "displayName": "Email Output",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Meeting Summary",
+              "displayName": "Meeting Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status Updates",
+              "displayName": "Status Updates",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Discussion Points",
+              "displayName": "Discussion Points",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Milestones",
+              "displayName": "Milestones",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "PDEV Requirements",
+              "displayName": "PDEV Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        4496,
+        576
+      ],
+      "id": "3bb824e9-3fd0-4bc8-9a10-5dd8ef07d65f",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND(\n  OR({PDEV STAGE} = 'Ongoing PEC', {PDEV STAGE} = 'New Requirement'),\n  {{ $json.airtable_formula }}\n)",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client",
+            "Requirement ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1888,
+        288
+      ],
+      "id": "9388b56f-8d01-44f5-bc4b-c1ddf8648047",
+      "name": "Search Ongoing PECs",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxho5QOix1I061r",
+          "mode": "list",
+          "cachedResultName": "SV Support",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+        },
+        "filterByFormula": "=SEARCH('{{ $('Cleaner').first().json.metadata.from }}', {SV Email})",
+        "options": {
+          "fields": [
+            "Name",
+            "Support Record ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3008,
+        -96
+      ],
+      "id": "93516565-bd42-426e-8870-3d7975b1ea3c",
+      "name": "Search PE",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3808,
+        240
+      ],
+      "id": "bd073309-da38-459a-b7fa-f729da1c4608",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3232,
+        -96
+      ],
+      "id": "ee46c97e-2d89-444c-bbed-39d5e3389d05",
+      "name": "Sender not exists?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblxho5QOix1I061r",
+          "mode": "list",
+          "cachedResultName": "SV Support",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+        },
+        "filterByFormula": "=SEARCH('{{ $('Cleaner').first().json.metadata.from }}', {SV Email})",
+        "options": {
+          "fields": [
+            "Name",
+            "Support Record ID"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3520,
+        -160
+      ],
+      "id": "79c842a2-0a0b-467d-bccf-34d940e7ffec",
+      "name": "Search PE1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND({PDEV STAGE} = 'Outliers', {{ $node[\"Cleaner\"].json.airtable_formula }})",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2336,
+        528
+      ],
+      "id": "8bfc8827-fdd0-47f8-8034-39dfe12d533d",
+      "name": "Search Outliers Requirements",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2112,
+        432
+      ],
+      "id": "e8a47038-3082-437d-9557-a1e7cac48b3f",
+      "name": "Ongoing Requirement not exists?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2560,
+        528
+      ],
+      "id": "0b247b06-1451-433a-bfe8-9a83a9dbabd2",
+      "name": "Outlier Requirement not exists?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND({PDEV STAGE} = 'Parked', {{ $node[\"Cleaner\"].json.airtable_formula }})",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2784,
+        624
+      ],
+      "id": "c2e7643d-c6f6-469b-a984-ecfe88fb136d",
+      "name": "Parked",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3008,
+        624
+      ],
+      "id": "35f6cde9-1cdd-4b05-b006-1bb4b9a59d6e",
+      "name": "Parked Requirement not exists?"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblwf4ikeTB158oZV",
+          "mode": "list",
+          "cachedResultName": "PDEV Requirements",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+        },
+        "filterByFormula": "=AND({PDEV STAGE} = 'Completed', {{ $node[\"Cleaner\"].json.airtable_formula }})",
+        "options": {
+          "fields": [
+            "PDEV Requirement",
+            "Client"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        3232,
+        528
+      ],
+      "id": "ed88b65f-5f26-4c12-8f16-41a1c1643400",
+      "name": "Completed",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5617afa5-07b5-49fd-ba62-718e81fd4af7",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3520,
+        336
+      ],
+      "id": "1ae593b4-1d28-4095-93a7-f1886bf2fc85",
+      "name": "Set Requirement ID Outlier."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fac0da43-9b25-41c8-b476-0219e64fdc7b",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3520,
+        144
+      ],
+      "id": "3215d0a6-26ff-4896-8970-26041c2a9585",
+      "name": "Set Requirement ID Ongoing"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ef6e1ca9-066e-4ee1-8bdd-40ea4b9334a0",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3520,
+        720
+      ],
+      "id": "e640ef6c-de5d-402b-bdf0-6b7f0b3c3947",
+      "name": "Set Requirement ID Parked"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c09679e4-1d30-44c9-9dbc-95dbb2b8c054",
+              "name": "Requirement ID",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3520,
+        528
+      ],
+      "id": "05c3c52b-e178-41a5-bfe4-0ab98b62b50b",
+      "name": "Set Requirement ID Completed"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4032,
+        576
+      ],
+      "id": "70d06114-54b2-4686-8f4e-762a9ec22b16",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This script extracts tabular data, narrative context, and builds a clean email-only Airtable Formula\nconst EXCLUDED_EMAILS = [\n  \"placements.sv@scalevirtually.com\",\n  \"ace@scalevirtually.com\",\n  \"ck@scalevirtually.com\",\n  \"bam@scalevirtually.com\",\n  \"karlo@scalevirtually.com\"\n];\n\nconst simplified_output = [];\n\nfor (const item of $input.all()) {\n  const json_content = item.json;\n  \n  // 1. Extract and Clean Email Participants\n  const fromEmail = json_content.from?.value?.[0]?.address?.toLowerCase() || \"\";\n  const toEmails = (json_content.to?.value || []).map(p => p.address.toLowerCase());\n  const ccEmails = (json_content.cc?.value || []).map(p => p.address.toLowerCase());\n\n  // 2. Internal Exclusion Logic\n  const primaryTo = toEmails[0] || \"\";\n  if (EXCLUDED_EMAILS.includes(primaryTo)) continue;\n\n  const hasExternalTo = toEmails.some(addr => !EXCLUDED_EMAILS.includes(addr));\n  if (!hasExternalTo) continue;\n\n  // 3. Metadata & Participant Flattening\n  const subject = json_content.subject || \"No Subject\";\n  const allParticipants = [...new Set([fromEmail, ...toEmails, ...ccEmails])]\n    .filter(e => e !== \"\")\n    .map(e => e.trim());\n\n  // 4. Construct Clean Airtable Formula (Emails Only)\n  const emailConditions = allParticipants.map(emailAddr => {\n    return `FIND('${emailAddr}', LOWER(ARRAYJOIN({Email (from Client)}, ' '))), FIND('${emailAddr}', LOWER(ARRAYJOIN({POC Primary email}, ' ')))`;\n  });\n\n  // Removed the {PDEV STAGE} logic here as requested\n  const airtable_formula = `OR(${emailConditions.join(\", \")})`;\n  \n  // 5. Extract Narrative Context\n  let text_body = json_content.text || \"\";\n  let narrative_context = text_body.split(/thanks and regards|best regards|--/i)[0].trim();\n\n  // 6. Extract Structural Data (HTML Tables)\n  let html_body = json_content.html || \"\";\n  let table_data = [];\n  const cell_matches = html_body.match(/<td[^>]*>(.*?)<\\/td>/gi);\n  if (cell_matches) {\n    table_data = cell_matches.map(cell => cell.replace(/<[^>]*>/g, '').trim()).filter(text => text !== \"\");\n  }\n\n  simplified_output.push({\n    json: {\n      metadata: {\n          from: fromEmail,\n          to_primary: primaryTo,\n          subject: subject,\n          date: json_content.date,\n          participants: allParticipants\n      },\n      airtable_formula: airtable_formula,\n      narrative_context: narrative_context,\n      structured_tabular_data: table_data.join(\" | \"),\n      is_hybrid_payload: table_data.length > 0 && narrative_context.length > 50\n    }\n  });\n}\n\nreturn simplified_output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        400
+      ],
+      "id": "558a4ec9-e699-43f7-b57f-33ecee357de2",
+      "name": "Cleaner"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  let raw = item.json.Milestones || item.json.milestones || [];\n\n  // If Milestones is a JSON string, parse it\n  if (typeof raw === 'string') {\n    try {\n      raw = JSON.parse(raw);\n    } catch (error) {\n      raw = [];\n    }\n  }\n\n  // If still not an array, force it to empty array\n  if (!Array.isArray(raw)) {\n    raw = [];\n  }\n\n  const milestonesText = raw\n    .map((m, index) => {\n      const date = m.date || 'TBD';\n      const task = String(m.task || '')\n        .replace(/\\*\\*/g, '')\n        .trim();\n\n      return `${index + 1}. [${date}] ${task}`;\n    })\n    .join('\\n');\n\n  return {\n    json: {\n      ...item.json,\n\n      // Create a NEW clean field\n      Milestones_Text: milestonesText\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4240,
+        576
+      ],
+      "id": "f35b0992-71eb-4f7a-b988-77b2d91f4017",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Search Ongoing PECs": {
+      "main": [
+        [
+          {
+            "node": "Search PE",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Ongoing Requirement not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search PE": {
+      "main": [
+        [
+          {
+            "node": "Sender not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sender not exists?": {
+      "main": [
+        [
+          {
+            "node": "Search PE1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search PE1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Outliers Requirements": {
+      "main": [
+        [
+          {
+            "node": "Outlier Requirement not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ongoing Requirement not exists?": {
+      "main": [
+        [
+          {
+            "node": "Search Outliers Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Requirement ID Ongoing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outlier Requirement not exists?": {
+      "main": [
+        [
+          {
+            "node": "Parked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Requirement ID Outlier.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parked": {
+      "main": [
+        [
+          {
+            "node": "Parked Requirement not exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parked Requirement not exists?": {
+      "main": [
+        [
+          {
+            "node": "Completed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Requirement ID Parked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed": {
+      "main": [
+        [
+          {
+            "node": "Set Requirement ID Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Outlier.": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Ongoing": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Parked": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set Requirement ID Completed": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Search Ongoing PECs",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "gQZoWFB01klMg0wu",
+    "saveExecutionProgress": true
+  },
+  "staticData": {
+    "node:Gmail Trigger": {
+      "Gmail Trigger": {
+        "lastTimeChecked": 1783370726,
+        "possibleDuplicates": [
+          "19f392df63daceed"
+        ]
+      }
+    },
+    "node:Gmail Trigger1": {
+      "Gmail Trigger1": {
+        "lastTimeChecked": 1772467412,
+        "possibleDuplicates": [
+          "19caf4a60a3cb6a9"
+        ]
+      }
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19e8f9fc9af90994",
+          "threadId": "19e8f9fc9af90994",
+          "labelIds": [
+            "UNREAD",
+            "IMPORTANT",
+            "CATEGORY_FORUMS",
+            "INBOX"
+          ],
+          "sizeEstimate": 73744,
+          "headers": {
+            "delivered-to": "Delivered-To: pj@scalevirtually.com",
+            "received": "Received: from smtpclient.apple ([136.158.51.140])\r\n        by smtp.gmail.com with ESMTPSA id 41be03b00d2f7-c85df032df5sm3236835a12.6.2026.06.03.15.34.29\r\n        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);\r\n        Wed, 03 Jun 2026 15:34:31 -0700 (PDT)",
+            "x-forwarded-encrypted": "X-Forwarded-Encrypted: i=2; AFNElJ+Bqo5vYPlmAPLrONPTOVu0h/70IfTD2oP3qToEjEDRWphqwCJ/9GapJSP4q3hUl7/LRQ==@scalevirtually.com",
+            "x-received": "X-Received: by 2002:a05:6300:6705:b0:3b4:6a31:6d0f with SMTP id adf61e73a8af0-3b497a15855mr6269383637.41.1780526071778;\r\n        Wed, 03 Jun 2026 15:34:31 -0700 (PDT)",
+            "arc-seal": "ARC-Seal: i=1; a=rsa-sha256; t=1780526072; cv=none;\r\n        d=google.com; s=arc-20240605;\r\n        b=RA3dmkOrqVu9gjRlFnsc5nb+rL8L+x+8nC3JSzlL2MGS7OwDnFNtGws7R5qYettW0l\r\n         KyRlYcdYJTc6T2SbF3wjRlhLJ/mNNl22WrVmGr3vqUAH1O0+YWpnJ6ChNvqL0RG1EEjE\r\n         eWZq8LzS1BCIqmqgxBZMjcqTNyrlUq1dnzLVAjOYBhtaMABXMdtevdG4EtVwVpTV2pUk\r\n         xS59zgzkV+49WxeEj3uSsIs5YOXg+lNcttnMh0a3XgkukmsCwBhDE7gtss9naI7nqIQt\r\n         ovCalNf4rWNBD/L297MR5BcYB4IPxEBBYQF8h3E6tZmRLM23qHJVQtYNZGk6b211UIt+\r\n         hr/g==",
+            "arc-message-signature": "ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;\r\n        h=to:cc:date:message-id:subject:mime-version:from:dkim-signature;\r\n        bh=bpbT2Fg6bo2En9kvabiavj2wqNpHhzlUiveLSTB89Vw=;\r\n        fh=FiK+9TG8JB4YnAmasdgWn6Tit1V4Do6dUL608NWUfh8=;\r\n        b=hrAeW12EWpMLMRCoEs3GkyDCTeELVqPFo8Fm9l+m8PFqj1Z/jw2Kq8p4sC/ptFDn4r\r\n         JJfRxLRWQDNJk5Gtp3MNVkduw7lItAIYoWgT2ahAQsFO6SI6kd4xbq6CqI3z3SxV52VJ\r\n         UPLfNRrfNvdH284hAsqtsMkFX8j38AjLjPYJpyQaZHnk6YlghqnCeR4HlVF1uTBLNfnU\r\n         QtdmcPtmv1DkZ4RRRIbDr5nESgOe8NoMtOvg+ePKq7560jMEa4i+NSr+JWAMPpzWTUKZ\r\n         Dn2tYxW8GQdVNNrB1XZ7kSb9gycebAPZt63wO5gVt69gZZhJX0eAQx7V6ac0JS+kG418\r\n         E9kQ==;\r\n        dara=google.com",
+            "arc-authentication-results": "ARC-Authentication-Results: i=1; mx.google.com;\r\n       dkim=fail header.i=@scalevirtually.com header.s=google header.b=jR6mZA7L;\r\n       spf=pass (google.com: domain of jesy@scalevirtually.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=jesy@scalevirtually.com;\r\n       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=scalevirtually.com;\r\n       dara=neutral header.i=@scalevirtually.com",
+            "return-path": "Return-Path: <pdev+bncBDB4JS7PXEKBB6OXQLIQMGQE6B3WARI@scalevirtually.com>",
+            "received-spf": "Received-SPF: pass (google.com: domain of jesy@scalevirtually.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;",
+            "authentication-results": "Authentication-Results: mx.google.com;\r\n       arc=pass (i=2 spf=pass spfdomain=scalevirtually.com dmarc=pass fromdomain=scalevirtually.com);\r\n       spf=pass (google.com: domain of pdev+bncbdb4js7pxekbb6oxqliqmgqe6b3wari@scalevirtually.com designates 209.85.220.69 as permitted sender) smtp.mailfrom=pdev+bncBDB4JS7PXEKBB6OXQLIQMGQE6B3WARI@scalevirtually.com;\r\n       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=scalevirtually.com;\r\n       dara=neutral header.i=@scalevirtually.com",
+            "x-google-dkim-signature": "X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;\r\n        d=1e100.net; s=20251104; t=1780526073; x=1781130873;\r\n        h=list-unsubscribe:list-subscribe:list-archive:list-help:list-post\r\n         :x-spam-checked-in-group:list-id:mailing-list:precedence\r\n         :x-original-authentication-results:x-original-sender:to:cc:date\r\n         :message-id:subject:mime-version:from:x-gm-gg:x-beenthere\r\n         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;\r\n        bh=bpbT2Fg6bo2En9kvabiavj2wqNpHhzlUiveLSTB89Vw=;\r\n        b=cRyqEok1AsejwTzCeKfwlsuflZI7eX+RTwKVlHWZ6tNtPG8xQCfnpR+WaCdJYvfLJC\r\n         JMPJpfjvDq4wCuHZFLM707EuUvAM4zC6ZNC8GPhIAQPbwL830p1ZwrBMKdR87w99eTnT\r\n         mTJl3sp7pJhWUbCle8/0dfksgf2PUE4MY17q6DNVxIRFPf9c9ouV99uURQWAxh6z5wdZ\r\n         lzatdzGMhl6Is0/0WXLxdLMHH3PeSpJqZC+W9FO5dKu3LJ0bFw4E+yrJ85VY4tTIyBWb\r\n         c/9XMk+dZhzsYZTJQMrGx51avyWJmAEkFSIfc0uUTyFL5GhJgOhCt2VGGMzwJs2uPQvH\r\n         ha6A==",
+            "x-gm-message-state": "X-Gm-Message-State: AOJu0YxQYLbGla7LTxeigpNjF0WoxnRd1qs0UqSBIk3yAx+Fi6bgHFW6\r\n\tBnsPmSP49I3LQkl7GvGTjoBE8PqW4sGs+UwmpbMnJOLvRTaNiX0gIYw3MQuRitMtJNqQyg==",
+            "x-beenthere": "X-BeenThere: pdev@scalevirtually.com; h=\"AUV6zMN5TYleol41Cgzf/J+TL68YMmeHMGp7u1m2lxlfnHh5dA==\"",
+            "x-gm-gg": "X-Gm-Gg: Acq92OGLaOS3UrhDGlyLNtYmzDvvk5HME+ySI7vegeWkwOarxzrQceGiwKsLaCxLNMZ\r\n\tML2vta4gDs4qdYfBvVjSnP94QpUEyXKTQkdFngysKKP/O8KuM4MP5XXeivrOQAwZxYNSlYRwNqz\r\n\t812S5zs1ewF5e/toe0EmmeepA97WUsM2OANgT1NwuWfLwChnosmd/ALuu/24dmc7pmf0LcwvkbI\r\n\tVmnOLuTF+lwCeCZWclexGzcGpn7oY91e/26WW8SNaheBkqsq0ytBh7jFLHmvHVQuuK4k6kMQsfs\r\n\tAugKmm7jGJisfEiCSRokTfL5enOGJ5V1nguIIJcUZE+nCY9IYSfhxsWrDvJD9jV4IZdTNIgkoQO\r\n\tO25iLlB4To6iGVwtYCzrDz+y5Zj12OdOREsOWFeuKnHVCk6knueZWhBMiHsiHBejwfXasuKX8kZ\r\n\t4E/Umsx1Ili7a4Wjes5T4p4kgZYpyZhIsmZ5Noi6ov39FnaJeAOYJxf9n3aMVv",
+            "from": "From: Jesylou Jopio <jesy@scalevirtually.com>",
+            "content-type": "Content-Type: multipart/alternative;\r\n\tboundary=\"Apple-Mail=_155BEC25-B320-4FAB-B81E-981082DEF71F\"",
+            "mime-version": "Mime-Version: 1.0 (Mac OS X Mail 16.0 \\(3864.600.51.1.1\\))",
+            "subject": "Subject: [MOM] Alignment Discussion - Dallin Cottle : Sales Coaching 060426",
+            "message-id": "Message-Id: <CE27B1DD-3D48-4E6A-AAD5-931971112222@scalevirtually.com>",
+            "date": "Date: Thu, 4 Jun 2026 06:33:57 +0800",
+            "cc": "Cc: Scale Virtually Process Development Team <pdev@scalevirtually.com>,\r\n Sean Connolly <sean@scalevirtually.com>,\r\n Paul Dichoso <paul@scalevirtually.com>,\r\n Joren Wilson <joren@scalevirtually.com>,\r\n Denesse Marie Handumon <denesse@scalevirtually.com>",
+            "to": "To: Corey Robinson <corey@roarcxo.com>,\r\n chris@roarcxo.com",
+            "x-mailer": "X-Mailer: Apple Mail (2.3864.600.51.1.1)",
+            "x-original-sender": "X-Original-Sender: jesy@scalevirtually.com",
+            "x-original-authentication-results": "X-Original-Authentication-Results: mx.google.com;       dkim=fail\r\n header.i=@scalevirtually.com header.s=google header.b=jR6mZA7L;\r\n       spf=pass (google.com: domain of jesy@scalevirtually.com designates\r\n 209.85.220.41 as permitted sender) smtp.mailfrom=jesy@scalevirtually.com;\r\n       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=scalevirtually.com;\r\n       dara=neutral header.i=@scalevirtually.com",
+            "precedence": "Precedence: list",
+            "mailing-list": "Mailing-list: list pdev@scalevirtually.com; contact pdev+owners@scalevirtually.com",
+            "list-id": "List-ID: <pdev.scalevirtually.com>",
+            "x-spam-checked-in-group": "X-Spam-Checked-In-Group: pdev@scalevirtually.com",
+            "x-google-group-id": "X-Google-Group-Id: 766992137603",
+            "list-post": "List-Post: <https://groups.google.com/a/scalevirtually.com/group/pdev/post>, <mailto:pdev@scalevirtually.com>",
+            "list-help": "List-Help: <https://support.google.com/a/scalevirtually.com/bin/topic.py?topic=25838>,\r\n <mailto:pdev+help@scalevirtually.com>",
+            "list-archive": "List-Archive: <https://groups.google.com/a/scalevirtually.com/group/pdev/>",
+            "list-subscribe": "List-Subscribe: <https://groups.google.com/a/scalevirtually.com/group/pdev/subscribe>,\r\n <mailto:pdev+subscribe@scalevirtually.com>",
+            "list-unsubscribe": "List-Unsubscribe: <mailto:googlegroups-manage+766992137603+unsubscribe@googlegroups.com>,\r\n <https://groups.google.com/a/scalevirtually.com/group/pdev/subscribe>"
+          },
+          "html": "<html aria-label=\"message body\"><head><meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\"></head><body style=\"overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\"><div><span id=\"docs-internal-guid-a2352eae-7fff-89a4-bb16-7ec319d56f0e\"><div dir=\"ltr\" align=\"left\" style=\"margin-left: 0pt;\"><table style=\"border: medium; border-collapse: collapse;\"><colgroup><col width=\"624\"></colgroup><tbody><tr style=\"height: 67.5pt;\"><td style=\"vertical-align: top; background-color: rgb(234, 123, 33); padding: 15pt 21pt; overflow: hidden; overflow-wrap: break-word;\"><h1 dir=\"ltr\" style=\"line-height: 1.527273; text-align: center; margin-top: 0pt; margin-bottom: 3pt;\"><span style=\"font-size: 16.5pt; font-family: Arial, sans-serif; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Minutes of the Meeting</span></h1><p dir=\"ltr\" style=\"line-height: 1.62; text-align: center; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 10pt; font-family: Arial, sans-serif; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Scale Virtually and ROAR: Sales Process Alignment</span></p></td></tr><tr style=\"height: 697.5pt;\"><td style=\"vertical-align: top; background-color: rgb(255, 255, 255); padding: 18pt 21pt 21pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.714286; margin-top: 0pt; margin-bottom: 12pt;\"><span style=\"font-size: 10.5pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Thank you for the productive discussion on aligning the sales playbook development and coaching cadence for ROAR Media\u2019s Sales team. We\u2019ve agreed to a piecemeal approach for documentation, starting with finalized process segments, and set a weekly coaching schedule for Tuesdays and Thursdays, 12\u20131 PM Central. Jesy will send a meeting summary, and Den will share recurring invites. We look forward to continued progress on the agreed next steps.</span></p><h3 dir=\"ltr\" style=\"line-height: 1.714286; margin-top: 12pt; margin-bottom: 18pt;\"><span style=\"font-size: 12.5pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Key Focus Areas &amp; Opportunities</span></h3><ul style=\"margin-top: 0px; margin-bottom: 0px; padding-inline-start: 48px;\"><li dir=\"ltr\" aria-level=\"1\" style=\"list-style-type: disc; font-size: 10.5pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre; margin-left: 15pt;\"><p dir=\"ltr\" role=\"presentation\" style=\"line-height: 1.714286; margin-top: 12pt; margin-bottom: 0pt;\"><span style=\"font-size: 10.5pt; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Process Clarity: Clarify documentation approach to align with ROAR's rapid process iteration.</span></p></li><li dir=\"ltr\" aria-level=\"1\" style=\"list-style-type: disc; font-size: 10.5pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre; margin-left: 15pt;\"><p dir=\"ltr\" role=\"presentation\" style=\"line-height: 1.714286; margin-top: 0pt; margin-bottom: 26pt;\"><span style=\"font-size: 10.5pt; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Documentation: Integrate sales coaching content into the playbook for centralized reference.</span></p></li></ul><h3 dir=\"ltr\" style=\"line-height: 1.716; margin-top: 4pt; margin-bottom: 4pt;\"><span style=\"font-size: 12.5pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Milestones</span></h3><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 11pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"><span class=\"Apple-tab-span\" style=\"white-space: pre;\">\t</span></span><span style=\"font-size: 11pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"><span class=\"Apple-tab-span\" style=\"white-space: pre;\">\t</span></span><span style=\"font-size: 11pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"><span class=\"Apple-tab-span\" style=\"white-space: pre;\">\t</span></span><span style=\"font-size: 11pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"><span class=\"Apple-tab-span\" style=\"white-space: pre;\">\t</span></span><span style=\"font-size: 11pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"><span class=\"Apple-tab-span\" style=\"white-space: pre;\">\t</span></span><span style=\"font-size: 11pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"><span class=\"Apple-tab-span\" style=\"white-space: pre;\">\t</span></span><span style=\"font-size: 11pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"><span class=\"Apple-tab-span\" style=\"white-space: pre;\">\t</span></span></p><div dir=\"ltr\" align=\"center\" style=\"margin-left: 0pt;\"><table style=\"border: medium; border-collapse: collapse;\"><colgroup><col width=\"98\"><col width=\"125\"><col width=\"79\"><col width=\"61\"><col width=\"74\"><col width=\"130\"></colgroup><tbody><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; background-color: rgb(255, 153, 0); padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; text-align: center; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; font-weight: 700; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Milestone / Deliverable</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; background-color: rgb(255, 153, 0); padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; text-align: center; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; font-weight: 700; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Action Item</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; background-color: rgb(255, 153, 0); padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; text-align: center; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; font-weight: 700; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Owner / Assignee</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; background-color: rgb(255, 153, 0); padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; text-align: center; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; font-weight: 700; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Status</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; background-color: rgb(255, 153, 0); padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; text-align: center; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; font-weight: 700; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Target Date</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; background-color: rgb(255, 153, 0); padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; text-align: center; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; font-weight: 700; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Dependencies / Inputs Needed</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Sales Playbook Direction Alignment</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Pivot approach from full-process documentation to </span><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-weight: 700; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">piecemeal training/playbook support</span><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\"> as ROAR finalizes each segment.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">SV Team</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Agreed</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Immediate</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">ROAR to send only finalized segments</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">ROAR Sales Process Finalization</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Continue finalizing automation, training, pipeline structure, and ownership internally before sending to SV.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Corey / ROAR Team</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">In Progress</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">TBD</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">ROAR automation team; GHL pipeline updates</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Finalized Segment Handoff</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Send finalized sales process segments to SV as they become ready.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Chris / ROAR Team</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Planned</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Ongoing</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Finalized ROAR SOPs, L10 outputs, scripts, workflows</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Lead Qualification Reference</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Once finalized, send the lead qualification process to SV so it can be turned into a one-pager/training reference.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Chris / ROAR Team</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Planned</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">TBD</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Final qualification criteria and scorecard</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Sales Coaching Documentation</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Capture concepts, questions, issues, and frameworks discussed during Joran\u2019s sales coaching sessions.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">SV Team</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">In Progress</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Ongoing</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Sales coaching recordings/notes; Joran inputs</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Sales Training Reference Materials</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Convert approved coaching outputs into training/reference materials, either in the playbook or a separate document.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">SV Team</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Planned</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Ongoing</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">ROAR sign-off on coaching outputs</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Sales Coaching Cadence</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Send recurring invites for sales coaching sessions.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Den</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Planned</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Immediate</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Confirmed schedule: Tuesdays/Thursdays, 12 PM Central</span></p></td></tr><tr style=\"height: 0pt;\"><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">MOM / Alignment Recap</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Send MOM email documenting the agreed revised approach and next steps.</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Jesy</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Planned</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Immediate</span></p></td><td style=\"border-width: 1pt; border-style: solid; border-color: rgb(183, 183, 183); vertical-align: middle; padding: 3.528pt; overflow: hidden; overflow-wrap: break-word;\"><p dir=\"ltr\" style=\"line-height: 1.2; margin-top: 0pt; margin-bottom: 0pt;\"><span style=\"font-size: 9pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Final action items from call</span></p></td></tr></tbody></table></div><br><h3 dir=\"ltr\" style=\"line-height: 1.714286; margin-top: 12pt; margin-bottom: 18pt;\"><span style=\"font-size: 10.5pt; font-family: Arial, sans-serif; color: rgb(67, 67, 67); font-weight: 400; font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">If there\u2019s anything I missed or if you\u2019d like to adjust any of the milestones, please feel free to let me know.</span></h3><p dir=\"ltr\" style=\"line-height: 1.714286; margin-top: 0pt; margin-bottom: 9pt;\"><span style=\"font-size: 10.5pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">Best regards,</span></p><p dir=\"ltr\" style=\"line-height: 1.714286; margin-top: 0pt; margin-bottom: 9pt;\"><span style=\"font-size: 10.5pt; font-family: Arial, sans-serif; color: rgb(0, 0, 0); font-variant-ligatures: normal; font-variant-alternates: normal; font-variant-numeric: normal; font-variant-east-asian: normal; font-variant-position: normal; vertical-align: baseline; white-space: pre-wrap;\">SV Process Engineering Team</span></p></td></tr></tbody></table></div></span></div><div><br></div><br><div>\n<meta charset=\"UTF-8\"><div dir=\"auto\" style=\"caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0); letter-spacing: normal; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration: none; overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\"><div dir=\"auto\" style=\"caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0); letter-spacing: normal; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration: none; overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\"><div dir=\"auto\" style=\"caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0); letter-spacing: normal; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration: none; overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\"><div dir=\"auto\" style=\"caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0); letter-spacing: normal; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration: none; overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\"><div dir=\"auto\" style=\"font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-caps: normal; font-weight: normal; letter-spacing: normal; text-align: start; text-indent: 0px; text-transform: none; white-space: normal; word-spacing: 0px; -webkit-text-stroke-width: 0px; text-decoration: none; caret-color: rgb(0, 0, 0); color: rgb(0, 0, 0); overflow-wrap: break-word; -webkit-nbsp-mode: space; line-break: after-white-space;\">Thanks and regards,<br><br><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 820px; color: rgb(255, 255, 255); orphans: 2; widows: 2; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; vertical-align: -webkit-baseline-middle; font-family: Verdana;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 820px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td width=\"150\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><span class=\"template3__ImageContainer-sc-vj949k-0 kElCTu\" style=\"box-sizing: border-box; margin-right: 20px; display: block;\"><img src=\"https://scalevirtually.ph/wp-content/uploads/2023/02/ScaleVirtually_logo.jpg\" role=\"presentation\" width=\"130\" class=\"image__StyledImage-sc-hupvqm-0 fQKUvi\" style=\"box-sizing: border-box; border-style: none; max-width: 130px;\"></span></td><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><h2 color=\"#000000\" class=\"name__NameContainer-sc-1m457h3-0 hkyYrA\" style=\"box-sizing: border-box; font-size: 18px; line-height: 1.38; margin: 0px;\"><span style=\"box-sizing: border-box;\">Jesy</span><span style=\"box-sizing: border-box;\">&nbsp;</span><span style=\"box-sizing: border-box;\">Jopio</span></h2><div style=\"box-sizing: border-box; font-size: 14px; line-height: 22px; margin: 0px;\"><span style=\"box-sizing: border-box;\">Scale Virtually LLC</span></div><div style=\"box-sizing: border-box; font-size: 14px; line-height: 22px; margin: 0px;\"><span style=\"box-sizing: border-box;\">Client Services Manager</span></div></td><td width=\"30\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><div style=\"box-sizing: border-box; width: 30px;\"></div></td><td color=\"#F17D1A\" direction=\"vertical\" width=\"1\" height=\"auto\" class=\"color-divider__Divider-sc-1h38qjv-0 dcKmvZ\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border-top-width: 0px; border-right-width: 0px; border-bottom-style: none; border-left-width: 1px; border-left-style: solid; border-left-color: rgb(241, 125, 26); width: 1px;\"></td><td width=\"30\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><div style=\"box-sizing: border-box; width: 30px;\"></div></td><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 298.438px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr height=\"25\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><td width=\"30\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 30px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: bottom;\"><span color=\"#F17D1A\" width=\"11\" class=\"contact-info__IconWrapper-sc-mmkjr6-1 hBHfIp\" style=\"box-sizing: border-box; display: inline-block; background-color: rgb(241, 125, 26);\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/phone-icon-2x.png\" color=\"#F17D1A\" alt=\"mobilePhone\" width=\"13\" class=\"contact-info__ContactLabelIcon-sc-mmkjr6-0 dGVIJx\" style=\"box-sizing: border-box; border-style: none; display: block;\"></span></td></tr></tbody></table></td><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><a href=\"tel:(773) 692-2792\" color=\"#000000\" class=\"contact-info__ExternalLink-sc-mmkjr6-2 bibcmr\" style=\"box-sizing: border-box; text-decoration: none; color: rgb(0, 0, 0); font-size: 12px;\">(773) 692-2792</a></td></tr><tr height=\"25\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><td width=\"30\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 30px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: bottom;\"><span color=\"#F17D1A\" width=\"11\" class=\"contact-info__IconWrapper-sc-mmkjr6-1 hBHfIp\" style=\"box-sizing: border-box; display: inline-block; background-color: rgb(241, 125, 26);\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/email-icon-2x.png\" color=\"#F17D1A\" alt=\"emailAddress\" width=\"13\" class=\"contact-info__ContactLabelIcon-sc-mmkjr6-0 dGVIJx\" style=\"box-sizing: border-box; border-style: none; display: block;\"></span></td></tr></tbody></table></td><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><a href=\"mailto:jesy@scalevirtually.com\" color=\"#000000\" class=\"contact-info__ExternalLink-sc-mmkjr6-2 bibcmr\" style=\"box-sizing: border-box; text-decoration: none; color: rgb(0, 0, 0); font-size: 12px;\">jesy@scalevirtually.com</a></td></tr><tr height=\"25\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><td width=\"30\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: middle;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 30px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; vertical-align: bottom;\"><span color=\"#F17D1A\" width=\"11\" class=\"contact-info__IconWrapper-sc-mmkjr6-1 hBHfIp\" style=\"box-sizing: border-box; display: inline-block; background-color: rgb(241, 125, 26);\"><img src=\"https://cdn2.hubspot.net/hubfs/53/tools/email-signature-generator/icons/link-icon-2x.png\" color=\"#F17D1A\" alt=\"website\" width=\"13\" class=\"contact-info__ContactLabelIcon-sc-mmkjr6-0 dGVIJx\" style=\"box-sizing: border-box; border-style: none; display: block;\"></span></td></tr></tbody></table></td><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><a href=\"https://www.scalevirtually.com/\" color=\"#000000\" class=\"contact-info__ExternalLink-sc-mmkjr6-2 bibcmr\" style=\"box-sizing: border-box; text-decoration: none; color: rgb(0, 0, 0); font-size: 12px;\">www.scalevirtually.com</a></td></tr></tbody></table></td></tr></tbody></table></td></tr><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 820px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td height=\"30\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"></td></tr><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td color=\"#F17D1A\" direction=\"horizontal\" width=\"auto\" height=\"1\" class=\"color-divider__Divider-sc-1h38qjv-0 dcKmvZ\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border-top-width: 0px; border-right-width: 0px; border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: rgb(241, 125, 26); border-left-style: none; width: 820px; display: block;\"></td></tr><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td height=\"30\" style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"></td></tr></tbody></table></td></tr><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 820px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; text-align: right; vertical-align: top;\"></td></tr></tbody></table></td></tr><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><table cellpadding=\"0\" cellspacing=\"0\" class=\"table__StyledTable-sc-1avdl6r-0 jWJRxL\" style=\"border-collapse: collapse; border-spacing: 0px; width: 820px; vertical-align: -webkit-baseline-middle;\"><tbody style=\"box-sizing: border-box;\"><tr style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px;\"></td><td style=\"box-sizing: border-box; margin: 0px; padding: 0px; border: 0px; text-align: right;\"><span style=\"box-sizing: border-box; display: block;\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://scalevirtually.com/\" color=\"#F17D1A\" class=\"cta__CtaButton-sc-sq0d6i-0 SvDt\" style=\"box-sizing: border-box; background-color: rgb(241, 125, 26); border-width: 6px 12px; border-style: solid; border-color: rgb(241, 125, 26); display: inline-block; color: rgb(255, 255, 255); font-weight: 700; text-decoration: none; text-align: center; line-height: 40px; font-size: 12px; border-radius: 3px;\">Looking to Lower Costs, 2x Growth, and Scale Successfully? Let's make it happen! Schedule a FREE Strategy Call Today!</a></span></td></tr></tbody></table></td></tr></tbody></table><div><br></div></div></div></div><br class=\"Apple-interchange-newline\"></div><br class=\"Apple-interchange-newline\"></div><br class=\"Apple-interchange-newline\"><br class=\"Apple-interchange-newline\">\n</div>\n\n<br></body></html>",
+          "text": "\nMinutes of the Meeting\nScale Virtually and ROAR: Sales Process Alignment\nThank you for the productive discussion on aligning the sales playbook development and coaching cadence for ROAR Media\u2019s Sales team. We\u2019ve agreed to a piecemeal approach for documentation, starting with finalized process segments, and set a weekly coaching schedule for Tuesdays and Thursdays, 12\u20131 PM Central. Jesy will send a meeting summary, and Den will share recurring invites. We look forward to continued progress on the agreed next steps.\n\nKey Focus Areas & Opportunities\n\nProcess Clarity: Clarify documentation approach to align with ROAR's rapid process iteration.\nDocumentation: Integrate sales coaching content into the playbook for centralized reference.\n\nMilestones\n\t\t\t\t\t\t\t\nMilestone / Deliverable\nAction Item\nOwner / Assignee\nStatus\nTarget Date\nDependencies / Inputs Needed\nSales Playbook Direction Alignment\nPivot approach from full-process documentation to piecemeal training/playbook support as ROAR finalizes each segment.\nSV Team\nAgreed\nImmediate\nROAR to send only finalized segments\nROAR Sales Process Finalization\nContinue finalizing automation, training, pipeline structure, and ownership internally before sending to SV.\nCorey / ROAR Team\nIn Progress\nTBD\nROAR automation team; GHL pipeline updates\nFinalized Segment Handoff\nSend finalized sales process segments to SV as they become ready.\nChris / ROAR Team\nPlanned\nOngoing\nFinalized ROAR SOPs, L10 outputs, scripts, workflows\nLead Qualification Reference\nOnce finalized, send the lead qualification process to SV so it can be turned into a one-pager/training reference.\nChris / ROAR Team\nPlanned\nTBD\nFinal qualification criteria and scorecard\nSales Coaching Documentation\nCapture concepts, questions, issues, and frameworks discussed during Joran\u2019s sales coaching sessions.\nSV Team\nIn Progress\nOngoing\nSales coaching recordings/notes; Joran inputs\nSales Training Reference Materials\nConvert approved coaching outputs into training/reference materials, either in the playbook or a separate document.\nSV Team\nPlanned\nOngoing\nROAR sign-off on coaching outputs\nSales Coaching Cadence\nSend recurring invites for sales coaching sessions.\nDen\nPlanned\nImmediate\nConfirmed schedule: Tuesdays/Thursdays, 12 PM Central\nMOM / Alignment Recap\nSend MOM email documenting the agreed revised approach and next steps.\nJesy\nPlanned\nImmediate\nFinal action items from call\n\nIf there\u2019s anything I missed or if you\u2019d like to adjust any of the milestones, please feel free to let me know.\n\nBest regards,\n\nSV Process Engineering Team\n\n\n\nThanks and regards,\n\n\nJesy Jopio\nScale Virtually LLC\nClient Services Manager\n\n(773) 692-2792 <tel:(773) 692-2792>\n\tjesy@scalevirtually.com <mailto:jesy@scalevirtually.com>\n\twww.scalevirtually.com <https://www.scalevirtually.com/>\nLooking to Lower Costs, 2x Growth, and Scale Successfully? Let's make it happen! Schedule a FREE Strategy Call Today! <https://scalevirtually.com/>\n\n\n\n\n\n\n",
+          "textAsHtml": "<p>Minutes of the Meeting<br/>Scale Virtually and ROAR: Sales Process Alignment<br/>Thank you for the productive discussion on aligning the sales playbook development and coaching cadence for ROAR Media&rsquo;s Sales team. We&rsquo;ve agreed to a piecemeal approach for documentation, starting with finalized process segments, and set a weekly coaching schedule for Tuesdays and Thursdays, 12&ndash;1 PM Central. Jesy will send a meeting summary, and Den will share recurring invites. We look forward to continued progress on the agreed next steps.</p><p>Key Focus Areas &amp; Opportunities</p><p>Process Clarity: Clarify documentation approach to align with ROAR&apos;s rapid process iteration.<br/>Documentation: Integrate sales coaching content into the playbook for centralized reference.</p><p>Milestones<br/>&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;&#x9;<br/>Milestone / Deliverable<br/>Action Item<br/>Owner / Assignee<br/>Status<br/>Target Date<br/>Dependencies / Inputs Needed<br/>Sales Playbook Direction Alignment<br/>Pivot approach from full-process documentation to piecemeal training/playbook support as ROAR finalizes each segment.<br/>SV Team<br/>Agreed<br/>Immediate<br/>ROAR to send only finalized segments<br/>ROAR Sales Process Finalization<br/>Continue finalizing automation, training, pipeline structure, and ownership internally before sending to SV.<br/>Corey / ROAR Team<br/>In Progress<br/>TBD<br/>ROAR automation team; GHL pipeline updates<br/>Finalized Segment Handoff<br/>Send finalized sales process segments to SV as they become ready.<br/>Chris / ROAR Team<br/>Planned<br/>Ongoing<br/>Finalized ROAR SOPs, L10 outputs, scripts, workflows<br/>Lead Qualification Reference<br/>Once finalized, send the lead qualification process to SV so it can be turned into a one-pager/training reference.<br/>Chris / ROAR Team<br/>Planned<br/>TBD<br/>Final qualification criteria and scorecard<br/>Sales Coaching Documentation<br/>Capture concepts, questions, issues, and frameworks discussed during Joran&rsquo;s sales coaching sessions.<br/>SV Team<br/>In Progress<br/>Ongoing<br/>Sales coaching recordings/notes; Joran inputs<br/>Sales Training Reference Materials<br/>Convert approved coaching outputs into training/reference materials, either in the playbook or a separate document.<br/>SV Team<br/>Planned<br/>Ongoing<br/>ROAR sign-off on coaching outputs<br/>Sales Coaching Cadence<br/>Send recurring invites for sales coaching sessions.<br/>Den<br/>Planned<br/>Immediate<br/>Confirmed schedule: Tuesdays/Thursdays, 12 PM Central<br/>MOM / Alignment Recap<br/>Send MOM email documenting the agreed revised approach and next steps.<br/>Jesy<br/>Planned<br/>Immediate<br/>Final action items from call</p><p>If there&rsquo;s anything I missed or if you&rsquo;d like to adjust any of the milestones, please feel free to let me know.</p><p>Best regards,</p><p>SV Process Engineering Team</p><p>Thanks and regards,</p><p>Jesy Jopio<br/>Scale Virtually LLC<br/>Client Services Manager</p><p>(773) 692-2792 &lt;tel:(773) 692-2792&gt;<br/>&#x9;<a href=\"mailto:jesy@scalevirtually.com\">jesy@scalevirtually.com</a> &lt;<a href=\"mailto:jesy@scalevirtually.com\">mailto:jesy@scalevirtually.com</a>&gt;<br/>&#x9;<a href=\"http://www.scalevirtually.com\">www.scalevirtually.com</a> &lt;<a href=\"https://www.scalevirtually.com/\">https://www.scalevirtually.com/</a>&gt;<br/>Looking to Lower Costs, 2x Growth, and Scale Successfully? Let&apos;s make it happen! Schedule a FREE Strategy Call Today! &lt;<a href=\"https://scalevirtually.com/\">https://scalevirtually.com/</a>&gt;</p>",
+          "subject": "[MOM] Alignment Discussion - Dallin Cottle : Sales Coaching 060426",
+          "date": "2026-06-03T22:33:57.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "corey@roarcxo.com",
+                "name": "Corey Robinson"
+              },
+              {
+                "address": "chris@roarcxo.com",
+                "name": ""
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Corey Robinson</span> &lt;<a href=\"mailto:corey@roarcxo.com\" class=\"mp_address_email\">corey@roarcxo.com</a>&gt;</span>, <span class=\"mp_address_group\"><a href=\"mailto:chris@roarcxo.com\" class=\"mp_address_email\">chris@roarcxo.com</a></span>",
+            "text": "\"Corey Robinson\" <corey@roarcxo.com>, chris@roarcxo.com"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "jesy@scalevirtually.com",
+                "name": "Jesylou Jopio"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Jesylou Jopio</span> &lt;<a href=\"mailto:jesy@scalevirtually.com\" class=\"mp_address_email\">jesy@scalevirtually.com</a>&gt;</span>",
+            "text": "\"Jesylou Jopio\" <jesy@scalevirtually.com>"
+          },
+          "cc": {
+            "value": [
+              {
+                "address": "pdev@scalevirtually.com",
+                "name": "Scale Virtually Process Development Team"
+              },
+              {
+                "address": "sean@scalevirtually.com",
+                "name": "Sean Connolly"
+              },
+              {
+                "address": "paul@scalevirtually.com",
+                "name": "Paul Dichoso"
+              },
+              {
+                "address": "joren@scalevirtually.com",
+                "name": "Joren Wilson"
+              },
+              {
+                "address": "denesse@scalevirtually.com",
+                "name": "Denesse Marie Handumon"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">Scale Virtually Process Development Team</span> &lt;<a href=\"mailto:pdev@scalevirtually.com\" class=\"mp_address_email\">pdev@scalevirtually.com</a>&gt;</span>, <span class=\"mp_address_group\"><span class=\"mp_address_name\">Sean Connolly</span> &lt;<a href=\"mailto:sean@scalevirtually.com\" class=\"mp_address_email\">sean@scalevirtually.com</a>&gt;</span>, <span class=\"mp_address_group\"><span class=\"mp_address_name\">Paul Dichoso</span> &lt;<a href=\"mailto:paul@scalevirtually.com\" class=\"mp_address_email\">paul@scalevirtually.com</a>&gt;</span>, <span class=\"mp_address_group\"><span class=\"mp_address_name\">Joren Wilson</span> &lt;<a href=\"mailto:joren@scalevirtually.com\" class=\"mp_address_email\">joren@scalevirtually.com</a>&gt;</span>, <span class=\"mp_address_group\"><span class=\"mp_address_name\">Denesse Marie Handumon</span> &lt;<a href=\"mailto:denesse@scalevirtually.com\" class=\"mp_address_email\">denesse@scalevirtually.com</a>&gt;</span>",
+            "text": "\"Scale Virtually Process Development Team\" <pdev@scalevirtually.com>, \"Sean Connolly\" <sean@scalevirtually.com>, \"Paul Dichoso\" <paul@scalevirtually.com>, \"Joren Wilson\" <joren@scalevirtually.com>, \"Denesse Marie Handumon\" <denesse@scalevirtually.com>"
+          },
+          "messageId": "<CE27B1DD-3D48-4E6A-AAD5-931971112222@scalevirtually.com>"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "AI Agent": [
+      {
+        "json": {
+          "output": "{\n  \"metadata\": {\n    \"subject\": \"[MOM] Alignment Discussion - **Dallin Cottle**: Sales Coaching & Process Alignment for **ROAR Media**\",\n    \"date\": \"2026-06-03\"\n  },\n  \"discussion_points\": \"This session focused on aligning **ROAR Media**\u2019s sales playbook development with rapid process iteration and establishing a structured coaching cadence.\\\\n\\\\n- **Process Clarity**: Adopted a piecemeal documentation approach to synchronize with **ROAR**\u2019s iterative finalization of sales segments, ensuring only validated components are integrated into the playbook.\\\\n- **Documentation & Coaching Integration**: Centralized sales coaching outputs (e.g., frameworks, Q&A, issues) into the playbook or standalone reference materials, with **Joran**\u2019s sessions serving as the primary input source.\\\\n- **Cadence & Ownership**: Established a recurring coaching schedule (**Tuesdays/Thursdays, 12\u20131 PM Central**) and clarified handoff protocols for finalized segments (e.g., **SOPs, L10 outputs, scripts**) between **ROAR** and **Scale Virtually (SV)** teams.\",\n  \"milestones\": [\n    {\n      \"date\": \"Immediate\",\n      \"task\": \"**Sales Playbook Direction Alignment**: Pivot from full-process documentation to modular training/playbook support, contingent on **ROAR**\u2019s finalized segments.\"\n    },\n    {\n      \"date\": \"TBD\",\n      \"task\": \"**ROAR Sales Process Finalization**: **Corey/ROAR Team** to complete automation, pipeline structure, and ownership updates (dependencies: **GHL pipeline**, internal automation team).\"\n    },\n    {\n      \"date\": \"Ongoing\",\n      \"task\": \"**Finalized Segment Handoff**: **Chris/ROAR Team** to transmit validated segments (e.g., **SOPs, workflows**) to **SV** as they are approved.\"\n    },\n    {\n      \"date\": \"TBD\",\n      \"task\": \"**Lead Qualification Reference**: **Chris/ROAR Team** to provide finalized qualification criteria for conversion into a one-pager/training asset by **SV**.\"\n    },\n    {\n      \"date\": \"Ongoing\",\n      \"task\": \"**Sales Coaching Documentation**: **SV Team** to capture and structure **Joran**\u2019s coaching outputs (recordings/notes) for playbook integration.\"\n    },\n    {\n      \"date\": \"Ongoing\",\n      \"task\": \"**Sales Training Reference Materials**: **SV Team** to convert approved coaching outputs into reference materials pending **ROAR** sign-off.\"\n    },\n    {\n      \"date\": \"Immediate\",\n      \"task\": \"**Sales Coaching Cadence**: **Den** to distribute recurring invites for **Tuesdays/Thursdays, 12 PM Central** sessions.\"\n    },\n    {\n      \"date\": \"Immediate\",\n      \"task\": \"**MOM/Alignment Recap**: **Jesy** to circulate meeting summary with revised approach and action items.\"\n    }\n  ]\n}"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "7793c1e0-83d8-4e41-b2d1-815ef3356add",
+  "activeVersionId": "7793c1e0-83d8-4e41-b2d1-815ef3356add",
+  "versionCounter": 787,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-02-04T16:28:23.087Z",
+      "createdAt": "2026-02-04T16:28:23.087Z",
+      "role": "workflow:owner",
+      "workflowId": "MKxENn2ylNS2ejBM",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    },
+    {
+      "updatedAt": "2026-04-29T22:14:43.442Z",
+      "createdAt": "2026-04-29T22:14:43.442Z",
+      "id": "syNcT4Uk2dB151Vd",
+      "name": "AI Agent"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:07:38.451Z",
+    "createdAt": "2026-07-04T13:07:38.451Z",
+    "versionId": "7793c1e0-83d8-4e41-b2d1-815ef3356add",
+    "workflowId": "MKxENn2ylNS2ejBM",
+    "nodes": [
+      {
+        "parameters": {
+          "pollTimes": {
+            "item": [
+              {
+                "mode": "everyMinute"
+              }
+            ]
+          },
+          "simple": false,
+          "filters": {
+            "q": "subject: \"MoM\""
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.gmailTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          1104,
+          432
+        ],
+        "id": "e84ff8af-8ed3-4baa-9d89-9888228caa5d",
+        "name": "Gmail Trigger",
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "UJOF7gMKW80Euvj8",
+            "name": "PJ SV Project"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "promptType": "define",
+          "text": "=Parse the following payload into the defined JSON schema. Ensure the Discussion Points are dense and technical, and the Milestones accurately reflect the project roadmap.\n\n### DATA SOURCE:\n{{ $json.narrative_context }}\n{{ $json.structured_tabular_data }}\n\n### REFERENCE:\nSubject: {{ $json.metadata.subject }}\nDate: {{ $json.metadata.date }}",
+          "options": {
+            "systemMessage": "## Role\nYou are a Context-Aware Information Architect. Your objective is to extract and categorize meeting intelligence into a structured JSON schema optimized for a modular UI.\n\n## Instructions\n1. Separate strategic Discussion Points from temporal Milestones.\n2. Identify Process Updates and Future Commitments regardless of industry.\n3. Return only valid JSON that can be parsed using JavaScript JSON.parse().\n4. Do not include raw line breaks inside string values. All line breaks inside string values must be escaped as \\\\n.\n5. Do not wrap the output in Markdown code blocks.\n6. Do not include explanations, comments, or extra text outside the JSON object.\n\n## Field Requirements\n- metadata: Object containing \"subject\" and \"date\".\n- discussion_points: One string only. Start with one high-level introductory sentence, followed by two escaped line breaks, then bullet points using \"-\" markers. Use \\\\n\\\\n before the first bullet and \\\\n between bullets.\n- milestones: One string only. Each milestone must be separated using escaped newline characters: \\\\n. Do not use bullet points.\n\n## Formatting Protocol\n- Apply Markdown bolding using **Text** to Stakeholders, Systems, and Dates.\n- Markdown bolding is allowed inside string values.\n- All newline characters must appear as literal escaped newline sequences: \\\\n.\n\n## Output Format\nReturn ONLY this raw JSON object structure:\n\n{\n  \"metadata\": {\n    \"subject\": \"string\",\n    \"date\": \"string\"\n  },\n  \"discussion_points\": \"string\",\n  \"milestones\": [\n    {\n      \"date\": \"string\",\n      \"task\": \"string\"\n    }\n  ]\n}"
+          }
+        },
+        "type": "@n8n/n8n-nodes-langchain.agent",
+        "typeVersion": 3,
+        "position": [
+          3280,
+          1024
+        ],
+        "id": "06611519-bf40-4c8e-93a4-af9ad2098dcb",
+        "name": "AI Agent",
+        "retryOnFail": true,
+        "maxTries": 5,
+        "waitBetweenTries": 5000
+      },
+      {
+        "parameters": {
+          "model": {
+            "__rl": true,
+            "value": "devstral-latest",
+            "mode": "list",
+            "cachedResultName": "devstral-latest"
+          },
+          "builtInTools": {},
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+        "typeVersion": 1.3,
+        "position": [
+          3136,
+          1280
+        ],
+        "id": "f2393f6e-0798-43fe-b886-698b00faf34c",
+        "name": "OpenAI Chat Model",
+        "credentials": {
+          "openAiApi": {
+            "id": "pmTl8tr3gScO6C5P",
+            "name": "Portkey"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return items.map(item => {\n  try {\n    const rawOutput = item.json.output || \"\";\n\n    const jsonStart = rawOutput.indexOf(\"{\");\n    const jsonEnd = rawOutput.lastIndexOf(\"}\") + 1;\n\n    if (jsonStart === -1 || jsonEnd === 0) {\n      throw new Error(\"No JSON object found\");\n    }\n\n    let jsonText = rawOutput.substring(jsonStart, jsonEnd)\n      .replace(/```json/g, \"\")\n      .replace(/```/g, \"\")\n      .trim();\n\n    // Repair raw line breaks inside JSON strings\n    let repaired = \"\";\n    let inString = false;\n    let escaped = false;\n\n    for (const char of jsonText) {\n      if (escaped) {\n        repaired += char;\n        escaped = false;\n        continue;\n      }\n\n      if (char === \"\\\\\") {\n        repaired += char;\n        escaped = true;\n        continue;\n      }\n\n      if (char === '\"') {\n        repaired += char;\n        inString = !inString;\n        continue;\n      }\n\n      if (inString && char === \"\\n\") {\n        repaired += \"\\\\n\";\n        continue;\n      }\n\n      if (inString && char === \"\\r\") {\n        repaired += \"\\\\r\";\n        continue;\n      }\n\n      repaired += char;\n    }\n\n    const aiData = JSON.parse(repaired);\n\n    return {\n      json: {\n        metadata: aiData.metadata,\n        discussion_points: aiData.discussion_points,\n        milestones: aiData.milestones\n      }\n    };\n\n  } catch (error) {\n    return {\n      json: {\n        error: \"JSON Parsing Failed\",\n        message: error.message,\n        raw: item.json.output\n      }\n    };\n  }\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3632,
+          1024
+        ],
+        "id": "7b2d7905-802f-4498-bf7b-9deeeb87bc99",
+        "name": "Code in JavaScript1"
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tbl8SG6egDHofQRur",
+            "mode": "list",
+            "cachedResultName": "MoM Output",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl8SG6egDHofQRur"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Email Subject": "={{ $('Cleaner').item.json.metadata.subject }}",
+              "Meeting Summary": "={{ $json.discussion_points }}",
+              "Milestones": "={{ $json.Milestones_Text }}",
+              "PDEV Requirements": "={{ [$json[\"Requirement ID\"]]}}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Email Subject",
+                "displayName": "Email Subject",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Email Output",
+                "displayName": "Email Output",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Meeting Summary",
+                "displayName": "Meeting Summary",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Status Updates",
+                "displayName": "Status Updates",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Discussion Points",
+                "displayName": "Discussion Points",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Milestones",
+                "displayName": "Milestones",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "PDEV Requirements",
+                "displayName": "PDEV Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": false
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {
+            "typecast": true
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          4496,
+          576
+        ],
+        "id": "3bb824e9-3fd0-4bc8-9a10-5dd8ef07d65f",
+        "name": "Create a record",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblwf4ikeTB158oZV",
+            "mode": "list",
+            "cachedResultName": "PDEV Requirements",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+          },
+          "filterByFormula": "=AND(\n  OR({PDEV STAGE} = 'Ongoing PEC', {PDEV STAGE} = 'New Requirement'),\n  {{ $json.airtable_formula }}\n)",
+          "options": {
+            "fields": [
+              "PDEV Requirement",
+              "Client",
+              "Requirement ID"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1888,
+          288
+        ],
+        "id": "9388b56f-8d01-44f5-bc4b-c1ddf8648047",
+        "name": "Search Ongoing PECs",
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblxho5QOix1I061r",
+            "mode": "list",
+            "cachedResultName": "SV Support",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+          },
+          "filterByFormula": "=SEARCH('{{ $('Cleaner').first().json.metadata.from }}', {SV Email})",
+          "options": {
+            "fields": [
+              "Name",
+              "Support Record ID"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          3008,
+          -96
+        ],
+        "id": "93516565-bd42-426e-8870-3d7975b1ea3c",
+        "name": "Search PE",
+        "alwaysOutputData": true,
+        "executeOnce": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineByPosition",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          3808,
+          240
+        ],
+        "id": "bd073309-da38-459a-b7fa-f729da1c4608",
+        "name": "Merge1"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+                "leftValue": "={{ !!$json.id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          3232,
+          -96
+        ],
+        "id": "ee46c97e-2d89-444c-bbed-39d5e3389d05",
+        "name": "Sender not exists?"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblxho5QOix1I061r",
+            "mode": "list",
+            "cachedResultName": "SV Support",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblxho5QOix1I061r"
+          },
+          "filterByFormula": "=SEARCH('{{ $('Cleaner').first().json.metadata.from }}', {SV Email})",
+          "options": {
+            "fields": [
+              "Name",
+              "Support Record ID"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          3520,
+          -160
+        ],
+        "id": "79c842a2-0a0b-467d-bccf-34d940e7ffec",
+        "name": "Search PE1",
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblwf4ikeTB158oZV",
+            "mode": "list",
+            "cachedResultName": "PDEV Requirements",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+          },
+          "filterByFormula": "=AND({PDEV STAGE} = 'Outliers', {{ $node[\"Cleaner\"].json.airtable_formula }})",
+          "options": {
+            "fields": [
+              "PDEV Requirement",
+              "Client"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          2336,
+          528
+        ],
+        "id": "8bfc8827-fdd0-47f8-8034-39dfe12d533d",
+        "name": "Search Outliers Requirements",
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+                "leftValue": "={{ !!$json.id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          2112,
+          432
+        ],
+        "id": "e8a47038-3082-437d-9557-a1e7cac48b3f",
+        "name": "Ongoing Requirement not exists?"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+                "leftValue": "={{ !!$json.id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          2560,
+          528
+        ],
+        "id": "0b247b06-1451-433a-bfe8-9a83a9dbabd2",
+        "name": "Outlier Requirement not exists?"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblwf4ikeTB158oZV",
+            "mode": "list",
+            "cachedResultName": "PDEV Requirements",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+          },
+          "filterByFormula": "=AND({PDEV STAGE} = 'Parked', {{ $node[\"Cleaner\"].json.airtable_formula }})",
+          "options": {
+            "fields": [
+              "PDEV Requirement",
+              "Client"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          2784,
+          624
+        ],
+        "id": "c2e7643d-c6f6-469b-a984-ecfe88fb136d",
+        "name": "Parked",
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "2fcb7657-97fd-4dfc-a5e4-a686a9b071af",
+                "leftValue": "={{ !!$json.id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "false",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "or"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.3,
+        "position": [
+          3008,
+          624
+        ],
+        "id": "35f6cde9-1cdd-4b05-b006-1bb4b9a59d6e",
+        "name": "Parked Requirement not exists?"
+      },
+      {
+        "parameters": {
+          "operation": "search",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblwf4ikeTB158oZV",
+            "mode": "list",
+            "cachedResultName": "PDEV Requirements",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblwf4ikeTB158oZV"
+          },
+          "filterByFormula": "=AND({PDEV STAGE} = 'Completed', {{ $node[\"Cleaner\"].json.airtable_formula }})",
+          "options": {
+            "fields": [
+              "PDEV Requirement",
+              "Client"
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          3232,
+          528
+        ],
+        "id": "ed88b65f-5f26-4c12-8f16-41a1c1643400",
+        "name": "Completed",
+        "alwaysOutputData": true,
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "5617afa5-07b5-49fd-ba62-718e81fd4af7",
+                "name": "Requirement ID",
+                "value": "={{ $json.id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3520,
+          336
+        ],
+        "id": "1ae593b4-1d28-4095-93a7-f1886bf2fc85",
+        "name": "Set Requirement ID Outlier."
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "fac0da43-9b25-41c8-b476-0219e64fdc7b",
+                "name": "Requirement ID",
+                "value": "={{ $json.id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3520,
+          144
+        ],
+        "id": "3215d0a6-26ff-4896-8970-26041c2a9585",
+        "name": "Set Requirement ID Ongoing"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "ef6e1ca9-066e-4ee1-8bdd-40ea4b9334a0",
+                "name": "Requirement ID",
+                "value": "={{ $json.id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3520,
+          720
+        ],
+        "id": "e640ef6c-de5d-402b-bdf0-6b7f0b3c3947",
+        "name": "Set Requirement ID Parked"
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "c09679e4-1d30-44c9-9dbc-95dbb2b8c054",
+                "name": "Requirement ID",
+                "value": "={{ $json.id }}",
+                "type": "string"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          3520,
+          528
+        ],
+        "id": "05c3c52b-e178-41a5-bfe4-0ab98b62b50b",
+        "name": "Set Requirement ID Completed"
+      },
+      {
+        "parameters": {
+          "mode": "combine",
+          "combineBy": "combineByPosition",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          4032,
+          576
+        ],
+        "id": "70d06114-54b2-4686-8f4e-762a9ec22b16",
+        "name": "Merge2"
+      },
+      {
+        "parameters": {
+          "jsCode": "// This script extracts tabular data, narrative context, and builds a clean email-only Airtable Formula\nconst EXCLUDED_EMAILS = [\n  \"placements.sv@scalevirtually.com\",\n  \"ace@scalevirtually.com\",\n  \"ck@scalevirtually.com\",\n  \"bam@scalevirtually.com\",\n  \"karlo@scalevirtually.com\"\n];\n\nconst simplified_output = [];\n\nfor (const item of $input.all()) {\n  const json_content = item.json;\n  \n  // 1. Extract and Clean Email Participants\n  const fromEmail = json_content.from?.value?.[0]?.address?.toLowerCase() || \"\";\n  const toEmails = (json_content.to?.value || []).map(p => p.address.toLowerCase());\n  const ccEmails = (json_content.cc?.value || []).map(p => p.address.toLowerCase());\n\n  // 2. Internal Exclusion Logic\n  const primaryTo = toEmails[0] || \"\";\n  if (EXCLUDED_EMAILS.includes(primaryTo)) continue;\n\n  const hasExternalTo = toEmails.some(addr => !EXCLUDED_EMAILS.includes(addr));\n  if (!hasExternalTo) continue;\n\n  // 3. Metadata & Participant Flattening\n  const subject = json_content.subject || \"No Subject\";\n  const allParticipants = [...new Set([fromEmail, ...toEmails, ...ccEmails])]\n    .filter(e => e !== \"\")\n    .map(e => e.trim());\n\n  // 4. Construct Clean Airtable Formula (Emails Only)\n  const emailConditions = allParticipants.map(emailAddr => {\n    return `FIND('${emailAddr}', LOWER(ARRAYJOIN({Email (from Client)}, ' '))), FIND('${emailAddr}', LOWER(ARRAYJOIN({POC Primary email}, ' ')))`;\n  });\n\n  // Removed the {PDEV STAGE} logic here as requested\n  const airtable_formula = `OR(${emailConditions.join(\", \")})`;\n  \n  // 5. Extract Narrative Context\n  let text_body = json_content.text || \"\";\n  let narrative_context = text_body.split(/thanks and regards|best regards|--/i)[0].trim();\n\n  // 6. Extract Structural Data (HTML Tables)\n  let html_body = json_content.html || \"\";\n  let table_data = [];\n  const cell_matches = html_body.match(/<td[^>]*>(.*?)<\\/td>/gi);\n  if (cell_matches) {\n    table_data = cell_matches.map(cell => cell.replace(/<[^>]*>/g, '').trim()).filter(text => text !== \"\");\n  }\n\n  simplified_output.push({\n    json: {\n      metadata: {\n          from: fromEmail,\n          to_primary: primaryTo,\n          subject: subject,\n          date: json_content.date,\n          participants: allParticipants\n      },\n      airtable_formula: airtable_formula,\n      narrative_context: narrative_context,\n      structured_tabular_data: table_data.join(\" | \"),\n      is_hybrid_payload: table_data.length > 0 && narrative_context.length > 50\n    }\n  });\n}\n\nreturn simplified_output;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1504,
+          400
+        ],
+        "id": "558a4ec9-e699-43f7-b57f-33ecee357de2",
+        "name": "Cleaner"
+      },
+      {
+        "parameters": {
+          "jsCode": "return items.map(item => {\n  let raw = item.json.Milestones || item.json.milestones || [];\n\n  // If Milestones is a JSON string, parse it\n  if (typeof raw === 'string') {\n    try {\n      raw = JSON.parse(raw);\n    } catch (error) {\n      raw = [];\n    }\n  }\n\n  // If still not an array, force it to empty array\n  if (!Array.isArray(raw)) {\n    raw = [];\n  }\n\n  const milestonesText = raw\n    .map((m, index) => {\n      const date = m.date || 'TBD';\n      const task = String(m.task || '')\n        .replace(/\\*\\*/g, '')\n        .trim();\n\n      return `${index + 1}. [${date}] ${task}`;\n    })\n    .join('\\n');\n\n  return {\n    json: {\n      ...item.json,\n\n      // Create a NEW clean field\n      Milestones_Text: milestonesText\n    }\n  };\n});"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          4240,
+          576
+        ],
+        "id": "f35b0992-71eb-4f7a-b988-77b2d91f4017",
+        "name": "Code in JavaScript"
+      }
+    ],
+    "connections": {
+      "Gmail Trigger": {
+        "main": [
+          [
+            {
+              "node": "Cleaner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI Chat Model": {
+        "ai_languageModel": [
+          [
+            {
+              "node": "AI Agent",
+              "type": "ai_languageModel",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Agent": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript1": {
+        "main": [
+          [
+            {
+              "node": "Merge2",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Search Ongoing PECs": {
+        "main": [
+          [
+            {
+              "node": "Search PE",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Ongoing Requirement not exists?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search PE": {
+        "main": [
+          [
+            {
+              "node": "Sender not exists?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Merge1": {
+        "main": [
+          [
+            {
+              "node": "Merge2",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sender not exists?": {
+        "main": [
+          [
+            {
+              "node": "Search PE1",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search PE1": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Search Outliers Requirements": {
+        "main": [
+          [
+            {
+              "node": "Outlier Requirement not exists?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Ongoing Requirement not exists?": {
+        "main": [
+          [
+            {
+              "node": "Search Outliers Requirements",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Set Requirement ID Ongoing",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Outlier Requirement not exists?": {
+        "main": [
+          [
+            {
+              "node": "Parked",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Set Requirement ID Outlier.",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parked": {
+        "main": [
+          [
+            {
+              "node": "Parked Requirement not exists?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parked Requirement not exists?": {
+        "main": [
+          [
+            {
+              "node": "Completed",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Set Requirement ID Parked",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Completed": {
+        "main": [
+          [
+            {
+              "node": "Set Requirement ID Completed",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Set Requirement ID Outlier.": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Set Requirement ID Ongoing": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Set Requirement ID Parked": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Set Requirement ID Completed": {
+        "main": [
+          [
+            {
+              "node": "Merge1",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge2": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Cleaner": {
+        "main": [
+          [
+            {
+              "node": "Search Ongoing PECs",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "AI Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Create a record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

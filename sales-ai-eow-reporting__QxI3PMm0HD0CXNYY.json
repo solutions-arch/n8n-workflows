@@ -1,0 +1,657 @@
+{
+  "updatedAt": "2026-07-04T12:57:38.435Z",
+  "createdAt": "2026-06-04T16:00:36.472Z",
+  "id": "QxI3PMm0HD0CXNYY",
+  "name": "Sales AI EOW Reporting",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        288
+      ],
+      "id": "ab023a2e-9400-409b-90eb-6070ce3fe0f3",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ",
+          "mode": "list",
+          "cachedResultName": "Confirmed Free Strategy Calls",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1564973464,
+          "mode": "list",
+          "cachedResultName": "All Meeting Recordings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit#gid=1564973464"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -192,
+        48
+      ],
+      "id": "691fc4b5-9602-41a2-b88a-6e4afcd56301",
+      "name": "Get all meeting bookings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ",
+          "mode": "list",
+          "cachedResultName": "Confirmed Free Strategy Calls",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 497885823,
+          "mode": "list",
+          "cachedResultName": "No Meeting Recordings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit#gid=497885823"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -192,
+        240
+      ],
+      "id": "033813bd-5de3-4888-9bbb-1536fe495f0a",
+      "name": "Get no meeting recordings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Count all strategy call bookings this week (not canceled)\nconst TZ = 'UTC-5';\nconst now = DateTime.now().setZone(TZ);\nconst weekStart = now.startOf('week');\nconst weekEnd = weekStart.plus({ weeks: 1 });\n\nlet count = 0;\n\nfor (const item of $input.all()) {\n  try {\n    const dateStr = String(item.json.Date || '').trim();\n    if (!dateStr) continue;\n\n    let date = DateTime.fromISO(dateStr).setZone(TZ);\n    if (!date.isValid) {\n      date = DateTime.fromFormat(dateStr, 'M/d/yyyy', { zone: TZ });\n    }\n    if (!date.isValid) continue;\n\n    const canceled = item.json['Canceled?'];\n    const isCanceled = (canceled === true || canceled === 'TRUE' || canceled === 'true');\n\n    if (date >= weekStart && date < weekEnd && !isCanceled) {\n      count++;\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { type: 'total_bookings', count } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        48
+      ],
+      "id": "e404e5f7-66a9-4867-81b8-c19896f6a8be",
+      "name": "Count all bookings"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Count strategy calls without recordings this week\n// and collect their meeting titles\nconst TZ = 'UTC-5';\nconst now = DateTime.now().setZone(TZ);\nconst weekStart = now.startOf('week');\nconst weekEnd = weekStart.plus({ weeks: 1 });\n\nlet count = 0;\nconst titles = [];\n\nfor (const item of $input.all()) {\n  try {\n    const dateStr = String(item.json.Date || '').trim();\n    if (!dateStr) continue;\n\n    let date = DateTime.fromFormat(dateStr, 'M/d/yyyy', { zone: TZ });\n    if (!date.isValid) {\n      date = DateTime.fromISO(dateStr).setZone(TZ);\n    }\n    if (!date.isValid) continue;\n\n    if (date >= weekStart && date < weekEnd) {\n      count++;\n      titles.push(item.json['Meeting Title'] || 'Untitled');\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { type: 'no_recording', count, titles } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        240
+      ],
+      "id": "3e8c4b2d-f3f0-4f0a-92da-20f57a37d5ff",
+      "name": "Count without recording"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        256,
+        144
+      ],
+      "id": "6d9f77b1-d497-4e48-b539-66046b3a6b2e",
+      "name": "Merge Counts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet totalBookings = 0;\nlet noRecording = 0;\nlet missingTitles = [];\n\nfor (const item of items) {\n  if (item.json.type === 'total_bookings') totalBookings = item.json.count;\n  if (item.json.type === 'no_recording') {\n    noRecording = item.json.count;\n    missingTitles = item.json.titles || [];\n  }\n}\n\nconst withRecording = totalBookings - noRecording;\nconst titleList = missingTitles\n  .map(t => `\u2022 ${t.replace('FREE Strategy Call - ', '')}`)\n  .join('\\n');\n\nconst summary = [\n  `*\ud83d\udcca EOW Strategy Calls Report*`,\n  ``,\n  `*Total calls this week: ${totalBookings}*`,\n  ``,\n  `\u2022 \u2705 With recording: ${withRecording}`,\n  `\u2022 \u26a0\ufe0f Missing recording: ${noRecording}`,\n  ``,\n  `*Calls missing recordings:*`,\n  titleList,\n].join('\\n');\n\nreturn [{\n  json: {\n    total_strategy_calls: totalBookings,\n    with_recording: withRecording,\n    without_recording: noRecording,\n    missing_titles: missingTitles,\n    summary\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        144
+      ],
+      "id": "eb5354ea-5c96-473a-a104-bc6777016e8c",
+      "name": "Compile Summary"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AJ0URLGHX",
+          "mode": "id"
+        },
+        "text": "={{ $json.summary }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        704,
+        144
+      ],
+      "id": "a127c23d-8e2e-4fed-b19c-38b503304ee0",
+      "name": "Send a message",
+      "webhookId": "6f941cef-932d-4045-ab6c-69a755e96cd1",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                6
+              ],
+              "triggerAtHour": 5,
+              "triggerAtMinute": 40
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -416,
+        0
+      ],
+      "id": "2fd92131-17a2-470e-a051-b99dee689e39",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Get all meeting bookings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get no meeting recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get all meeting bookings": {
+      "main": [
+        [
+          {
+            "node": "Count all bookings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get no meeting recordings": {
+      "main": [
+        [
+          {
+            "node": "Count without recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count all bookings": {
+      "main": [
+        [
+          {
+            "node": "Merge Counts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count without recording": {
+      "main": [
+        [
+          {
+            "node": "Merge Counts",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Counts": {
+      "main": [
+        [
+          {
+            "node": "Compile Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Summary": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get all meeting bookings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get no meeting recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "09992924-e717-40d7-8118-9f833808f4a7",
+  "activeVersionId": "09992924-e717-40d7-8118-9f833808f4a7",
+  "versionCounter": 19,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-04T16:00:36.475Z",
+      "createdAt": "2026-06-04T16:00:36.475Z",
+      "role": "workflow:owner",
+      "workflowId": "QxI3PMm0HD0CXNYY",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T12:57:38.436Z",
+    "createdAt": "2026-07-04T12:57:38.436Z",
+    "versionId": "09992924-e717-40d7-8118-9f833808f4a7",
+    "workflowId": "QxI3PMm0HD0CXNYY",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          -416,
+          288
+        ],
+        "id": "ab023a2e-9400-409b-90eb-6070ce3fe0f3",
+        "name": "When clicking 'Execute workflow'"
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ",
+            "mode": "list",
+            "cachedResultName": "Confirmed Free Strategy Calls",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 1564973464,
+            "mode": "list",
+            "cachedResultName": "All Meeting Recordings",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit#gid=1564973464"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          -192,
+          48
+        ],
+        "id": "691fc4b5-9602-41a2-b88a-6e4afcd56301",
+        "name": "Get all meeting bookings",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "documentId": {
+            "__rl": true,
+            "value": "1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ",
+            "mode": "list",
+            "cachedResultName": "Confirmed Free Strategy Calls",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": 497885823,
+            "mode": "list",
+            "cachedResultName": "No Meeting Recordings",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit#gid=497885823"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          -192,
+          240
+        ],
+        "id": "033813bd-5de3-4888-9bbb-1536fe495f0a",
+        "name": "Get no meeting recordings",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "7pY5bB7lSFChbAjI",
+            "name": "Solutions"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "// Count all strategy call bookings this week (not canceled)\nconst TZ = 'UTC-5';\nconst now = DateTime.now().setZone(TZ);\nconst weekStart = now.startOf('week');\nconst weekEnd = weekStart.plus({ weeks: 1 });\n\nlet count = 0;\n\nfor (const item of $input.all()) {\n  try {\n    const dateStr = String(item.json.Date || '').trim();\n    if (!dateStr) continue;\n\n    let date = DateTime.fromISO(dateStr).setZone(TZ);\n    if (!date.isValid) {\n      date = DateTime.fromFormat(dateStr, 'M/d/yyyy', { zone: TZ });\n    }\n    if (!date.isValid) continue;\n\n    const canceled = item.json['Canceled?'];\n    const isCanceled = (canceled === true || canceled === 'TRUE' || canceled === 'true');\n\n    if (date >= weekStart && date < weekEnd && !isCanceled) {\n      count++;\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { type: 'total_bookings', count } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          32,
+          48
+        ],
+        "id": "e404e5f7-66a9-4867-81b8-c19896f6a8be",
+        "name": "Count all bookings"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Count strategy calls without recordings this week\n// and collect their meeting titles\nconst TZ = 'UTC-5';\nconst now = DateTime.now().setZone(TZ);\nconst weekStart = now.startOf('week');\nconst weekEnd = weekStart.plus({ weeks: 1 });\n\nlet count = 0;\nconst titles = [];\n\nfor (const item of $input.all()) {\n  try {\n    const dateStr = String(item.json.Date || '').trim();\n    if (!dateStr) continue;\n\n    let date = DateTime.fromFormat(dateStr, 'M/d/yyyy', { zone: TZ });\n    if (!date.isValid) {\n      date = DateTime.fromISO(dateStr).setZone(TZ);\n    }\n    if (!date.isValid) continue;\n\n    if (date >= weekStart && date < weekEnd) {\n      count++;\n      titles.push(item.json['Meeting Title'] || 'Untitled');\n    }\n  } catch (e) {}\n}\n\nreturn [{ json: { type: 'no_recording', count, titles } }];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          32,
+          240
+        ],
+        "id": "3e8c4b2d-f3f0-4f0a-92da-20f57a37d5ff",
+        "name": "Count without recording"
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 3.2,
+        "position": [
+          256,
+          144
+        ],
+        "id": "6d9f77b1-d497-4e48-b539-66046b3a6b2e",
+        "name": "Merge Counts"
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nlet totalBookings = 0;\nlet noRecording = 0;\nlet missingTitles = [];\n\nfor (const item of items) {\n  if (item.json.type === 'total_bookings') totalBookings = item.json.count;\n  if (item.json.type === 'no_recording') {\n    noRecording = item.json.count;\n    missingTitles = item.json.titles || [];\n  }\n}\n\nconst withRecording = totalBookings - noRecording;\nconst titleList = missingTitles\n  .map(t => `\u2022 ${t.replace('FREE Strategy Call - ', '')}`)\n  .join('\\n');\n\nconst summary = [\n  `*\ud83d\udcca EOW Strategy Calls Report*`,\n  ``,\n  `*Total calls this week: ${totalBookings}*`,\n  ``,\n  `\u2022 \u2705 With recording: ${withRecording}`,\n  `\u2022 \u26a0\ufe0f Missing recording: ${noRecording}`,\n  ``,\n  `*Calls missing recordings:*`,\n  titleList,\n].join('\\n');\n\nreturn [{\n  json: {\n    total_strategy_calls: totalBookings,\n    with_recording: withRecording,\n    without_recording: noRecording,\n    missing_titles: missingTitles,\n    summary\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          480,
+          144
+        ],
+        "id": "eb5354ea-5c96-473a-a104-bc6777016e8c",
+        "name": "Compile Summary"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C0AJ0URLGHX",
+            "mode": "id"
+          },
+          "text": "={{ $json.summary }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          704,
+          144
+        ],
+        "id": "a127c23d-8e2e-4fed-b19c-38b503304ee0",
+        "name": "Send a message",
+        "webhookId": "6f941cef-932d-4045-ab6c-69a755e96cd1",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "weeks",
+                "triggerAtDay": [
+                  6
+                ],
+                "triggerAtHour": 5,
+                "triggerAtMinute": 40
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -416,
+          0
+        ],
+        "id": "2fd92131-17a2-470e-a051-b99dee689e39",
+        "name": "Schedule Trigger"
+      }
+    ],
+    "connections": {
+      "When clicking 'Execute workflow'": {
+        "main": [
+          [
+            {
+              "node": "Get all meeting bookings",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Get no meeting recordings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get all meeting bookings": {
+        "main": [
+          [
+            {
+              "node": "Count all bookings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get no meeting recordings": {
+        "main": [
+          [
+            {
+              "node": "Count without recording",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Count all bookings": {
+        "main": [
+          [
+            {
+              "node": "Merge Counts",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Count without recording": {
+        "main": [
+          [
+            {
+              "node": "Merge Counts",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "Merge Counts": {
+        "main": [
+          [
+            {
+              "node": "Compile Summary",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Compile Summary": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Get all meeting bookings",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Get no meeting recordings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

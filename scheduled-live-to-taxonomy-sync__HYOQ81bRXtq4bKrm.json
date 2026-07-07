@@ -1,0 +1,247 @@
+{
+  "updatedAt": "2026-06-17T20:44:43.435Z",
+  "createdAt": "2026-06-17T20:13:40.099Z",
+  "id": "HYOQ81bRXtq4bKrm",
+  "name": "[Scheduled] Live to Taxonomy Sync",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7ed8d29f-5839-470b-9b0d-1cf5976004b4",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl5uteWre548NeMZ",
+          "mode": "list",
+          "cachedResultName": "Virtual Assistants",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl5uteWre548NeMZ"
+        },
+        "options": {
+          "fields": [
+            "Virtual Assistant",
+            "VA Source",
+            "VA Status"
+          ],
+          "view": {
+            "__rl": true,
+            "value": "viwi854gts3oQbTHT",
+            "mode": "list",
+            "cachedResultName": "VA Marketplace",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tbl5uteWre548NeMZ/viwi854gts3oQbTHT"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        -80
+      ],
+      "id": "5e12b173-670c-4993-8875-a845cd4883fc",
+      "name": "Search live base",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "app91Dn4mXetDxUHE",
+          "mode": "list",
+          "cachedResultName": "Taxonomy",
+          "cachedResultUrl": "https://airtable.com/app91Dn4mXetDxUHE"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbl5uteWre548NeMZ",
+          "mode": "list",
+          "cachedResultName": "Virtual Assistants",
+          "cachedResultUrl": "https://airtable.com/app91Dn4mXetDxUHE/tbl5uteWre548NeMZ"
+        },
+        "options": {
+          "fields": [
+            "Virtual Assistant",
+            "VA Source",
+            "VA Status"
+          ],
+          "view": {
+            "__rl": true,
+            "value": "viwi854gts3oQbTHT",
+            "mode": "list",
+            "cachedResultName": "VA Marketplace",
+            "cachedResultUrl": "https://airtable.com/app91Dn4mXetDxUHE/tbl5uteWre548NeMZ/viwi854gts3oQbTHT"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        144
+      ],
+      "id": "6d079739-a53e-4f60-afc5-35b9bb558bfe",
+      "name": "Search live base1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "id"
+            },
+            {
+              "field1": "VA Status",
+              "field2": "VA Status"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.compareDatasets",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        0
+      ],
+      "id": "855b24c8-ec77-4505-b416-28698a566fb0",
+      "name": "Compare Datasets"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Search live base",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search live base1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search live base": {
+      "main": [
+        [
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search live base1": {
+      "main": [
+        [
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "bd127865-1b9b-4710-9976-687fd7b87290",
+  "activeVersionId": null,
+  "versionCounter": 3,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-06-17T20:13:40.108Z",
+      "createdAt": "2026-06-17T20:13:40.108Z",
+      "role": "workflow:owner",
+      "workflowId": "HYOQ81bRXtq4bKrm",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

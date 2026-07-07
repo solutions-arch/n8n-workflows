@@ -1,0 +1,296 @@
+{
+  "updatedAt": "2026-05-01T15:17:50.717Z",
+  "createdAt": "2026-01-13T15:17:38.912Z",
+  "id": "OdTqWyEwZb9ugzhZ",
+  "name": "[Bubble] Bubble to AT Sync [Clients]",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "d97674d1-e97a-4bd6-a7af-eb247706d9b8",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "07f006fa-db87-4607-9e5c-fb9046d2e4f0",
+      "name": "Webhook",
+      "webhookId": "d97674d1-e97a-4bd6-a7af-eb247706d9b8"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblaf3mkvcrgSSBSZ",
+          "mode": "list",
+          "cachedResultName": "Clients",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblaf3mkvcrgSSBSZ"
+        },
+        "filterByFormula": "={Bubble Unique ID} = \"{{ $json.body.bubble_id }}\"",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        128
+      ],
+      "id": "32450593-b16a-4994-9e3c-b46e5bfbeddc",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (Node.js)\n// Logic: Bubble sends a single \"Field Name\" and \"Value\" pair.\n// We map that name to the specific Airtable column and update if changed.\n\n// \u2705 MAPPING: Bubble \"Field Name\" -> Actual Airtable Column Name\n// I have included variations based on your prompt and the payload provided.\nconst MAP = {\n  // Bubble sends : Airtable Column\n  \"Name\": \"Client Name\",\n  \"Client Name\": \"Client Name\", // Included because your payload specifically shows \"Client Name\"\n  \n  \"Email\": \"Email\",\n  \n  \"Contact Number\": \"Phone Number\",\n  \"Phone Number\": \"Phone Number\", // Included for safety\n  \n  \"Timezone\": \"Time Zone\", // Note the space in Airtable based on your payload\n  \"Time Zone\": \"Time Zone\",\n  \n  \"Role\": \"Client Role\",\n  \"Client Role\": \"Client Role\"\n};\n\n// ---------- helpers ----------\nfunction normalize(v) {\n  if (v === undefined) return undefined;\n  if (v === null) return null;\n  return String(v).trim();\n}\n\nfunction valuesEqual(a, b) {\n  return normalize(a) === normalize(b);\n}\n\n// ---------- main ----------\nreturn $input.all().flatMap((item) => {\n  const json = item.json;\n  const bubble = json.body ?? {};\n  \n  const recordId = json.id || json[\"Record ID\"] || json.recordId;\n  if (!recordId) return [];\n\n  // 1. Identify which field Bubble wants to update\n  const incomingLabel = bubble[\"Field Name\"]; \n  const incomingValue = bubble[\"Value\"];\n\n  // 2. Find the corresponding Airtable Column Name\n  const airtableField = MAP[incomingLabel];\n\n  // If we don't recognize the field name, stop here.\n  if (!airtableField) {\n    return [];\n  }\n\n  // 3. Compare current Airtable data vs Bubble data\n  const currentVal = json[airtableField];\n  \n  // If values are the same, do nothing (return empty array)\n  if (valuesEqual(currentVal, incomingValue)) {\n    return [];\n  }\n\n  // 4. Prepare the update\n  const fieldsToUpdate = {};\n  fieldsToUpdate[airtableField] = incomingValue;\n\n  return [\n    {\n      json: {\n        recordId,\n        fields: fieldsToUpdate,\n        airtableBody: { fields: fieldsToUpdate }, // Use this in HTTP Request\n        bubble_id: bubble.bubble_id\n      },\n    },\n  ];\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        16
+      ],
+      "id": "6aed3ef9-4da9-428e-ae79-089e31810cd4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        608,
+        16
+      ],
+      "id": "acb4d944-de43-4f34-a362-0c6aaa71bdfd",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/apptuAm73VyH7pcHA/tblaf3mkvcrgSSBSZ/{{$json.recordId}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer patcvfupPT4vIItdh.61f72576611bf1b806c376fc2309347df9378195ae08a3f703113966eec7c9e2"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.airtableBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1088,
+        16
+      ],
+      "id": "a2f09943-3d80-49c3-a8b2-87f433f4a3dd",
+      "name": "HTTP Request"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Bubble",
+            "content-length": "130",
+            "accept-encoding": "gzip, br",
+            "baggage": "bubblegroup.client.version=6789c436921427e56f28628c6c76ffb76150e0d9,bubblegroup.client.commit_timestamp=1768315709000,bubblegroup.http.route=workflow%2Fstart,bubblegroup.http.host=scalevirtually.net,bubblegroup.workflow.appname=janssen-97365,bubblegroup.workflow.app_version=33020,bubblegroup.workflow.situation=page_wf,user_agent.origin=web,bubblegroup.workflow.id=bUhDD,bubblegroup.workflow.event.type=ButtonClicked,bubblegroup.workflow.action.id=bUhKz,bubblegroup.workflow.action.type=apiconnector2-bUUWr0.bUhKn",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "35.89.136.10",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9bd5f24bd670758f-PDX",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "traceparent": "00-dc5738055d26b5816bf2d3d52fd91232-3a78d49da9af6cb1-01",
+            "x-bubble-depth": "1",
+            "x-forwarded-for": "35.89.136.10, 104.23.160.97",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-869467f569-bd6m6",
+            "x-is-trusted": "yes",
+            "x-real-ip": "35.89.136.10"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "bubble_id": "1726599975697x764376286622801000",
+            "Field Name": "Client Name",
+            "Value": "Aaradona Walkersssss"
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook-test/d97674d1-e97a-4bd6-a7af-eb247706d9b8",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "versionId": "ce1a917e-4ca1-42b7-9786-00f1a7bc6dbd",
+  "activeVersionId": null,
+  "versionCounter": 82,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-01-13T15:17:38.916Z",
+      "createdAt": "2026-01-13T15:17:38.916Z",
+      "role": "workflow:owner",
+      "workflowId": "OdTqWyEwZb9ugzhZ",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

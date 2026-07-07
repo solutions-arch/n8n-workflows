@@ -1,0 +1,339 @@
+{
+  "updatedAt": "2026-06-10T18:22:36.378Z",
+  "createdAt": "2026-02-25T16:43:51.218Z",
+  "id": "ZX4ksTgkNpVayS2i",
+  "name": "Fathom fetcher",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "eeaae5d8-d228-4018-922b-56edd0c7d84d",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "url": "https://api.fathom.ai/external/v1/meetings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "1"
+            },
+            {
+              "name": "include_transcript",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        672,
+        -160
+      ],
+      "id": "fd6d6eb8-29c2-45b6-8f05-bf6e3c7ca6d3",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QphOV4DaoUcohtJF",
+          "name": "Fathom PJ"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.zoom.us/v2/users/{{ $json.host_email }}/meetings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer "
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        704,
+        64
+      ],
+      "id": "565e495d-1d84-4a24-9f06-d669383863ff",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblcuUr2mHvbjnHwt",
+          "mode": "list",
+          "cachedResultName": "Zoom OAuth",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblcuUr2mHvbjnHwt"
+        },
+        "filterByFormula": "=account_id = '{{ $json.body.payload.account_id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        112
+      ],
+      "id": "9918f722-cb5d-485f-a956-493f5c1fe783",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "b8eb9f45-1beb-4fc9-9fb0-73e0fbee1892",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -224
+      ],
+      "id": "a75c3058-0646-447a-9249-12298e564d22",
+      "name": "Webhook",
+      "webhookId": "b8eb9f45-1beb-4fc9-9fb0-73e0fbee1892"
+    },
+    {
+      "parameters": {
+        "url": "https://api.fathom.ai/external/v1/meetings?limit=1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        -96
+      ],
+      "id": "a3e057dd-0ec2-4073-b722-224358e5a581",
+      "name": "HTTP Request2",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "QphOV4DaoUcohtJF",
+          "name": "Fathom PJ"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Search records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "When clicking \u2018Execute workflow\u2019": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Zoom Marketplace/1.0a",
+            "content-length": "356",
+            "accept-encoding": "gzip, br",
+            "authorization": "yQfaXnHsSBSW5t_6amTmpg",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "170.114.6.88",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "9d69df511dd632a5-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "clientid": "akvSMOSCRE2XEEyIAkiiQQ",
+            "content-type": "application/json; charset=utf-8",
+            "traceparent": "00-1ab87e7d1b05a658e91fad9ed31f995c-e9c713ff8f12adb2-00",
+            "x-forwarded-for": "170.114.6.88, 104.23.211.209",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-6d69f46f85-dk6dm",
+            "x-is-trusted": "yes",
+            "x-real-ip": "170.114.6.88",
+            "x-zm-request-id": "a7ad3b96_4a5b_4236_b3e7_364e578ec688",
+            "x-zm-request-timestamp": "1772553817",
+            "x-zm-signature": "v0=a059e45eaeb5272009256c83a47fa651ed4477379d8f819f2ae23d33e1cc7b54",
+            "x-zm-trackingid": "v=2.0;clid=us06;rid=WEB_4482db873fc46b066bedf8643d2205a0",
+            "zm-trace-upstream": "Meeting_Web_marketplace-consumer"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "event": "meeting.ended",
+            "payload": {
+              "account_id": "jj0FwZbwT3-CKPmPD0sk9A",
+              "object": {
+                "duration": 0,
+                "start_time": "2026-03-03T15:38:44Z",
+                "timezone": "",
+                "end_time": "2026-03-03T16:03:15Z",
+                "topic": "Patrick Jansen Villanueva's Zoom Meeting",
+                "id": "85134909302",
+                "type": 1,
+                "uuid": "2UdMaMIfRYqXXT3nYPz/nQ==",
+                "host_id": "TyBMR10YQzqBuGplqu5IeQ"
+              }
+            },
+            "event_ts": 1772553796265
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/f4e8867b-7c14-4050-8f38-b49e26c96869",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "versionId": "ed051f46-7f1a-4505-8180-9865abaa741b",
+  "activeVersionId": null,
+  "versionCounter": 15,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-02-25T16:43:51.222Z",
+      "createdAt": "2026-02-25T16:43:51.222Z",
+      "role": "workflow:owner",
+      "workflowId": "ZX4ksTgkNpVayS2i",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-05-01T15:24:59.751Z",
+      "createdAt": "2026-05-01T15:24:59.751Z",
+      "id": "R2WGrSOtAkT7FXOA",
+      "name": "Sales AI"
+    },
+    {
+      "updatedAt": "2026-05-01T15:51:41.546Z",
+      "createdAt": "2026-04-29T02:41:36.848Z",
+      "id": "gEjLijqqlVjM2WW5",
+      "name": "Paused/Retired"
+    }
+  ],
+  "activeVersion": null
+}

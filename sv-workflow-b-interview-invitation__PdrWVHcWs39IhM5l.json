@@ -1,0 +1,597 @@
+{
+  "updatedAt": "2026-07-02T11:29:37.084Z",
+  "createdAt": "2026-07-02T11:29:10.031Z",
+  "id": "PdrWVHcWs39IhM5l",
+  "name": "SV Workflow B \u2014 Interview Invitation",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "workable-candidate-interview",
+        "options": {}
+      },
+      "id": "e9b00181-8250-434e-9f74-5612c459e4a1",
+      "name": "Workable Trigger (candidateMoved \u2192 Interview)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "5b7522bf-abb6-4456-b070-a76a2d58ea84"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $json.body || $json;\nconst isRealWorkable = root.event_type === 'candidate_moved' && root.data;\n\nconst targetSlug = isRealWorkable\n  ? (root.data?.stage_kind || '')\n  : (root.target_stage?.slug || '');\nif (targetSlug !== 'interview') return [];\n\nconst sourceSlug = isRealWorkable ? null : (root.source_stage?.slug || '');\nif (sourceSlug && sourceSlug === targetSlug) return [];\n\nif (isRealWorkable) {\n  const d = root.data || {};\n  return [{ json: {\n    event_type: root.event_type,\n    candidate: {\n      id: d.id,\n      firstname: d.firstname,\n      lastname: d.lastname,\n      email: d.email,\n      phone_number: d.phone || null,\n    },\n    job: {\n      shortcode: d.job?.shortcode || null,\n      title: d.job?.title || null,\n      id: d.job?.id || null,\n      custom_attributes: d.job?.custom_attributes || null,\n    },\n    source_stage: { slug: null, name: null },\n    target_stage: { slug: targetSlug, name: d.stage || '' },\n    moved_by_member_id: null,\n  } }];\n}\nreturn [{ json: root }];"
+      },
+      "id": "c72ace55-1d84-41ae-b8ba-054056fb2f13",
+      "name": "Self-Fire Filter + Shape Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p = $json.body || $json;\nconst c = p.candidate || {};\nconst j = p.job || {};\nconst missing = [];\nif (!c.id) missing.push('candidate.id');\nif (!c.firstname) missing.push('candidate.firstname');\nif (!c.email) missing.push('candidate.email');\nif (!j.shortcode) missing.push('job.shortcode');\nif (missing.length) { throw new Error('MISSING_REQUIRED: ' + missing.join(', ')); }\n\nconst BUCKET_TO_ROLE = { admin_va: 'GVA', executive_va: 'EVA', bookkeeper_va: 'BK', inside_sales_agent: 'ISA', product_developer: 'PDEV', operations_manager: 'MGR' };\nconst ROLE_LABEL = { GVA: 'General Virtual Assistant', EVA: 'Executive Virtual Assistant', BK: 'Bookkeeper Virtual Assistant', ISA: 'Inside Sales Agent', PDEV: 'Product Developer', MGR: 'Operations Manager' };\nconst ROLE_TIER = { GVA: 1, EVA: 1, BK: 2, ISA: 2, PDEV: 3, MGR: 3 };\n\nconst bucket = j.custom_attributes?.question_bucket;\nlet role_type = bucket ? BUCKET_TO_ROLE[bucket] : null;\nif (!role_type) {\n  const t = (j.title || '').toLowerCase();\n  if (t.includes('bookkeep')) role_type = 'BK';\n  else if (t.includes('executive')) role_type = 'EVA';\n  else if (t.includes('inside sales')) role_type = 'ISA';\n  else if (t.includes('operations manager')) role_type = 'MGR';\n  else if (t.includes('developer')) role_type = 'PDEV';\n  else role_type = 'GVA';\n}\n\nreturn [{ json: {\n  workable_id: c.id,\n  first_name: c.firstname,\n  email: c.email,\n  phone_number: c.phone_number || null,\n  job_id: j.id,\n  job_shortcode: j.shortcode,\n  role_type,\n  role_label: j.title || ROLE_LABEL[role_type],\n  tier: ROLE_TIER[role_type],\n} }];"
+      },
+      "id": "7007d860-88f9-484a-a9f3-520527d7486d",
+      "name": "Extract + Validate Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline?candidate_id=eq.{{ $json.workable_id }}&select=candidate_id,status,invite_sent_at",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "6c9d080c-9741-4283-a437-9b442e51a1b1",
+      "name": "Idempotency Check (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        608,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const upstream = $input.first().json;\nconst incoming = $('Extract + Validate Context').item.json;\nlet existing = null;\nif (Array.isArray(upstream)) { existing = upstream[0] || null; }\nelse if (Array.isArray(upstream.data)) { existing = upstream.data[0] || null; }\nelse if (upstream && typeof upstream === 'object' && (upstream.status || upstream.candidate_id)) {\n  existing = upstream;\n}\nif (existing && existing.status && ['invite_sent', 'scored', 'disqualified'].includes(existing.status)) {\n  return [];\n}\nreturn [{ json: incoming }];"
+      },
+      "id": "88bec18c-b6d8-4147-97d6-0bbc7a9bc80c",
+      "name": "Idempotency Decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst session_id = crypto.randomUUID();\nconst invite_sent_at = new Date().toISOString();\nconst deadline_iso = new Date(Date.now() + 96 * 3600 * 1000).toISOString();\n\nconst base = 'https://sv-ats.vercel.app';\nconst safeEnc = (s) => encodeURIComponent(String(s)).replace(/\\(/g, '%28').replace(/\\)/g, '%29');\nconst recording_link = base + '/?s=' + safeEnc(session_id);\n\nconst deadline = new Date(deadline_iso).toLocaleString('en-US', {\n  timeZone: 'Asia/Manila',\n  weekday: 'long',\n  year: 'numeric',\n  month: 'long',\n  day: 'numeric',\n  hour: 'numeric',\n  minute: '2-digit',\n  hour12: true,\n}) + ' Manila time';\n\nreturn [{ json: { ...$json, session_id, invite_sent_at, deadline_iso, deadline, recording_link } }];"
+      },
+      "id": "7dccb337-f77b-4a2b-8227-a0b561f5e285",
+      "name": "Generate Session + Recording Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $json;\nconst subjTpl = \"You've been shortlisted \u2014 Scale Virtually __ROLE_LABEL__ assessment\";\nconst bodyTpl = \"Hi __FIRST_NAME__,\\n\\nCongratulations! You've been shortlisted to move forward in the __ROLE_LABEL__ application process.\\n\\nNext Step: Video Recording Assessment\\n\\nThis is a short recorded interview consisting of 7 questions and takes approximately 8-10 minutes to complete. No scheduling is required \u2014 you may complete it at any time before __DEADLINE__.\\n\\nStart your assessment here:\\n__RECORDING_LINK__\\n\\nWhat You'll Need\\n- A phone or desktop device with a working camera and microphone\\n- A quiet, well-lit environment\\n- Approximately 10 minutes of uninterrupted time\\n\\nWhat to Expect\\n- A quick camera and microphone check before you begin\\n- One optional practice question to get comfortable\\n- 7 questions, 60-90 seconds each\\n- You can replay and re-record each answer before moving on\\n\\nWhy This Step Exists\\nWe use a standardized video assessment to ensure a fair and consistent evaluation process for all candidates, especially given the high volume of applications.\\n\\nIf you experience any technical issues, simply reply to this email and our team will be happy to assist you. You can also request a retake directly from the assessment page.\\n\\nBest regards,\\nThe Scale Virtually Talent Acquisition Team\";\nconst subst = (s) => s\n  .replaceAll('__FIRST_NAME__', c.first_name || 'there')\n  .replaceAll('__ROLE_LABEL__', c.role_label || 'Virtual Assistant')\n  .replaceAll('__RECORDING_LINK__', c.recording_link || '(link unavailable)')\n  .replaceAll('__DEADLINE__', c.deadline || '(deadline unavailable)');\nreturn [{ json: {\n  ...c,\n  email_subject: subst(subjTpl),\n  email_body: subst(bodyTpl),\n  email_subject_json_str: JSON.stringify(subst(subjTpl)),\n  email_body_json_str: JSON.stringify(subst(bodyTpl)),\n} }];"
+      },
+      "id": "6df3d35c-008b-4aef-a752-ae6b7afae586",
+      "name": "Render Invite Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"Scale Virtually Talent Acquisition <careers@scalevirtually.com>\",\n  \"to\": [\"{{ $json.email }}\"],\n  \"subject\": {{ $json.email_subject_json_str }},\n  \"text\": {{ $json.email_body_json_str }},\n  \"reply_to\": \"careers@scalevirtually.com\",\n  \"tags\": [{ \"name\": \"template\", \"value\": \"template_1b_invite\" }]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "af723fe4-7c55-4fd4-a302-9835d549aad2",
+      "name": "Send Invite via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1408,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ge6KQt8Yw3ll0qku",
+          "name": "Workable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://scale-virtually.workable.com/spi/v3/candidates/{{ $('Generate Session + Recording Link').item.json.workable_id }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tags\": [\"ai_screening_invited\"]\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b71d5bb2-df4c-4955-9892-24afd2355082",
+      "name": "Apply Tag ai-screening-invited (Workable)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1600,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ge6KQt8Yw3ll0qku",
+          "name": "Workable API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/candidate_sessions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"id\": \"{{ $('Generate Session + Recording Link').item.json.session_id }}\",\n  \"candidate_id\": \"{{ $('Generate Session + Recording Link').item.json.workable_id }}\",\n  \"email\": \"{{ $('Generate Session + Recording Link').item.json.email }}\",\n  \"first_name\": \"{{ $('Generate Session + Recording Link').item.json.first_name }}\",\n  \"role_type\": \"{{ $('Generate Session + Recording Link').item.json.role_type }}\",\n  \"role_label\": \"{{ $('Generate Session + Recording Link').item.json.role_label }}\",\n  \"tier\": {{ $('Generate Session + Recording Link').item.json.tier }},\n  \"job_shortcode\": \"{{ $('Generate Session + Recording Link').item.json.job_shortcode }}\",\n  \"status\": \"invited\",\n  \"invite_sent_at\": \"{{ $('Generate Session + Recording Link').item.json.invite_sent_at }}\",\n  \"deadline\": \"{{ $('Generate Session + Recording Link').item.json.deadline_iso }}\",\n  \"recording_link\": \"{{ $('Generate Session + Recording Link').item.json.recording_link }}\",\n  \"questions_completed\": [],\n  \"current_question_index\": 0,\n  \"last_activity_at\": \"{{ $('Generate Session + Recording Link').item.json.invite_sent_at }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a37a6f52-f7be-4ea6-83ea-f0410d37d646",
+      "name": "Write Candidate Session (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1808,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/workable_candidates_pipeline",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": \"{{ $('Generate Session + Recording Link').item.json.workable_id }}\",\n  \"job_shortcode\": \"{{ $('Generate Session + Recording Link').item.json.job_shortcode }}\",\n  \"email\": \"{{ $('Generate Session + Recording Link').item.json.email }}\",\n  \"first_name\": \"{{ $('Generate Session + Recording Link').item.json.first_name }}\",\n  \"role_type\": \"{{ $('Generate Session + Recording Link').item.json.role_type }}\",\n  \"role_label\": \"{{ $('Generate Session + Recording Link').item.json.role_label }}\",\n  \"tier\": {{ $('Generate Session + Recording Link').item.json.tier }},\n  \"session_id\": \"{{ $('Generate Session + Recording Link').item.json.session_id }}\",\n  \"current_stage_slug\": \"interview\",\n  \"recording_link\": \"{{ $('Generate Session + Recording Link').item.json.recording_link }}\",\n  \"status\": \"invite_sent\",\n  \"invite_sent_at\": \"{{ $('Generate Session + Recording Link').item.json.invite_sent_at }}\",\n  \"invite_attempts\": 0\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f5f48e5e-83fe-4acf-9647-05493c303779",
+      "name": "Register Pipeline Row (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2016,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/stage_confirmations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"candidate_id\": \"{{ $('Generate Session + Recording Link').item.json.workable_id }}\",\n  \"session_id\": \"{{ $('Generate Session + Recording Link').item.json.session_id }}\",\n  \"stage\": \"invite_sent\",\n  \"sent_at\": \"{{ $('Generate Session + Recording Link').item.json.invite_sent_at }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "4e0efdf6-8f1d-4d0d-9b50-7a8b2fb4ffe9",
+      "name": "Log Stage Confirmation (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2224,
+        0
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gcjvkdniphsctckipsay.supabase.co/rest/v1/execution_context",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal,resolution=merge-duplicates"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"execution_id\": \"{{ $execution.id }}\",\n  \"workflow_label\": \"B\",\n  \"workflow_n8n_id\": \"{{ $workflow.id }}\",\n  \"candidate_id\": \"{{ $('Extract + Validate Context').item.json.workable_id }}\",\n  \"candidate_email\": \"{{ $('Extract + Validate Context').item.json.email }}\",\n  \"trigger_event\": \"candidate_moved_interview\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "700a468c-bfeb-4f5f-97d5-c816d2b717d6",
+      "name": "Log Execution Context (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        640,
+        240
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "ZOV8vNWEzXHUqonm",
+          "name": "ATS"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Workable Trigger (candidateMoved \u2192 Interview)": {
+      "main": [
+        [
+          {
+            "node": "Self-Fire Filter + Shape Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Self-Fire Filter + Shape Normalize": {
+      "main": [
+        [
+          {
+            "node": "Extract + Validate Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract + Validate Context": {
+      "main": [
+        [
+          {
+            "node": "Idempotency Check (Supabase)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Execution Context (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idempotency Check (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Idempotency Decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idempotency Decide": {
+      "main": [
+        [
+          {
+            "node": "Generate Session + Recording Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Session + Recording Link": {
+      "main": [
+        [
+          {
+            "node": "Render Invite Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Invite Email": {
+      "main": [
+        [
+          {
+            "node": "Send Invite via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Invite via Resend": {
+      "main": [
+        [
+          {
+            "node": "Apply Tag ai-screening-invited (Workable)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply Tag ai-screening-invited (Workable)": {
+      "main": [
+        [
+          {
+            "node": "Write Candidate Session (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Candidate Session (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Register Pipeline Row (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Pipeline Row (Supabase)": {
+      "main": [
+        [
+          {
+            "node": "Log Stage Confirmation (Supabase)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "1fc16ca2-74b2-4331-827c-ca40c81c32a2",
+  "activeVersionId": null,
+  "versionCounter": 3,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-07-02T11:29:10.037Z",
+      "createdAt": "2026-07-02T11:29:10.037Z",
+      "role": "workflow:owner",
+      "workflowId": "PdrWVHcWs39IhM5l",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

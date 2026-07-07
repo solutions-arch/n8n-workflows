@@ -1,0 +1,308 @@
+{
+  "updatedAt": "2026-06-04T16:43:04.000Z",
+  "createdAt": "2026-06-02T19:03:48.978Z",
+  "id": "Qr79MyJkbluPwanj",
+  "name": "EOW Reporting",
+  "description": null,
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7f189c54-b702-4240-8e36-e5e460026f39",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ",
+          "mode": "list",
+          "cachedResultName": "Confirmed Free Strategy Calls",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1564973464,
+          "mode": "list",
+          "cachedResultName": "All Meeting Recordings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit#gid=1564973464"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "98b798e3-d5b0-44b0-99e5-92692f1ca99d",
+      "name": "Get all meeting recordings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ",
+          "mode": "list",
+          "cachedResultName": "Confirmed Free Strategy Calls",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 497885823,
+          "mode": "list",
+          "cachedResultName": "No Meeting Recordings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1mzAZgnI8QghdIafIqeGkGRYndG-jxaQpN06lBRPcVFQ/edit#gid=497885823"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        224
+      ],
+      "id": "713c8d23-0bcc-4ee0-b30a-9ff7cd9d476b",
+      "name": "Get no meeting recordings",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7pY5bB7lSFChbAjI",
+          "name": "Solutions"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8fcebd0b-cae2-4a43-a19f-615fad315ca5",
+              "leftValue": "={{ \n  DateTime.fromISO($json.Date).toMillis() >= $now.startOf('week').toMillis()\n  &&\n  DateTime.fromISO($json.Date).toMillis() < $now.startOf('week').plus({ weeks: 1 }).toMillis()\n}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "15f433cb-cc01-4c5e-918b-d1adc3066a9f",
+              "leftValue": "={{ $json[\"Canceled?\"] }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        0
+      ],
+      "id": "f2476c4a-1408-4c40-9f7a-5c3f5c5141fe",
+      "name": "Filter all meeting recordings"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8fcebd0b-cae2-4a43-a19f-615fad315ca5",
+              "leftValue": "={{\n(() => {\n  const dateText = String($json.Date || '').trim();\n\n  if (!dateText) return false;\n\n  const rowDate = DateTime.fromFormat(dateText, 'M/d/yyyy');\n\n  if (!rowDate.isValid) return false;\n\n  return rowDate >= $now.startOf('week') && rowDate <= $now.endOf('week');\n})()\n}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        224
+      ],
+      "id": "40bae1d3-fed5-4c4b-aac2-c223cc9bbef7",
+      "name": "Filter no meeting recording"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "Event ID",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        800,
+        64
+      ],
+      "id": "e6080c27-58a8-4a10-9bf5-52814e96ba05",
+      "name": "Merge"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Get all meeting recordings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get no meeting recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get all meeting recordings": {
+      "main": [
+        [
+          {
+            "node": "Filter all meeting recordings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get no meeting recordings": {
+      "main": [
+        [
+          {
+            "node": "Filter no meeting recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter all meeting recordings": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter no meeting recording": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "ed4aa974-b9f0-4050-b96f-5dd3d4f819ef",
+  "activeVersionId": null,
+  "versionCounter": 7,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-06-02T19:03:48.984Z",
+      "createdAt": "2026-06-02T19:03:48.984Z",
+      "role": "workflow:owner",
+      "workflowId": "Qr79MyJkbluPwanj",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

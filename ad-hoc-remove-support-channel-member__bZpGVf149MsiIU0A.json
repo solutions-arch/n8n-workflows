@@ -1,0 +1,284 @@
+{
+  "updatedAt": "2026-06-22T21:52:58.345Z",
+  "createdAt": "2026-04-10T12:53:45.618Z",
+  "id": "bZpGVf149MsiIU0A",
+  "name": "[Ad hoc] Remove Support Channel Member",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -176,
+        0
+      ],
+      "id": "f56849a0-1b08-4503-8d4b-9181801aa386",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "kick",
+        "channelId": {
+          "__rl": true,
+          "value": "=C0AEN1ZRM3P",
+          "mode": "id"
+        },
+        "userId": "=U070Q7H8NKA"
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        592,
+        0
+      ],
+      "id": "d031fa38-dcbc-47a5-a78f-3dd1ac527b1e",
+      "name": "Kick a user from a channel",
+      "webhookId": "f8e45868-c82d-4552-a12b-27ff25c4ce70",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Steps\n\n1. Get channel ID - _right-click on the channel then copy the channel ID_\n2. Get member ID - _open member details > copy member ID_\n3. Execute",
+        "height": 432,
+        "width": 432
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        304,
+        -256
+      ],
+      "typeVersion": 1,
+      "id": "f822f0d3-e5ee-4a13-80fe-44eb487e556c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "archive",
+        "channelId": {
+          "__rl": true,
+          "value": "C0A795BU4MS",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        400,
+        384
+      ],
+      "id": "7434b34f-f7d8-4627-8e06-20639f6cd02b",
+      "name": "Archive a channel",
+      "webhookId": "9515c988-d59f-42b6-844e-a2daf009b185",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "invite",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B3BQ5FE2J",
+          "mode": "id"
+        },
+        "userIds": [
+          "U07TL165AP4"
+        ]
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        384,
+        192
+      ],
+      "id": "d8d48100-623b-4d65-acc2-a0b1b7635f51",
+      "name": "Invite a user to a channel",
+      "webhookId": "e3dbbb6a-374f-42fe-bfdd-a81328ee753a",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const channelId = 'C0AEN1ZRM3P';\n\nconst userIds = [\n  'U070Q7HANKA',\n  'U06FSPKURQB',\n  'U05KAKXLX1Q',\n  'U04P08JUNSV',\n];\n\nreturn userIds.map(userId => ({\n  json: {\n    channelId: channelId.trim(),\n    userId: userId.trim(),\n  },\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        0
+      ],
+      "id": "b738bbbd-5ae6-41a2-985c-ddc7bfa03471",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "member",
+        "channelId": {
+          "__rl": true,
+          "value": "C0AEN1ZRM3P",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        128,
+        336
+      ],
+      "id": "1f5f62ed-6a0b-4c26-b085-af76dbad804f",
+      "name": "Get members of a channel",
+      "webhookId": "d45791b2-04b8-4b8b-b775-9cae2490c79a",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BCPGL33HN",
+          "mode": "id"
+        },
+        "ts": 1781886653.346579,
+        "text": "=Hi Everyone!\n\nWe have a Straight-to-Placements VA for *Keith Norris*, *Mariella David*. I need help setting them up. Below are the work details for Mariella David:\n\n*Role*: Marketing VA\n*Start Date*: 2026-08-03\n*Work Schedule*: Monday to Friday, 7:00 AM to 4:00 PM Mountain Time, Denver\n*Client Rate*: $12/hr\n*Mariella David's Contact Details*:\ndavidmrlla@gmail.com\n09054306042\n\n*VA Rate*: $6/hr\n\n*To-dos*:\n<@U04PBE8NDMY> - We'll be requesting a Scale Virtually email\n<@U03MW6CT03U> (Contractor Services) and <@U05E7RU1JAE> - schedule a NCO and Job Offer meeting\n@Process Engineer - once we're done sending the logistics email to the client, kindly schedule the Process Onboarding Course\n<@U03TQJSAD1S> - once everything is clear, kindly schedule an Onboarding meeting\n\nPlease let us know if there's anything else that I can help you with.\n\n- Placements Team",
+        "updateFields": {},
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        -80,
+        320
+      ],
+      "id": "2c3d46e8-d114-424c-b595-8264b3b57f4b",
+      "name": "Update a message",
+      "webhookId": "0fdb0c15-5816-4d14-a935-c41131b1f7cc",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Kick a user from a channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "484ece6c-35d9-4c49-b47c-6ae94e944e37",
+  "activeVersionId": null,
+  "versionCounter": 16,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-04-10T12:53:45.622Z",
+      "createdAt": "2026-04-10T12:53:45.622Z",
+      "role": "workflow:owner",
+      "workflowId": "bZpGVf149MsiIU0A",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T02:40:41.816Z",
+      "createdAt": "2026-04-29T02:40:41.816Z",
+      "id": "bVP681xsrIg2kaSR",
+      "name": "Ad Hoc"
+    }
+  ],
+  "activeVersion": null
+}

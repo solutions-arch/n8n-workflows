@@ -1,0 +1,120 @@
+{
+  "updatedAt": "2026-04-21T18:25:05.896Z",
+  "createdAt": "2026-04-21T18:25:05.896Z",
+  "id": "AlYsEy29UiqHemKe",
+  "name": "My workflow 13",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "fdac6903-938e-4204-b542-789f7da60b75",
+      "name": "Webhook",
+      "webhookId": "52cc821c-f514-4731-a272-40f91c8f1010"
+    },
+    {
+      "parameters": {
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-heyreach.heyReach",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "6c388fa6-89d7-4351-9cf9-aecf4019195d",
+      "name": "Retrieve a campaign",
+      "credentials": {
+        "heyReachApi": {
+          "id": "fEzfXBSd6wzHRkjU",
+          "name": "HeyReach account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Retrieve a campaign",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "1b578d80-02a6-4114-95c5-794a5722914d",
+  "activeVersionId": null,
+  "versionCounter": 1,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-04-21T18:25:05.898Z",
+      "createdAt": "2026-04-21T18:25:05.898Z",
+      "role": "workflow:owner",
+      "workflowId": "AlYsEy29UiqHemKe",
+      "projectId": "FtQDRp9NTnHC2f4o",
+      "project": {
+        "updatedAt": "2026-04-09T18:34:38.902Z",
+        "createdAt": "2025-09-03T13:17:34.780Z",
+        "id": "FtQDRp9NTnHC2f4o",
+        "name": "Solution Architects <solutions@scalevirtually.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-03T13:17:34.780Z",
+            "createdAt": "2025-09-03T13:17:34.780Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "FtQDRp9NTnHC2f4o",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
+}

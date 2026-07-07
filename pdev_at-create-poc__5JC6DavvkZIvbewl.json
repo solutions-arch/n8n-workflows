@@ -1,0 +1,1172 @@
+{
+  "updatedAt": "2026-07-04T13:08:57.128Z",
+  "createdAt": "2026-01-13T21:44:16.413Z",
+  "id": "5JC6DavvkZIvbewl",
+  "name": "[AT] Create POC",
+  "description": "Syncs a POC from Airtable to Bubble, stores the Bubble ID back in Airtable, and connects the POC to the correct Client Requirement in Bubble.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b4302ab4-5003-48ce-b3b3-a98733198b4c",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        0
+      ],
+      "id": "059ce940-7624-4829-930d-08210002ce0d",
+      "name": "Webhook",
+      "webhookId": "b4302ab4-5003-48ce-b3b3-a98733198b4c"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "typeName": "Client Directory",
+        "options": {
+          "filters": {
+            "filter": [
+              {
+                "key": "=Name",
+                "constraint_type": "equals",
+                "value": "={{ $json.body.record.name }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "position": [
+        304,
+        0
+      ],
+      "id": "fcebd218-0307-4e87-a2f0-20142cf9b3b3",
+      "name": "Fetch POC",
+      "alwaysOutputData": true,
+      "credentials": {
+        "bubbleApi": {
+          "id": "o3eWjifu6jdDsPuY",
+          "name": "Bubble Sync"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cd05c0bb-1a74-4077-a153-1277fe7e2b00",
+              "leftValue": "={{ $json._id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        512,
+        0
+      ],
+      "id": "3cd8cd49-bd11-4edf-be87-4d137932566b",
+      "name": "POC Check",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "typeName": "Client Directory",
+        "properties": {
+          "property": [
+            {
+              "key": "Name",
+              "value": "={{ $('Webhook').item.json.body.record[\"POC Name\"] }}"
+            },
+            {
+              "key": "Client",
+              "value": "={{ $('Webhook').item.json.body.record[\"Client Unique ID\"][0] }}"
+            },
+            {
+              "key": "Primary Email",
+              "value": "={{ $('Webhook').item.json.body.record[\"POC Primary Email\"] }}"
+            },
+            {
+              "key": "Phone",
+              "value": "={{ $('Webhook').item.json.body.record[\"POC Primary Contact Number\"] }}"
+            },
+            {
+              "key": "Client Requirement",
+              "value": "={{ $('Webhook').item.json.body.record[\"Requirement Bubble ID\"][0] }}"
+            },
+            {
+              "key": "Role",
+              "value": "={{ $('Webhook').item.json.body.record[\"Job Title\"] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -112
+      ],
+      "id": "93d47492-3980-4605-a24f-53cee11e761d",
+      "name": "Create POC record",
+      "credentials": {
+        "bubbleApi": {
+          "id": "o3eWjifu6jdDsPuY",
+          "name": "Bubble Sync"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "apptuAm73VyH7pcHA",
+          "mode": "list",
+          "cachedResultName": "SV: Client Services",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblWoE42gtxjntgaw",
+          "mode": "list",
+          "cachedResultName": "POC",
+          "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblWoE42gtxjntgaw"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Webhook').item.json.body.record.id }}",
+            "Bubble Unique ID": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "POC Name",
+              "displayName": "POC Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client",
+              "displayName": "Client",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Client Unique ID",
+              "displayName": "Client Unique ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "POC Primary Email",
+              "displayName": "POC Primary Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Primary Contact Number",
+              "displayName": "POC Primary Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Created By",
+              "displayName": "Created By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PLACEMENTS Requirements",
+              "displayName": "PLACEMENTS Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Secondary Email",
+              "displayName": "POC Secondary Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "POC Secondary Contact Number",
+              "displayName": "POC Secondary Contact Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Timezone",
+              "displayName": "Timezone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "EST",
+                  "value": "EST"
+                },
+                {
+                  "name": "CST",
+                  "value": "CST"
+                },
+                {
+                  "name": "MST",
+                  "value": "MST"
+                },
+                {
+                  "name": "PST",
+                  "value": "PST"
+                },
+                {
+                  "name": "LATAM",
+                  "value": "LATAM"
+                },
+                {
+                  "name": "AST",
+                  "value": "AST"
+                },
+                {
+                  "name": "HDT",
+                  "value": "HDT"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Photo",
+              "displayName": "Photo",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Bubble Unique ID",
+              "displayName": "Bubble Unique ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Projects",
+              "displayName": "Projects",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Record ID",
+              "displayName": "Record ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "PDEV Requirements",
+              "displayName": "PDEV Requirements",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Requirement Bubble ID",
+              "displayName": "Requirement Bubble ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1136,
+        -112
+      ],
+      "id": "41a9ace8-6ecc-4315-8521-08295f7b5905",
+      "name": "Update POC Unique ID",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "cHANqvXsE4Fgk1Fq",
+          "name": "Airtable Personal Access Token account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "typeName": "Client Requirement",
+        "objectId": "={{ $('Webhook').item.json.body.record[\"Requirement Bubble ID\"][0] }}",
+        "properties": {
+          "property": [
+            {
+              "key": "Point of Contact",
+              "value": "={{ [$json.id] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.bubble",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        96
+      ],
+      "id": "175e73fe-b67e-41be-b2f2-ea37e836967c",
+      "name": "Link POC to Client Requirement",
+      "credentials": {
+        "bubbleApi": {
+          "id": "o3eWjifu6jdDsPuY",
+          "name": "Bubble Sync"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch POC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch POC": {
+      "main": [
+        [
+          {
+            "node": "POC Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POC Check": {
+      "main": [
+        [
+          {
+            "node": "Create POC record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create POC record": {
+      "main": [
+        [
+          {
+            "node": "Update POC Unique ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Link POC to Client Requirement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "gQZoWFB01klMg0wu",
+    "timeSavedPerExecution": 3,
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "89ea2e10-3605-4224-bfe4-55f8834da1cf",
+  "activeVersionId": "89ea2e10-3605-4224-bfe4-55f8834da1cf",
+  "versionCounter": 176,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-01-13T21:44:16.418Z",
+      "createdAt": "2026-01-13T21:44:16.418Z",
+      "role": "workflow:owner",
+      "workflowId": "5JC6DavvkZIvbewl",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-07T04:01:27.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-06",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-05-01T15:17:16.595Z",
+      "createdAt": "2026-05-01T15:17:16.595Z",
+      "id": "BkGKfSsKIdzqADRQ",
+      "name": "PDEV"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:08:57.129Z",
+    "createdAt": "2026-07-04T13:08:57.129Z",
+    "versionId": "89ea2e10-3605-4224-bfe4-55f8834da1cf",
+    "workflowId": "5JC6DavvkZIvbewl",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "b4302ab4-5003-48ce-b3b3-a98733198b4c",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          32,
+          0
+        ],
+        "id": "059ce940-7624-4829-930d-08210002ce0d",
+        "name": "Webhook",
+        "webhookId": "b4302ab4-5003-48ce-b3b3-a98733198b4c"
+      },
+      {
+        "parameters": {
+          "operation": "getAll",
+          "typeName": "Client Directory",
+          "options": {
+            "filters": {
+              "filter": [
+                {
+                  "key": "=Name",
+                  "constraint_type": "equals",
+                  "value": "={{ $json.body.record.name }}"
+                }
+              ]
+            }
+          }
+        },
+        "type": "n8n-nodes-base.bubble",
+        "typeVersion": 1,
+        "position": [
+          304,
+          0
+        ],
+        "id": "fcebd218-0307-4e87-a2f0-20142cf9b3b3",
+        "name": "Fetch POC",
+        "alwaysOutputData": true,
+        "credentials": {
+          "bubbleApi": {
+            "id": "o3eWjifu6jdDsPuY",
+            "name": "Bubble Sync"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "cd05c0bb-1a74-4077-a153-1277fe7e2b00",
+                "leftValue": "={{ $json._id }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "string",
+                  "operation": "empty",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          512,
+          0
+        ],
+        "id": "3cd8cd49-bd11-4edf-be87-4d137932566b",
+        "name": "POC Check",
+        "alwaysOutputData": false
+      },
+      {
+        "parameters": {
+          "operation": "create",
+          "typeName": "Client Directory",
+          "properties": {
+            "property": [
+              {
+                "key": "Name",
+                "value": "={{ $('Webhook').item.json.body.record[\"POC Name\"] }}"
+              },
+              {
+                "key": "Client",
+                "value": "={{ $('Webhook').item.json.body.record[\"Client Unique ID\"][0] }}"
+              },
+              {
+                "key": "Primary Email",
+                "value": "={{ $('Webhook').item.json.body.record[\"POC Primary Email\"] }}"
+              },
+              {
+                "key": "Phone",
+                "value": "={{ $('Webhook').item.json.body.record[\"POC Primary Contact Number\"] }}"
+              },
+              {
+                "key": "Client Requirement",
+                "value": "={{ $('Webhook').item.json.body.record[\"Requirement Bubble ID\"][0] }}"
+              },
+              {
+                "key": "Role",
+                "value": "={{ $('Webhook').item.json.body.record[\"Job Title\"] }}"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.bubble",
+        "typeVersion": 1,
+        "position": [
+          832,
+          -112
+        ],
+        "id": "93d47492-3980-4605-a24f-53cee11e761d",
+        "name": "Create POC record",
+        "credentials": {
+          "bubbleApi": {
+            "id": "o3eWjifu6jdDsPuY",
+            "name": "Bubble Sync"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "base": {
+            "__rl": true,
+            "value": "apptuAm73VyH7pcHA",
+            "mode": "list",
+            "cachedResultName": "SV: Client Services",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA"
+          },
+          "table": {
+            "__rl": true,
+            "value": "tblWoE42gtxjntgaw",
+            "mode": "list",
+            "cachedResultName": "POC",
+            "cachedResultUrl": "https://airtable.com/apptuAm73VyH7pcHA/tblWoE42gtxjntgaw"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "id": "={{ $('Webhook').item.json.body.record.id }}",
+              "Bubble Unique ID": "={{ $json.id }}"
+            },
+            "matchingColumns": [
+              "id"
+            ],
+            "schema": [
+              {
+                "id": "id",
+                "displayName": "id",
+                "required": false,
+                "defaultMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": false
+              },
+              {
+                "id": "POC Name",
+                "displayName": "POC Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Name",
+                "displayName": "Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Job Title",
+                "displayName": "Job Title",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Company",
+                "displayName": "Company",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Client",
+                "displayName": "Client",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Client Name",
+                "displayName": "Client Name",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Client Unique ID",
+                "displayName": "Client Unique ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "POC Primary Email",
+                "displayName": "POC Primary Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "POC Primary Contact Number",
+                "displayName": "POC Primary Contact Number",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Created By",
+                "displayName": "Created By",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "Created",
+                "displayName": "Created",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PLACEMENTS Requirements",
+                "displayName": "PLACEMENTS Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "POC Secondary Email",
+                "displayName": "POC Secondary Email",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "POC Secondary Contact Number",
+                "displayName": "POC Secondary Contact Number",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Timezone",
+                "displayName": "Timezone",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "options",
+                "options": [
+                  {
+                    "name": "EST",
+                    "value": "EST"
+                  },
+                  {
+                    "name": "CST",
+                    "value": "CST"
+                  },
+                  {
+                    "name": "MST",
+                    "value": "MST"
+                  },
+                  {
+                    "name": "PST",
+                    "value": "PST"
+                  },
+                  {
+                    "name": "LATAM",
+                    "value": "LATAM"
+                  },
+                  {
+                    "name": "AST",
+                    "value": "AST"
+                  },
+                  {
+                    "name": "HDT",
+                    "value": "HDT"
+                  }
+                ],
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Photo",
+                "displayName": "Photo",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Bubble Unique ID",
+                "displayName": "Bubble Unique ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": false,
+                "removed": false
+              },
+              {
+                "id": "Projects",
+                "displayName": "Projects",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Record ID",
+                "displayName": "Record ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              },
+              {
+                "id": "PDEV Requirements",
+                "displayName": "PDEV Requirements",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "array",
+                "readOnly": false,
+                "removed": true
+              },
+              {
+                "id": "Requirement Bubble ID",
+                "displayName": "Requirement Bubble ID",
+                "required": false,
+                "defaultMatch": false,
+                "canBeUsedToMatch": true,
+                "display": true,
+                "type": "string",
+                "readOnly": true,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.airtable",
+        "typeVersion": 2.1,
+        "position": [
+          1136,
+          -112
+        ],
+        "id": "41a9ace8-6ecc-4315-8521-08295f7b5905",
+        "name": "Update POC Unique ID",
+        "credentials": {
+          "airtableTokenApi": {
+            "id": "cHANqvXsE4Fgk1Fq",
+            "name": "Airtable Personal Access Token account 3"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "update",
+          "typeName": "Client Requirement",
+          "objectId": "={{ $('Webhook').item.json.body.record[\"Requirement Bubble ID\"][0] }}",
+          "properties": {
+            "property": [
+              {
+                "key": "Point of Contact",
+                "value": "={{ [$json.id] }}"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.bubble",
+        "typeVersion": 1,
+        "position": [
+          1136,
+          96
+        ],
+        "id": "175e73fe-b67e-41be-b2f2-ea37e836967c",
+        "name": "Link POC to Client Requirement",
+        "credentials": {
+          "bubbleApi": {
+            "id": "o3eWjifu6jdDsPuY",
+            "name": "Bubble Sync"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Fetch POC",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch POC": {
+        "main": [
+          [
+            {
+              "node": "POC Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "POC Check": {
+        "main": [
+          [
+            {
+              "node": "Create POC record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create POC record": {
+        "main": [
+          [
+            {
+              "node": "Update POC Unique ID",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Link POC to Client Requirement",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}
