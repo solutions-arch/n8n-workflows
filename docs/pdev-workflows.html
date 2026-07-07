@@ -1,0 +1,629 @@
+<title>PDEV Workflows — Process Engineering Automation</title>
+<style>
+  :root {
+    --ground: #f2f0ec; --surface: #ffffff; --ink: #1a1917; --ink-2: #4d4a44;
+    --ink-3: #8a857c; --rule: #d6d1c9;
+    --accent: #1a6b5a; --accent-soft: #e4f0ec; --accent-muted: #2d8b76;
+    --warn: #b07318; --warn-soft: #faf0e0;
+    --ai: #6b52a3; --ai-soft: #eee9f7;
+    --live: #1a7a3a; --live-soft: #e3f2e8;
+    --off: #8a857c; --off-soft: #edebe7;
+    --shadow: 0 1px 3px rgba(26,25,23,0.07);
+    --shadow-lg: 0 4px 16px rgba(26,25,23,0.08);
+    --mistral: #FF7000; --openai: #10A37F; --anthropic: #D4845A;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#5cc4a8;--accent-soft:#1a2e28;--accent-muted:#4aab90;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --mistral:#FF8C33;--openai:#2EB88A;--anthropic:#E09A70;
+  }}
+  :root[data-theme="light"]{
+    --ground:#f2f0ec;--surface:#ffffff;--ink:#1a1917;--ink-2:#4d4a44;
+    --ink-3:#8a857c;--rule:#d6d1c9;
+    --accent:#1a6b5a;--accent-soft:#e4f0ec;--accent-muted:#2d8b76;
+    --warn:#b07318;--warn-soft:#faf0e0;
+    --ai:#6b52a3;--ai-soft:#eee9f7;
+    --live:#1a7a3a;--live-soft:#e3f2e8;
+    --off:#8a857c;--off-soft:#edebe7;
+    --shadow:0 1px 3px rgba(26,25,23,0.07);--shadow-lg:0 4px 16px rgba(26,25,23,0.08);
+    --mistral:#FF7000;--openai:#10A37F;--anthropic:#D4845A;
+  }
+  :root[data-theme="dark"]{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#5cc4a8;--accent-soft:#1a2e28;--accent-muted:#4aab90;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --mistral:#FF8C33;--openai:#2EB88A;--anthropic:#E09A70;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+
+  .wrap{max-width:1360px;margin:0 auto;padding:32px 20px 64px}
+
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+  h1{font-size:26px;font-weight:720;margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+  .lead{font-size:15px;color:var(--ink-2);margin:0 0 24px;max-width:62ch}
+
+  .tabs{display:flex;gap:2px;border-bottom:2px solid var(--rule);margin-bottom:20px}
+  .tab{font:inherit;font-size:14px;font-weight:640;padding:10px 20px 9px;border:none;background:none;color:var(--ink-3);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .panel[hidden]{display:none}
+
+  /* ---- animated map ---- */
+  .qbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .qbtn{font:inherit;font-size:12.5px;padding:7px 14px;border-radius:20px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,background .15s,color .15s}
+  .qbtn:hover{border-color:var(--accent)}
+  .qbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .qbtn.active{background:var(--accent);border-color:var(--accent);color:var(--ground)}
+  .qbtn.ai-q.active{background:var(--ai);border-color:var(--ai)}
+  .qbtn.playall{font-weight:650}
+
+  .caption{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:14px 18px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow);margin-bottom:16px;min-height:62px}
+  .caption .route{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;padding:3px 10px;border-radius:20px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+  .caption .desc{font-size:13.5px;color:var(--ink-2);flex:1 1 300px}
+  .caption .stat{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+  .board{border:1px solid var(--rule);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);overflow-x:auto}
+  .board svg{display:block;min-width:900px;width:100%;height:auto}
+
+  svg text{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;fill:var(--ink)}
+  svg .t-title{font-size:13px;font-weight:650}
+  svg .t-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:9.5px;fill:var(--ink-3)}
+  svg .t-col{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.14em;fill:var(--ink-3);text-transform:uppercase}
+
+  svg .node rect.body{fill:var(--surface);stroke:var(--rule);stroke-width:1.4;rx:8}
+  svg .node.trigger rect.body{stroke:var(--warn)}
+  svg .node.proc rect.body{stroke:var(--accent)}
+  svg .node.dest rect.body{stroke:var(--rule)}
+  svg .node.ai-node rect.body{stroke:var(--ai)}
+
+  svg .edge{fill:none;stroke:var(--rule);stroke-width:1.5}
+
+  svg.running .node,svg.running .edge{opacity:.15;transition:opacity .35s}
+  svg.running .node.on,svg.running .edge.on{opacity:1}
+  svg .node.on rect.body{stroke-width:2.6}
+  svg .node.trigger.on rect.body{stroke:var(--warn)}
+  svg .node.proc.on rect.body{stroke:var(--accent)}
+  svg .node.ai-node.on rect.body{stroke:var(--ai)}
+  svg .node.dest.on rect.body{stroke:var(--accent)}
+  svg .edge.on{stroke:var(--accent);stroke-width:2.4}
+  svg .node,svg .edge{transition:opacity .35s}
+
+  #pulse{fill:var(--accent);opacity:0;filter:url(#glow)}
+  #pulse.visible{opacity:1}
+  #pulse.ai-pulse{fill:var(--ai)}
+  svg .edge.on.ai-edge{stroke:var(--ai)}
+  svg .edge{stroke-dasharray:none}
+  svg .edge.on{stroke-dasharray:8 4;animation:edgeDash .6s linear infinite}
+  @keyframes edgeDash{to{stroke-dashoffset:-12}}
+
+  /* ---- deep dive ---- */
+  .dive-intro{font-size:15px;color:var(--ink-2);max-width:64ch;margin:0 0 28px;line-height:1.6}
+  .group-label{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:36px 0 14px 2px}
+  .group-label:first-child{margin-top:0}
+
+  .station{background:var(--surface);border:1px solid var(--rule);border-radius:11px;box-shadow:var(--shadow);padding:22px 26px 20px;margin-bottom:16px}
+  .station.ai-station{border-left:3px solid var(--ai);border-color:var(--ai) var(--rule) var(--rule) var(--ai)}
+  .st-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:10px}
+  .st-num{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--surface);background:var(--accent);min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .ai-station .st-num{background:var(--ai)}
+  .st-head h2{font-size:18px;font-weight:700;margin:0;line-height:1.3}
+  .st-chips-row{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .st-fn{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--ink-3);width:100%}
+  .station p{font-size:14.5px;color:var(--ink);margin:0 0 12px;max-width:68ch;line-height:1.6}
+
+  .chip{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;padding:2px 9px;border-radius:20px;white-space:nowrap;font-weight:600}
+  .chip.ai{background:var(--ai-soft);color:var(--ai)}
+  .chip.live{background:var(--live-soft);color:var(--live)}
+  .chip.off{background:var(--off-soft);color:var(--off)}
+  .chip.sys{background:var(--accent-soft);color:var(--accent)}
+  .chip.time{background:var(--warn-soft);color:var(--warn)}
+
+  .ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 16px}
+  @media(max-width:640px){.ba-grid{grid-template-columns:1fr}}
+  .ba-col h3{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+  .ba-col.before h3{color:var(--warn)}
+  .ba-col.after h3{color:var(--live)}
+  .ba-col ul{margin:0;padding:0;list-style:none}
+  .ba-col li{font-size:13.5px;line-height:1.55;color:var(--ink-2);padding:5px 0 5px 18px;position:relative}
+  .ba-col.before li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--warn-soft);border:1.5px solid var(--warn)}
+  .ba-col.after li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--live-soft);border:1.5px solid var(--live)}
+  .ba-col li strong{color:var(--ink);font-weight:620}
+
+  .flow-steps{margin:0 0 16px;padding:0;list-style:none}
+  .flow-step{display:grid;grid-template-columns:28px 1fr;gap:0 12px}
+  .flow-step .dot{grid-column:1;grid-row:1;width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:6px;justify-self:center}
+  .flow-step .line{grid-column:1;grid-row:2;width:2px;background:var(--rule);justify-self:center;min-height:12px}
+  .flow-step:last-child .line{display:none}
+  .flow-step .step-title{grid-column:2;grid-row:1;font-size:13.5px;font-weight:620;color:var(--ink);margin:0;line-height:1.4}
+  .flow-step .step-desc{grid-column:2;grid-row:2;font-size:13px;color:var(--ink-2);margin:0;padding-bottom:10px;line-height:1.5;max-width:60ch}
+
+  .impact{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:4px}
+  .ai-station .impact{border-left-color:var(--ai);background:var(--ai-soft)}
+  .impact .impact-head{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;font-weight:700}
+  .ai-station .impact .impact-head{color:var(--ai)}
+  .impact ul{margin:0;padding:0;list-style:none}
+  .impact li{font-size:13.5px;color:var(--ink);line-height:1.5;padding:2px 0}
+  .impact li strong{font-weight:660;color:var(--accent-muted)}
+  .ai-station .impact li strong{color:var(--ai)}
+
+  .sub-label{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-muted);margin:16px 0 8px 0;font-weight:700}
+
+  /* ---- AI stack banner ---- */
+  .ai-stack{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 18px;border-radius:10px;background:var(--ai-soft);border:1px solid color-mix(in srgb, var(--ai) 20%, transparent);margin:0 0 20px}
+  .ai-stack-title{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ai);font-weight:700;flex-basis:100%}
+  .ai-stack-desc{font-size:13px;color:var(--ink-2);flex-basis:100%;margin-bottom:4px}
+  .ai-stack-row{display:flex;flex-wrap:wrap;gap:8px}
+  .vendor-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 5px;border-radius:20px;background:var(--surface);border:1px solid var(--rule);font-size:12.5px;font-weight:620;color:var(--ink)}
+  .vendor-pill .vp-dot{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+
+  /* ---- mini flow diagrams ---- */
+  .mini-flow{overflow-x:auto;margin:14px 0 18px;padding:10px 6px;border-radius:10px;background:var(--ground);border:1px solid var(--rule)}
+  .mini-flow svg{display:block;width:100%;min-width:420px;height:auto}
+  .mf-node{fill:var(--surface);stroke:var(--accent);stroke-width:1.4}
+  .mf-trig{stroke:var(--warn)}
+  .mf-ai{stroke:var(--ai);fill:var(--ai-soft);stroke-width:2}
+  .mf-title{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;font-size:11px;font-weight:650;fill:var(--ink)}
+  .mf-title-ai{fill:var(--ai)}
+  .mf-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:8.5px;fill:var(--ink-3)}
+  .mf-edge{fill:none;stroke:var(--rule);stroke-width:1.5;stroke-dasharray:6 4;animation:mfPulse 1.2s linear infinite}
+  .mf-edge-ai{stroke:var(--ai)}
+  @keyframes mfPulse{to{stroke-dashoffset:-10}}
+
+  @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+
+<!-- shared SVG defs for mini-flow arrowheads -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <marker id="mf-arr" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--rule)"/></marker>
+    <marker id="mf-arr-ai" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--ai)"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <p class="eyebrow">scale virtually · process engineering</p>
+  <h1>PDEV Workflow Automation</h1>
+  <p class="lead">12 automated workflows — including 4 powered by AI inference models — replace manual data entry, meeting notes, daily reporting, and cross-system syncing.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-map" id="tab-map">Animated map</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-dive" id="tab-dive">Step-by-step deep dive</button>
+  </div>
+
+  <!-- ===== TAB 1: ANIMATED MAP ===== -->
+  <section class="panel" id="panel-map" role="tabpanel">
+    <div class="qbar" id="qbar"></div>
+    <div class="caption">
+      <span class="route" id="cap-route">pick a workflow</span>
+      <span class="desc" id="cap-desc">Each button traces a different workflow through the system — from trigger to output. The four AI-powered workflows use real inference models (Mistral, OpenAI, Claude).</span>
+      <span class="stat" id="cap-stat"></span>
+    </div>
+    <div class="board">
+      <svg id="flow" viewBox="0 0 1340 620" role="img" aria-label="Flow diagram of PDEV automation system"></svg>
+    </div>
+  </section>
+
+  <!-- ===== TAB 2: DEEP DIVE ===== -->
+  <section class="panel" id="panel-dive" role="tabpanel" hidden>
+    <p class="dive-intro">Each workflow below shows the manual process it replaces, a node-by-node animated flow, and measurable impact. AI-powered workflows first, then intake and daily operations.</p>
+
+    <h3 class="group-label">AI-powered intelligence</h3>
+
+    <div class="ai-stack">
+      <span class="ai-stack-title">Inference models powering 4 agentic workflows</span>
+      <span class="ai-stack-desc">These workflows call external AI inference APIs to read, analyze, and generate structured output — they are not rule-based automations.</span>
+      <div class="ai-stack-row">
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--mistral)">M</span> Mistral AI</span>
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--openai)">O</span> OpenAI</span>
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--anthropic)">C</span> Anthropic Claude</span>
+      </div>
+    </div>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">1</span><h2>AI Meeting Minutes Generator</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">48 nodes</span></div></div><p class="st-fn">[Fathom] PEC MoM Generator</p><div class="mini-flow" id="mf-1"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Someone takes notes during client meetings — splitting attention</li><li>15–30 min writing formal minutes afterward</li><li>Action items identified manually</li><li>MoM emailed and posted to Slack by hand</li><li>Quality depends on notetaker's attention and writing skill</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Meeting recorded on Fathom — each PE has a dedicated channel</li><li>Transcript cleaned and normalized automatically</li><li>AI generates structured minutes: attendees, agenda, action items, decisions</li><li>MoM emailed to client, posted to Slack, stored in database</li><li><strong>100% coverage — every recorded meeting gets minutes</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>15–30 min saved per meeting</strong></li><li><strong>Consistent format</strong> — professional MoM every time</li><li><strong>Better meetings</strong> — PEs focus fully on the conversation</li></ul></div></article>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">2</span><h2>Automated MoM Email Processing</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">23 nodes</span></div></div><p class="st-fn">[Gmail] MoM Fetcher</p><div class="mini-flow" id="mf-2"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>No existing process — MoM emails were not systematically tracked</li><li>No linkage between MoM emails and PDEV requirements</li><li>Insights buried in inboxes</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>MoM email triggers automatically</li><li>AI reads, analyzes, and matches to the correct requirement</li><li>Record created in Airtable under the right status</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Net-new capability</strong> — this process didn't exist before</li><li><strong>No manual email triage</strong></li><li><strong>~10 min saved per email</strong></li></ul></div></article>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">3</span><h2>AI Client Insight Extraction</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">24 nodes</span></div></div><p class="st-fn">[Gmail] Insights Fetcher</p><div class="mini-flow" id="mf-3"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>No existing process — client email insights were not captured</li><li>Valuable project signals stayed buried in inboxes</li><li>No structured record of client sentiment or updates</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>AI scans every qualifying client email</li><li>Extracts key updates, sentiment, project signals</li><li>Matched to correct requirement, insight record created</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Net-new capability</strong> — this process didn't exist before</li><li><strong>No lost insights</strong> — every email analyzed</li><li><strong>Automatic routing</strong> to correct requirement</li></ul></div></article>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">4</span><h2>Daily AI Insights Report</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">13 nodes</span></div></div><p class="st-fn">[Scheduled] PDEV Insights</p><div class="mini-flow" id="mf-4"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Daily review of all logged insights — by hand</li><li>Synthesize patterns — rarely consistent</li><li>Write summary and share — time-consuming</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Daily schedule triggers automatically</li><li>Insights aggregated per requirement</li><li>AI writes narrative summary — wins, risks, trends</li><li>Visual report card rendered and posted to Slack</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Consistent daily reporting</strong> — no one needs to drive it</li><li><strong>Visual report card</strong> — easy to scan and share</li><li><strong>~45–60 min saved daily</strong></li></ul></div></article>
+
+    <h3 class="group-label">Client intake pipeline</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">5</span><h2>Automated RFP Processing Pipeline</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">95 nodes</span></div></div><p class="st-fn">[AT] New RFP Form submission</p><div class="mini-flow" id="mf-5"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>An RFP arrives via email or form</li><li>Someone manually extracts company, client, POC, and role details</li><li>They check Airtable one-by-one for existing records</li><li>New records created; existing ones linked — by hand</li><li>For multi-role RFPs, the entire cycle repeats per role</li><li>Attachments downloaded and uploaded manually</li><li>Confirmation emails sent manually</li><li><strong>Total: 30–60 minutes per RFP</strong></li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>RFP form submitted once</li><li>Company, client, POC deduplicated automatically</li><li>Multi-role RFPs split — each role gets its own requirement</li><li>Attachments fetched and stored to correct records</li><li>Bubble internal portal updated with linked IDs</li><li>Confirmation emails sent automatically</li><li><strong>Total: seconds, zero manual intervention</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>30–60 min → seconds</strong> — entire RFP intake automated</li><li><strong>Zero duplication</strong> — every entity deduplicated before creation</li><li><strong>Portal stays current</strong> — Bubble updated instantly</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">6</span><h2>Auto-Create Client Requirements</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">5 nodes</span></div></div><p class="st-fn">[AT] Create PDEV Requirement</p><div class="mini-flow" id="mf-6"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Requirement logged in Airtable</li><li>Open Bubble portal, look up project and client IDs</li><li>Re-enter same information manually</li><li>Wrong IDs = incorrect portal data</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Requirement logged in Airtable as usual</li><li>Project and client IDs looked up automatically</li><li>Matching record created in Bubble instantly</li><li>IDs linked back to Airtable</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>~5 min saved per requirement</strong></li><li><strong>No ID mismatch errors</strong></li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">7</span><h2>Auto-Create Point of Contact Records</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">6 nodes</span></div></div><p class="st-fn">[AT] Create POC</p><div class="mini-flow" id="mf-7"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>New contact identified for a client</li><li>Manually check Bubble for duplicates</li><li>Create record by hand if new</li><li>Link to correct requirement manually</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>POC registered in Airtable</li><li>Duplicate check runs automatically</li><li>Created only if doesn't exist</li><li>Linked to correct requirement automatically</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>No duplicate contacts</strong></li><li><strong>~3–5 min saved per POC</strong></li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">8</span><h2>Master Integration — Two Systems in Sync</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">42 nodes</span></div></div><p class="st-fn">[AT] PDEV Master Integration</p><div class="mini-flow" id="mf-8"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Data lives in Airtable and Bubble separately</li><li>Any change = log into both systems and update each</li><li>Data drifts apart over time</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Update Airtable once — Bubble follows</li><li>Missing records created automatically</li><li>All IDs synced back, Slack notification on completion</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Single source of truth</strong> — update once, both systems follow</li><li><strong>~15–20 min saved per update</strong></li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">9</span><h2>Project PE Assignment Sync</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">6 nodes</span></div></div><p class="st-fn">[Bubble] Bubble to AT Sync [Projects]</p><div class="mini-flow" id="mf-9"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>PE assigned to a project in the Bubble portal</li><li>Someone must manually update the same assignment in Airtable</li><li>Requirement record also needs the PE linked — a second manual step</li><li>Assignments drift between systems</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>PE assigned in Bubble triggers a webhook</li><li>Matching project and PE looked up in Airtable automatically</li><li>Both the project and its parent requirement updated in one pass</li><li>Both systems always reflect the same PE assignment</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>No dual-entry</strong> — assign once, both systems follow</li><li><strong>PE assignments always consistent</strong> across Bubble and Airtable</li></ul></div></article>
+
+    <h3 class="group-label">Daily operations &amp; reporting</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">10</span><h2>Daily PDEV Health Digest &amp; Metrics</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">24 nodes (2 workflows)</span></div></div><p class="st-fn">Daily Scrubbing (PDEV &amp; Projects) + Daily Scrubbing Notifier (PDEV)</p><div class="mini-flow" id="mf-10"></div><p>Two coordinated workflows run daily. One computes and stores health metrics for every active requirement and project; the other scores, ranks, and posts a prioritized digest to Slack.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Someone manually reviews all active requirements each morning</li><li>They mentally assess urgency — inconsistent across reviewers</li><li>Summary written up and posted to Slack by hand</li><li>Some days it doesn't happen — issues slip through</li><li>No systematic day-to-day tracking of requirement health</li><li>Trend analysis impossible without historical data points</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Health metrics computed daily for every requirement and project</li><li>Each record updated with current metrics in Airtable</li><li>Dated snapshots saved — building trend history over time</li><li>Requirements scored objectively by urgency, health, and recency</li><li>Formatted, ranked digest posted to Slack automatically</li><li>Enables weekly/monthly reporting from real data</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Consistent daily visibility</strong> — the digest happens every day, no exceptions</li><li><strong>Objective scoring</strong> — urgency is calculated, not guessed</li><li><strong>Historical trend data</strong> — see exactly when a requirement stalled or accelerated</li><li><strong>~20–30 min saved daily</strong> — eliminates manual review, write-up, and record-keeping</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">11</span><h2>Billable Activities Tracker</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">19 nodes</span></div></div><p class="st-fn">[Scheduled] Billable Activities</p><div class="mini-flow" id="mf-11"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Time logs pulled from the Bubble portal manually</li><li>Cross-reference each log with the correct client, contractor, and requirement — by hand</li><li>Deduplicate entries manually to avoid double-counting</li><li>Billable activity records created one at a time in Airtable</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Schedule triggers automatically — time logs fetched from the Bubble portal API</li><li>Clients, contractors, and PDEV requirements looked up and cross-referenced</li><li>Unique entries deduplicated automatically</li><li>Billable activity records created in Airtable in one pass</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Automated billing reconciliation</strong> — no manual cross-referencing</li><li><strong>No double-counting</strong> — deduplication built in</li><li><strong>Complete billable activity tracking</strong> from real time-log data</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">12</span><h2>Automated Error Monitoring</h2><div class="st-chips-row"><span class="chip off">Inactive</span><span class="chip time">6 nodes</span></div></div><p class="st-fn">PDev Error Trigger</p><div class="mini-flow" id="mf-12"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Failures noticed hours or days later</li><li>Manual log digging, manual ticket creation</li><li>Manual Slack notification</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Failure caught instantly</li><li>ClickUp bug ticket filed automatically</li><li>Error logged in Supabase, Slack notification sent</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Zero-delay detection</strong></li><li><strong>Full audit trail</strong> for pattern analysis</li></ul></div></article>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  var LOGOS={"mistral":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAAAXNSR0IArs4c6QAAAHhlWElmTU0AKgAAAAgABAEaAAUAAAABAAAAPgEbAAUAAAABAAAARgEoAAMAAAABAAIAAIdpAAQAAAABAAAATgAAAAAAAABIAAAAAQAAAEgAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAACigAwAEAAAAAQAAACgAAAAASWlSmwAAAAlwSFlzAAALEwAACxMBAJqcGAAAA+hJREFUWAntV89rE0EUfrO7aZomxVi81lO1VRDBkwdBBelJ25NnD/Zv8FRQ/whPehB7ExRFr4LgSUREPFSL0CpYlF5Mq0ma7M74vdmddHYz26Y2aAuZsp3dN9/75s37MTMhGrSBBwYeONgeEC7z1UcahfwB+TRGYYIYQd+kh2KS7rh0epEpRR4t0l0q0gS1LN4GvRJTNO/iCFxCKlFADTpPQ3QYRsatiK5O75343QgFnQXvSTKuGdK8G3kUbgNj9KZeZZSoxoYaf+bx7SwXYGXvtROoh150vrr0eXhft3wDOQT2w0i/k5F/tSghSCIL+Ulzm3A7WN0hrgHJYWAimWhtot+g4+oxXU4khEzlcQnDX4oryFCrqSc0TgU6Taxnmg/Gn1SFnMikDs9jYww26d0GfsVo1kBW8GgWCT6b6MZeiLSJk5B97sj5RdE0sPfQp9s3PbYl4yLZtYGsbofB0PFkJrlZFodmEyZmzeDRSGNtPEu52SHld54rp20zlKPxj8X9MbDg9GBfltIfA9upoPXFMEOSXyR1DLH5poqNRrZXOLia4pG6nUn1RTpCRaSmKzttDq7oNoNMWduD8UaRlvCX3mZgnQfFnQzkZQTYTrKxYL1fdjV0T6MlbCDvGDnN7UEGM7d5cpQ7Yvfi09XaAWdeDnoV53uQQ5YNW95qXR7sFctzMDanuQ1EDsqWT0IoUkkOejhIVUEuiYpMX7mU8GXNmwa0gvueboyVgVzxRuWb1LxKCVnzL3lKVKXBFgRFIU/ivii5DfxwiEKsLMATGSIfd6K2elp8XrthT4oliHCmuoR5JlLYUL0Yflabs7H83popv/U8OhOZhYM30ta6z7tsELf4eCTzCF91L+jq+DBwwoE1V90Op7oFVPyX5t4mxPkGdmj/74vbwAIyqtdWDhiLrOthV7q547bdNSuzdxu5EflU9kgnfWJq8s6Wp/GrDZ9GdKqavI8nQYV1YS9C9xAOF+a0eePPNC9kWLQSXwr0Lmbc+g93+EHZnxI4IxIevRPIllwLm2rVIJlRonYqp4rzY0dLP8zNig+Htde/z9Fae65hwOjBJQoV75jniZLNG4ZqXdblsgXVv9XAf12s5txE2qgyQ2IUUXDEj2n8ilMqqrdp4gTRipFzv+zTtapH920DWR6CNO1qhAREgcXLOK6wlqILgVk1C1MN5md09LGc7A4amoy3CkWcxpldwkdlM3cXP5R0wlqTsSOyOJ4HctUVd0tvX7wGpT2YwR5ECEvslCwNPLAnbg4xfoV5ASZYyJL3+q2LBNERAa1nQ4yb2qemoIVsDvbKzQbiNPveK36AG3hg4IH96oE/g28NE5ydtXoAAAAASUVORK5CYII=","openai":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAKKADAAQAAAABAAAAKAAAAAB65masAAAGMklEQVRYCcWXW7CWUxjH7USTTg6hJCpJBySqC5lS6cK4wYzJ6KipJqSMm0iDikROMzFJXWmnacYxoRKjHMbhApUOikhHQnQup99vt5+v1Tvfu/e3Q/4zv/2u9axnrfdZaz1rvd8uO+7oVY+uHeFCuA52wgL4ApbDAfhfdApvHQur4a8i/IHtM7gV6sIxVXfe9iVkA9uNbU8R+wfYXOGjVlkNel6D7xxoUNnHFSyHJbAZakFz6AP94BxQtt0NrmZ9MBXWwTLYDv+KXIWfwJX7EyZDI8jTyTQsguxKp/VNtD8D7eEf6Xh6L4YY/M5qRjub9icgJhT9zM19EPV47sA2Go5avekZg7nFefJUG7xbGv4HKb8CA6ATtIEuMBzSSes/BWqktniPgTgUHoIOOSNcj92TG4H5fBt6QFW6gcYtEP1GVeUcbU0pmBu7IDr6fA+y6ophPqR+q6j3B1OjFF2K01ZwjN/gAshVZ1rWQPpCD4X1pyDkyyfBXgjfHymPAw9IVs0wSJ5cyXjPs3lObl+aPx9TN1ci2Q0o5BWyHwzOL8ZMOA+y8lK/Dwz+B8ibgNed15XjbYPGcIS8oz6CWI1plE8C77xiAbbEboDfwBWQVW0Mg2AtxJjxXIntJvDeTHUblfDplTZY9rMUjbMpOyN1JuQF6LXxpk4Z9aT+Ljiek3gEBkEctniP92Q3CDnRaBsWRp91wI+7jRvhDAhVF6AvCZncz8Hv4FjPw0UQ8mIfC253BOIEpkNzsL+Ttu0OKMiDEQ0PFayHCtUF+Dpu5tkE8ATGix1PW0PIqhWGGWBw4b+Z8iyIOAZTLmgIpXDsXbAeKlQVoF+FDRB55uqPgOHwLTjmenD8EyArt9cdiHfH0x3okjr7WbLRGbnMqfICdBV2gf32whRoAiHTxN3YDfoshezkMVXk+o08PTgRoD8m2kBBkynZeADaFayHClUFqP9qSPMs073iyxP57Tv89dM260T9VPBwRpALKBdWfWDScDXlVK7Kz2DH8UmDK+jFag5WpxdxcNvWgOO4QhPgNEjl1eR3O4I0rgp15O9BsGFqheXwHw9AnLr5lF1R1QJM6IVQnV7FQV9XbihsAN/1FfSFVM2peKHb/ilUrKJ/Pqk0+gPyXEhljqwDOzm4h8BcdVKlBmjflqDMz9dAm3ncDFLFmXB8F69C/flrB5kHhf2nrBrDA+D26ON2uW2lbPFLlX3ST+H9lbZ9PM+HVH2oRCyDosH9fyNpmEM5myP6uk3lEAMY6CWQJ3+JrwBXIw3wQeqO4Q3QGlJ5gg3cdm+CgnT8FeLlqyi7vbUgq14YloC+++FxOAtCbqO3wx7Qx+um1ACNw8Dt9xgUdBklZxoBxnMRtm4Fr8OF2hQHQ+TnRsojwRyNg2DbenASpQbYHV9vCN8/BAoaQEmjjXNha2Vdm3feTEhfQrVCDfh7L6STM/ndRu+3F8Ax0r5VbfHESn9Pfmco6HZKEWB7yufCDHD22sUrZxykP0rNs3Kw3UFnQ3rhe83YVkqATui7Sv9lPOtAQUMpRSAuc+hyCgsh2nyan4PhYYiEXkq5N2RV7BTnraALEu+5JTtQz6RxVKaxjHpfWJ74xEBfY7sZzMmsnNxacPvzVrAZbfb1ex5jfki5Lhwhr5XIu/cp1zqi9VClIY8xsAW2w3godh21wu5qRHqYwy0gFCvo6R4GiyGC+56y11lRTceqowfFKyZPTWhw5lk1wnAPxOfRsQzyUUhXeCr1eE8E5tM7s6p7teITFnfhNpyPOEXU8+Rq94OVkL7Q3O0GWS3BkPrtoP4knJ51LFaP0+wAbrm5V5U8UOkWxUq4A2VFOrbD5tbq50kdDWl+Uq1e/qOTzvAd6iOgK/gp6gTemy/DQQhfV/0uMFfzVE5D+F+V51SK3ZP8SzJYDLoPm/dd1H3q9zS0gKrk7pjf9nHSaV5SrbncjmmwCdKAsuW3aG8EeapPw0SIiTmhi/OcU3uxHEnbo+xV4oCtwe3zU7YXJkEzUOthFhjsRnClmkIPGAgdQNm3H8yz8l/Lz5yXanZFDWJnEfsqbFfCMVVd3jYSPofYwmzAa2jzG+63tkYqdYtLGfREnDqCqXAt1IO5sAIM3qulxvobWfhD/vVPaqoAAAAASUVORK5CYII=","claude":"data:image/png;base64,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","airtable":"data:image/png;base64,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","bubble":"data:image/png;base64,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","gmail":"data:image/png;base64,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","slack":"data:image/png;base64,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","fathom":"data:image/png;base64,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","webhook":"data:image/png;base64,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"};
+
+  // ---- tabs ----
+  var tabs=document.querySelectorAll(".tab");
+  var panels=document.querySelectorAll(".panel");
+  tabs.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      tabs.forEach(function(t){t.classList.remove("active");t.setAttribute("aria-selected","false")});
+      btn.classList.add("active");btn.setAttribute("aria-selected","true");
+      var target=btn.getAttribute("aria-controls");
+      panels.forEach(function(p){p.hidden=p.id!==target});
+    });
+  });
+
+  // ---- mini flow generator ----
+  function buildMiniFlow(id, stages){
+    var c=document.getElementById(id);
+    if(!c)return;
+    var NW=170,NH=50,GAP=32,PAD=14;
+    var W=PAD*2+stages.length*NW+(stages.length-1)*GAP;
+    var H=NH+PAD*2;
+    var s=document.createElementNS(NS,"svg");
+    s.setAttribute("viewBox","0 0 "+W+" "+H);
+    // x positions
+    var xs=[];
+    for(var i=0;i<stages.length;i++){xs.push(PAD+i*(NW+GAP));}
+    // edges
+    for(var i=0;i<stages.length-1;i++){
+      var x1=xs[i]+NW,x2=xs[i+1],y=PAD+NH/2;
+      var isAiEdge=stages[i].c==="ai"||stages[i+1].c==="ai";
+      var p=document.createElementNS(NS,"path");
+      p.setAttribute("d","M"+x1+" "+y+"L"+x2+" "+y);
+      p.setAttribute("class","mf-edge"+(isAiEdge?" mf-edge-ai":""));
+      p.setAttribute("marker-end","url(#"+(isAiEdge?"mf-arr-ai":"mf-arr")+")");
+      s.appendChild(p);
+    }
+    // nodes
+    for(var i=0;i<stages.length;i++){
+      var st=stages[i],x=xs[i],y=PAD;
+      var g=document.createElementNS(NS,"g");
+      var r=document.createElementNS(NS,"rect");
+      r.setAttribute("x",x);r.setAttribute("y",y);
+      r.setAttribute("width",NW);r.setAttribute("height",NH);
+      r.setAttribute("rx",8);
+      r.setAttribute("class","mf-node"+(st.c==="ai"?" mf-ai":st.c==="warn"?" mf-trig":""));
+      g.appendChild(r);
+      if(st.logo&&LOGOS[st.logo]){
+        var img=document.createElementNS(NS,"image");
+        img.setAttributeNS("http://www.w3.org/1999/xlink","href",LOGOS[st.logo]);
+        img.setAttribute("href",LOGOS[st.logo]);
+        img.setAttribute("x",x+8);img.setAttribute("y",y+11);
+        img.setAttribute("width",28);img.setAttribute("height",28);
+        img.setAttribute("preserveAspectRatio","xMidYMid meet");
+        g.appendChild(img);
+      }
+      var cx=st.logo&&LOGOS[st.logo]?x+104:x+NW/2;
+      var t=document.createElementNS(NS,"text");
+      t.setAttribute("x",cx);t.setAttribute("y",y+(st.s?20:28));
+      t.setAttribute("text-anchor","middle");
+      t.setAttribute("class","mf-title"+(st.c==="ai"?" mf-title-ai":""));
+      t.textContent=st.l;
+      g.appendChild(t);
+      if(st.s){
+        var u=document.createElementNS(NS,"text");
+        u.setAttribute("x",cx);u.setAttribute("y",y+35);
+        u.setAttribute("text-anchor","middle");u.setAttribute("class","mf-sub");
+        u.textContent=st.s;
+        g.appendChild(u);
+      }
+      s.appendChild(g);
+    }
+    c.appendChild(s);
+  }
+
+  // render all mini flows
+  var MF=[
+    ["mf-1",[{l:"Fathom",s:"recording",c:"warn",logo:"fathom"},{l:"Clean Transcript",s:"normalize"},{l:"Mistral AI",s:"inference",c:"ai",logo:"mistral"},{l:"Email · Slack · DB",s:"distribute"}]],
+    ["mf-2",[{l:"Gmail",s:"MoM email",c:"warn",logo:"gmail"},{l:"OpenAI",s:"inference",c:"ai",logo:"openai"},{l:"Match Requirement",s:"lookup"},{l:"Airtable",s:"create record",logo:"airtable"}]],
+    ["mf-3",[{l:"Gmail",s:"client email",c:"warn",logo:"gmail"},{l:"OpenAI",s:"inference",c:"ai",logo:"openai"},{l:"Extract Signals",s:"sentiment · updates"},{l:"Airtable",s:"insight record",logo:"airtable"}]],
+    ["mf-4",[{l:"Schedule",s:"daily cron",c:"warn"},{l:"Aggregate",s:"per requirement"},{l:"Claude",s:"inference",c:"ai",logo:"claude"},{l:"Report Card",s:"render"},{l:"Slack",s:"post digest",logo:"slack"}]],
+    ["mf-5",[{l:"RFP Form",s:"webhook",c:"warn",logo:"webhook"},{l:"Dedup & Build",s:"company · client · POC"},{l:"Create Records",s:"Airtable",logo:"airtable"},{l:"Update Portal",s:"Bubble",logo:"bubble"},{l:"Send Email",s:"confirmation"}]],
+    ["mf-6",[{l:"AT Trigger",s:"new requirement",c:"warn",logo:"airtable"},{l:"Lookup IDs",s:"project · client"},{l:"Create Record",s:"Bubble",logo:"bubble"},{l:"Link Back",s:"Airtable",logo:"airtable"}]],
+    ["mf-7",[{l:"AT Trigger",s:"new POC",c:"warn",logo:"airtable"},{l:"Dedup Check",s:"Bubble lookup"},{l:"Create if New",s:"Bubble",logo:"bubble"},{l:"Link to Req",s:"Airtable",logo:"airtable"}]],
+    ["mf-8",[{l:"AT Trigger",s:"record change",c:"warn",logo:"airtable"},{l:"Sync Engine",s:"42 nodes"},{l:"Update Bubble",s:"portal",logo:"bubble"},{l:"Sync IDs",s:"Airtable",logo:"airtable"},{l:"Notify",s:"Slack",logo:"slack"}]],
+    ["mf-9",[{l:"Bubble Webhook",s:"PE assigned",c:"warn",logo:"bubble"},{l:"Search AT",s:"project · PE",logo:"airtable"},{l:"Merge & Match",s:"records"},{l:"Assign PE",s:"project + req"}]],
+    ["mf-10",[{l:"Schedule",s:"daily cron",c:"warn"},{l:"Fetch Records",s:"PDEV + projects"},{l:"Compute Metrics",s:"score · rank"},{l:"Save Snapshots",s:"Airtable",logo:"airtable"},{l:"Post Digest",s:"Slack",logo:"slack"}]],
+    ["mf-11",[{l:"Schedule",s:"daily cron",c:"warn"},{l:"Fetch Logs",s:"Bubble API",logo:"bubble"},{l:"Cross-Reference",s:"client · contractor"},{l:"Dedup",s:"unique entries"},{l:"Create Records",s:"Airtable",logo:"airtable"}]],
+    ["mf-12",[{l:"Error Trigger",s:"workflow failure",c:"warn",logo:"webhook"},{l:"Create Ticket",s:"ClickUp"},{l:"Log Error",s:"Supabase"},{l:"Notify",s:"Slack",logo:"slack"}]]
+  ];
+  MF.forEach(function(m){buildMiniFlow(m[0],m[1])});
+
+  // ---- SVG system map ----
+  var svg=document.getElementById("flow");
+  function el(tag,attrs,parent){
+    var e=document.createElementNS(NS,tag);
+    for(var k in attrs)e.setAttribute(k,attrs[k]);
+    (parent||svg).appendChild(e);return e;
+  }
+
+  var NODES={
+    form:     {x:30, y:52,  w:170,h:50,title:"RFP Form",       sub:"webhook trigger",    cls:"trigger"},
+    at_in:    {x:30, y:138, w:170,h:50,title:"Airtable",        sub:"automation trigger",  cls:"trigger"},
+    fathom:   {x:30, y:224, w:170,h:50,title:"Fathom",          sub:"meeting recording",   cls:"trigger"},
+    gmail_in: {x:30, y:310, w:170,h:50,title:"Gmail",           sub:"email trigger",       cls:"trigger"},
+    sched:    {x:30, y:396, w:170,h:50,title:"Scheduler",       sub:"daily cron",          cls:"trigger"},
+    err:      {x:30, y:482, w:170,h:50,title:"Error Trigger",   sub:"workflow failure",    cls:"trigger"},
+    dedup:    {x:460,y:70,  w:200,h:54,title:"Dedup & Build",   sub:"company · client · POC",cls:"proc"},
+    sync:     {x:460,y:175, w:200,h:54,title:"Cross-System Sync",sub:"AT ↔ Bubble ↔ ClickUp",cls:"proc"},
+    ai:       {x:460,y:285, w:200,h:54,title:"AI Agent",        sub:"LLM inference",       cls:"ai-node"},
+    compute:  {x:460,y:400, w:200,h:54,title:"Metrics Engine",   sub:"scoring · snapshots",  cls:"proc"},
+    at_out:   {x:930,y:42,  w:170,h:50,title:"Airtable",        sub:"create / update",     cls:"dest"},
+    bubble:   {x:930,y:128, w:170,h:50,title:"Bubble Portal",   sub:"internal portal",     cls:"dest"},
+    clickup:  {x:930,y:214, w:170,h:50,title:"ClickUp",         sub:"project management",  cls:"dest"},
+    gmail_out:{x:930,y:300, w:170,h:50,title:"Gmail",           sub:"send email",          cls:"dest"},
+    slack:    {x:930,y:386, w:170,h:50,title:"Slack",            sub:"team notifications",  cls:"dest"},
+    supa:     {x:930,y:472, w:170,h:50,title:"Supabase",         sub:"database storage",    cls:"dest"}
+  };
+
+  var K=90;
+  function anchor(id,side,off){
+    var n=NODES[id],o=off||0;
+    if(side==="r")return{x:n.x+n.w,y:n.y+n.h/2+o};
+    if(side==="l")return{x:n.x,y:n.y+n.h/2+o};
+    if(side==="t")return{x:n.x+n.w/2+o,y:n.y};
+    return{x:n.x+n.w/2+o,y:n.y+n.h};
+  }
+  function edgeD(from,fs,to,ts,fo,to2,k1,k2){
+    var a=anchor(from,fs,fo),b=anchor(to,ts,to2);
+    var c1=k1||K,c2=k2||K;
+    var dx=fs==="r"?1:fs==="l"?-1:0,dy=fs==="t"?-1:fs==="b"?1:0;
+    var dx2=ts==="r"?1:ts==="l"?-1:0,dy2=ts==="t"?-1:ts==="b"?1:0;
+    return"M "+a.x+" "+a.y+" C "+(a.x+dx*c1)+" "+(a.y+dy*c1)+", "+(b.x+dx2*c2)+" "+(b.y+dy2*c2)+", "+b.x+" "+b.y;
+  }
+
+  var EDGES={
+    e_form_dedup:    {d:edgeD("form","r","dedup","l")},
+    e_form_sync:     {d:edgeD("form","r","sync","l",0,0,100,80)},
+    e_at_dedup:      {d:edgeD("at_in","r","dedup","l",0,0,100,80)},
+    e_at_sync:       {d:edgeD("at_in","r","sync","l")},
+    e_fathom_ai:     {d:edgeD("fathom","r","ai","l")},
+    e_gmail_ai:      {d:edgeD("gmail_in","r","ai","l")},
+    e_sched_compute: {d:edgeD("sched","r","compute","l")},
+    e_sched_ai:      {d:edgeD("sched","r","ai","l",0,0,140,120)},
+    e_err_compute:   {d:edgeD("err","r","compute","l",0,0,120,100)},
+    e_dedup_at:      {d:edgeD("dedup","r","at_out","l")},
+    e_dedup_bubble:  {d:edgeD("dedup","r","bubble","l",0,0,80,60)},
+    e_dedup_gmail:   {d:edgeD("dedup","r","gmail_out","l",0,0,110,130)},
+    e_sync_at:       {d:edgeD("sync","r","at_out","l",0,0,110,130)},
+    e_sync_bubble:   {d:edgeD("sync","r","bubble","l")},
+    e_sync_clickup:  {d:edgeD("sync","r","clickup","l",0,0,80,60)},
+    e_sync_slack:    {d:edgeD("sync","r","slack","l",0,0,110,130)},
+    e_ai_at:         {d:edgeD("ai","r","at_out","l",0,0,140,170)},
+    e_ai_gmail:      {d:edgeD("ai","r","gmail_out","l")},
+    e_ai_slack:      {d:edgeD("ai","r","slack","l",0,0,80,60)},
+    e_ai_supa:       {d:edgeD("ai","r","supa","l",0,0,100,130)},
+    e_ai_compute:    {d:edgeD("ai","b","compute","t",0,0,50,50)},
+    e_compute_at:    {d:edgeD("compute","r","at_out","l",0,0,150,200)},
+    e_compute_slack: {d:edgeD("compute","r","slack","l")},
+    e_compute_clickup:{d:edgeD("compute","r","clickup","l",0,0,130,160)},
+    e_compute_supa:  {d:edgeD("compute","r","supa","l",0,0,80,60)},
+    e_err_clickup:   {d:edgeD("err","r","clickup","l",0,0,160,180)},
+    e_err_supa:      {d:edgeD("err","r","supa","l",0,0,140,140)},
+    e_err_slack:     {d:edgeD("err","r","slack","l",0,0,180,160)}
+  };
+
+  el("text",{x:115,y:32,class:"t-col","text-anchor":"middle"}).textContent="TRIGGERS";
+  el("text",{x:560,y:50,class:"t-col","text-anchor":"middle"}).textContent="PROCESSING";
+  el("text",{x:1015,y:26,class:"t-col","text-anchor":"middle"}).textContent="DESTINATIONS";
+
+  var defs=el("defs",{});
+  var filt=el("filter",{id:"glow",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  el("feGaussianBlur",{stdDeviation:"4",result:"blur"},filt);
+  var merge=el("feMerge",{},filt);
+  el("feMergeNode",{"in":"blur"},merge);
+  el("feMergeNode",{"in":"SourceGraphic"},merge);
+
+  var marker=el("marker",{id:"arrow",viewBox:"0 0 10 8",refX:"9",refY:"4",markerWidth:"8",markerHeight:"6",orient:"auto-start-reverse"},defs);
+  el("path",{d:"M 0 0 L 10 4 L 0 8 z",fill:"var(--rule)",class:"arrow-fill"},marker);
+
+  Object.keys(EDGES).forEach(function(id){
+    el("path",{id:id,d:EDGES[id].d,class:"edge","marker-end":"url(#arrow)"});
+  });
+
+  Object.keys(NODES).forEach(function(id){
+    var n=NODES[id];
+    var g=el("g",{id:"n_"+id,class:"node "+n.cls});
+    el("rect",{x:n.x,y:n.y,width:n.w,height:n.h,rx:8,class:"body"},g);
+    var t=el("text",{x:n.x+n.w/2,y:n.y+n.h/2-5,"text-anchor":"middle",class:"t-title"},g);
+    t.textContent=n.title;
+    var s=el("text",{x:n.x+n.w/2,y:n.y+n.h/2+11,"text-anchor":"middle",class:"t-sub"},g);
+    s.textContent=n.sub;
+  });
+
+  var pulse=el("circle",{id:"pulse",cx:0,cy:0,r:6});
+
+  // ---- scenarios ----
+  var SCENARIOS=[
+    {key:"rfp",btn:"RFP Processing",route:"RFP Pipeline",
+     desc:"A form submission creates 20+ records across Airtable, Bubble, and Gmail — company, client, POC, and per-role requirements with full deduplication.",
+     stat:"95 nodes · 30-60 min → seconds",
+     steps:[["n:form"],["e:e_form_dedup"],["n:dedup"],["e:e_dedup_at","e:e_dedup_bubble","e:e_dedup_gmail"],["n:at_out","n:bubble","n:gmail_out"]]},
+    {key:"req",btn:"Create Requirement",route:"Auto-Create Requirement",
+     desc:"When a requirement is logged in Airtable, the Bubble internal portal is updated instantly — no manual ID lookup.",
+     stat:"5 nodes · ~5 min saved each",
+     steps:[["n:at_in"],["e:e_at_sync"],["n:sync"],["e:e_sync_bubble","e:e_sync_at"],["n:bubble","n:at_out"]]},
+    {key:"poc",btn:"Create POC",route:"Auto-Create POC",
+     desc:"New contacts are checked for duplicates and created in Bubble automatically, then linked to the correct requirement.",
+     stat:"6 nodes · ~3-5 min saved each",
+     steps:[["n:at_in"],["e:e_at_dedup"],["n:dedup"],["e:e_dedup_bubble","e:e_dedup_at"],["n:bubble","n:at_out"]]},
+    {key:"master",btn:"Master Integration",route:"Two-System Sync",
+     desc:"When a PDEV record changes in Airtable, Bubble and Slack update automatically — projects, clients, POCs stay aligned.",
+     stat:"42 nodes · ~15-20 min saved per update",
+     steps:[["n:at_in"],["e:e_at_sync"],["n:sync"],["e:e_sync_bubble","e:e_sync_at","e:e_sync_slack"],["n:bubble","n:at_out","n:slack"]]},
+    {key:"pesync",btn:"PE Assignment Sync",route:"Project PE Assignment Sync",
+     desc:"When a PE is assigned in the Bubble portal, a webhook syncs the assignment to both the project and requirement records in Airtable automatically.",
+     stat:"6 nodes · PE assignments always in sync",
+     steps:[["n:form"],["e:e_form_sync"],["n:sync"],["e:e_sync_at"],["n:at_out"]]},
+    {key:"health",btn:"Health Digest & Metrics",route:"Daily Health Digest & Metrics",
+     desc:"Two coordinated workflows: first, health metrics are computed for every requirement and project and saved as dated snapshots in Airtable. Then, records are scored by urgency and a ranked digest is posted to Slack.",
+     stat:"24 nodes (2 workflows) · ~20-30 min saved daily",
+     steps:[["n:sched"],["e:e_sched_compute"],["n:compute"],["e:e_compute_at","e:e_compute_slack"],["n:at_out","n:slack"]]},
+    {key:"billable",btn:"Billable Activities",route:"Billable Activities Tracker",
+     desc:"Time logs are fetched from the Bubble portal API, cross-referenced with clients, contractors, and PDEV requirements from Airtable, deduplicated, and turned into billable activity records.",
+     stat:"19 nodes · automated billing reconciliation",
+     steps:[["n:sched"],["e:e_sched_compute"],["n:compute"],["e:e_compute_at"],["n:at_out"]]},
+    {key:"error",btn:"Error Monitor",route:"Error Monitoring",
+     desc:"When any PDEV workflow fails, a ClickUp ticket is filed, error logged in Supabase, and Slack notification sent — instantly.",
+     stat:"6 nodes · zero-delay detection",
+     steps:[["n:err"],["e:e_err_clickup","e:e_err_supa","e:e_err_slack"],["n:clickup","n:supa","n:slack"]]},
+    {key:"mom",btn:"AI Meeting Minutes",route:"Fathom MoM Generator",isAI:true,
+     desc:"Fathom recordings are transcribed, then sent to Mistral's inference API which generates structured minutes with action items. MoM emailed to clients and posted to Slack.",
+     stat:"48 nodes · Mistral AI · 15-30 min saved per meeting",
+     steps:[["n:fathom"],["e:e_fathom_ai"],["n:ai"],["e:e_ai_gmail","e:e_ai_slack","e:e_ai_supa","e:e_ai_at"],["n:gmail_out","n:slack","n:supa","n:at_out"]]},
+    {key:"momfetch",btn:"AI MoM Fetcher",route:"MoM Email Processing",isAI:true,
+     desc:"Incoming MoM emails are read by OpenAI's inference API, matched to the correct PDEV requirement by status, and logged in Airtable automatically.",
+     stat:"23 nodes · OpenAI · ~10 min saved per email",
+     steps:[["n:gmail_in"],["e:e_gmail_ai"],["n:ai"],["e:e_ai_at"],["n:at_out"]]},
+    {key:"insights",btn:"AI Insight Extraction",route:"Client Insight Extraction",isAI:true,
+     desc:"Every client email is scanned by OpenAI's inference API for project updates and signals, matched to the right requirement, and logged as a structured insight record.",
+     stat:"24 nodes · OpenAI · no lost insights",
+     steps:[["n:gmail_in"],["e:e_gmail_ai"],["n:ai"],["e:e_ai_at"],["n:at_out"]]},
+    {key:"daily_insights",btn:"AI Daily Report",route:"Daily Insights Report",isAI:true,
+     desc:"Insight records pulled from Airtable, grouped per requirement, then Claude's inference API writes a narrative summary, renders a visual report card, and posts to Slack.",
+     stat:"13 nodes · Claude · ~45-60 min saved daily",
+     steps:[["n:sched"],["e:e_sched_ai"],["n:ai"],["e:e_ai_slack","e:e_ai_at"],["n:slack","n:at_out"]]}
+  ];
+
+  var qbar=document.getElementById("qbar");
+  var capRoute=document.getElementById("cap-route");
+  var capDesc=document.getElementById("cap-desc");
+  var capStat=document.getElementById("cap-stat");
+
+  SCENARIOS.forEach(function(sc){
+    var b=document.createElement("button");
+    b.className="qbtn"+(sc.isAI?" ai-q":"");
+    b.textContent=sc.btn;
+    b.dataset.key=sc.key;
+    b.addEventListener("click",function(){play(sc)});
+    qbar.appendChild(b);
+  });
+
+  var animId=0;
+  var playAllTimer=null;
+
+  function clearAnim(){
+    animId++;
+    if(playAllTimer){clearTimeout(playAllTimer);playAllTimer=null;}
+    svg.classList.remove("running");
+    svg.querySelectorAll(".on").forEach(function(e){e.classList.remove("on")});
+    svg.querySelectorAll(".ai-edge").forEach(function(e){e.classList.remove("ai-edge")});
+    pulse.classList.remove("visible","ai-pulse");
+    qbar.querySelectorAll(".qbtn").forEach(function(b){b.classList.remove("active")});
+  }
+
+  function animateAlongPath(pathElem,dur,myId,cb){
+    var len=pathElem.getTotalLength();
+    var t0=null;
+    pulse.classList.add("visible");
+    function frame(ts){
+      if(myId!==animId)return;
+      if(!t0)t0=ts;
+      var p=Math.min((ts-t0)/dur,1);
+      var pt=pathElem.getPointAtLength(p*len);
+      pulse.setAttribute("cx",pt.x);
+      pulse.setAttribute("cy",pt.y);
+      if(p<1)requestAnimationFrame(frame);
+      else if(cb)cb();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function runSteps(steps,isAI,myId,done){
+    var i=0;
+    function next(){
+      if(myId!==animId||i>=steps.length){
+        if(myId===animId)pulse.classList.remove("visible");
+        if(done)done();
+        return;
+      }
+      var ids=steps[i];i++;
+      var nodes=[],edges=[];
+      ids.forEach(function(id){
+        var pre=id.substring(0,2),eid=id.substring(2),elem;
+        if(pre==="n:"){
+          elem=document.getElementById("n_"+eid);
+          if(elem){elem.classList.add("on");nodes.push(eid);}
+        }else{
+          elem=document.getElementById(eid);
+          if(elem){elem.classList.add("on");if(isAI)elem.classList.add("ai-edge");edges.push(elem);}
+        }
+      });
+      if(edges.length>0){
+        var done0=0,total=edges.length;
+        edges.forEach(function(pathEl,idx){
+          if(idx===0){
+            animateAlongPath(pathEl,380,myId,function(){done0++;if(done0>=total)setTimeout(next,80);});
+          }else{
+            setTimeout(function(){done0++;if(done0>=total&&myId===animId)setTimeout(next,80);},380);
+          }
+        });
+      }else if(nodes.length>0){
+        var nd=NODES[nodes[0]];
+        if(nd){pulse.setAttribute("cx",nd.x+nd.w/2);pulse.setAttribute("cy",nd.y+nd.h/2);pulse.classList.add("visible");}
+        setTimeout(next,320);
+      }else{setTimeout(next,200);}
+    }
+    next();
+  }
+
+  function play(sc,cb){
+    clearAnim();
+    qbar.querySelectorAll(".qbtn").forEach(function(b){if(b.dataset.key===sc.key)b.classList.add("active")});
+    capRoute.textContent=sc.route;
+    capRoute.style.background=sc.isAI?"var(--ai-soft)":"";
+    capRoute.style.color=sc.isAI?"var(--ai)":"";
+    capDesc.textContent=sc.desc;
+    capStat.textContent=sc.stat;
+    if(sc.isAI)pulse.classList.add("ai-pulse");
+    svg.classList.add("running");
+    var myId=animId;
+    runSteps(sc.steps,sc.isAI,myId,cb);
+  }
+
+  function playAll(){
+    var idx=0;
+    function nextScenario(){
+      if(idx>=SCENARIOS.length)return;
+      play(SCENARIOS[idx],function(){idx++;if(idx<SCENARIOS.length){playAllTimer=setTimeout(nextScenario,900);}});
+    }
+    nextScenario();
+  }
+
+  var pab=document.createElement("button");
+  pab.className="qbtn playall";
+  pab.textContent="Play All";
+  pab.addEventListener("click",playAll);
+  qbar.insertBefore(pab,qbar.firstChild);
+
+})();
+</script>
