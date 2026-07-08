@@ -73,6 +73,8 @@ export const scenarios = [
     isAI: true,
     desc: "When a prospect replies via the outreach platform, the AI reads the message and classifies intent — interested, not interested, out of office, or requesting more info. The result is logged and the team is notified instantly.",
     stat: "12 steps · AI-powered · 100% capture rate",
+    executions30d: 302, // Reply Capture & Classification, Supabase workflow_executions
+    hoursSaved30d: 191.27, // 302×38m / 60
     chips: [{ type: "live", label: "Active" }, { type: "ai", label: "AI Engine" }, { type: "time", label: "12 steps" }],
     steps: [["n:inbox"], ["e:e_inbox_ai"], ["n:ai"], ["e:e_ai_sheets", "e:e_ai_chat"], ["n:sheets", "n:chat"]],
     before: [
@@ -98,6 +100,8 @@ export const scenarios = [
     route: "Meeting Booking Tracker",
     desc: "When a prospect books a meeting, the system captures the booking, validates the lead against warm-lead and DC booked lists, logs it to the tracking sheets, and sends a real-time notification.",
     stat: "27 steps (3 workflows) · ~5-10 min saved per booking",
+    executions30d: 16, // Booking Tracker (Bedrock 10 + Mojave 5 + BUO 1), Supabase workflow_executions
+    hoursSaved30d: 5.13, // (10×28m + 1×28m) / 60 — Mojave has no reliable per-run rate yet, excluded from hours (still counted in executions30d above)
     chips: [{ type: "live", label: "Active" }, { type: "time", label: "27 steps (3 workflows)" }],
     steps: [["n:webhook"], ["e:e_wh_validator"], ["n:validator"], ["e:e_validator_sheets", "e:e_validator_chat"], ["n:sheets", "n:chat"]],
     before: [
@@ -122,6 +126,8 @@ export const scenarios = [
     route: "Daily Campaign Reporting",
     desc: "Every morning, the system connects to the outreach platform, fetches campaign statistics for all active clients, aggregates the data per client, and updates the daily stats sheet. A summary notification is posted to the team — ready for review before the day starts.",
     stat: "14 steps · ~15-20 min saved daily",
+    executions30d: 69, // Daily Stats Fetcher (25, incl. pre-rename "Update Performance Flat (0620)" 18+7) + [Scheduled] Daily Sync (44, grouped here), Supabase workflow_executions
+    hoursSaved30d: 21, // (25×24m + 44×15m) / 60
     chips: [{ type: "live", label: "Active" }, { type: "time", label: "14 steps" }],
     steps: [["n:sched"], ["e:e_sched_campaign"], ["n:campaign"], ["e:e_campaign_sheets", "e:e_campaign_chat"], ["n:sheets", "n:chat"]],
     before: [
@@ -147,6 +153,8 @@ export const scenarios = [
     route: "System Operations",
     desc: "When a client campaign status changes, the corresponding workflow is activated or deactivated automatically. Errors are caught instantly with automatic ticket creation, logging, and team alerts.",
     stat: "16 steps (3 workflows) · single source of truth",
+    executions30d: 24, // Client Update Notifier (19) + Error Trigger (3) + Calendly Webhook Registration (2), Supabase workflow_executions
+    hoursSaved30d: 1.58, // 19×5m / 60 — Error Trigger and Calendly Webhook Registration have no reliable per-run rate yet, excluded from hours (still counted in executions30d above)
     chips: [{ type: "live", label: "Active" }, { type: "sys", label: "Integration" }, { type: "time", label: "16 steps (3 workflows)" }],
     steps: [["n:campaign_u", "n:err"], ["e:e_cu_wfmgr", "e:e_err_task", "e:e_err_errorlog", "e:e_err_chat"], ["n:wfmgr", "n:task", "n:errorlog"], ["e:e_wfmgr_chat"], ["n:chat"]],
     before: [

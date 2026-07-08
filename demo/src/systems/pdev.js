@@ -90,6 +90,8 @@ export const scenarios = [
     route: "Client Onboarding Pipeline",
     desc: "A single intake form submission checks for existing records to avoid duplicates, creates everything needed across systems, updates the internal portal, and sends a confirmation — automatically, in seconds.",
     stat: "106 nodes (3 workflows) · 30-60 min → seconds",
+    executions30d: 17, // RFP Form Submission (8) + Create PDEV Requirement (3) + Create POC (6), Supabase workflow_executions
+    hoursSaved30d: 39.07, // (8×284m + 3×16m + 6×4m) / 60
     chips: [{ type: "live", label: "Active" }, { type: "time", label: "106 nodes (3 workflows)" }],
     steps: [["n:form"], ["e:e_form_dedup"], ["n:dedup"], ["e:e_dedup_database", "e:e_dedup_portal", "e:e_dedup_email_out"], ["n:database", "n:portal", "n:email_out"]],
     before: [
@@ -116,6 +118,8 @@ export const scenarios = [
     route: "Cross-System Sync & Portal Integration",
     desc: "When a record changes anywhere — including team assignments — every connected system updates automatically to match, with a notification sent once it's done.",
     stat: "48 nodes (2 workflows) · ~15-20 min saved per update",
+    executions30d: 20, // PDEV Master Integration (12) + Bubble→AT Sync Projects (8), Supabase workflow_executions
+    hoursSaved30d: 19.4, // 12×97m / 60 — Bubble→AT Sync has no reliable per-run rate yet, excluded from hours (still counted in executions30d above)
     chips: [{ type: "live", label: "Active" }, { type: "time", label: "48 nodes (2 workflows)" }],
     steps: [["n:record"], ["e:e_record_sync"], ["n:sync_eng"], ["e:e_sync_database", "e:e_sync_portal", "e:e_sync_chat"], ["n:database", "n:portal", "n:chat"]],
     before: [
@@ -140,6 +144,8 @@ export const scenarios = [
     isAI: true,
     desc: "Meetings are recorded and transcribed automatically, then the AI generates structured minutes with action items and distributes them by email, chat, and database record. The same AI also reads incoming meeting-related emails and matches them to the right project.",
     stat: "71 nodes (2 workflows) · AI-powered · 15-30 min + 10 min saved",
+    executions30d: 137, // Gmail MoM Fetcher (90, Supabase) + PEC meetings (47, manually counted off the calendar Jun 9–Jul 8 — Supabase's 148 includes partial/non-end-to-end executions)
+    hoursSaved30d: 129.77, // (90×51m + 47×68m) / 60
     chips: [{ type: "live", label: "Active" }, { type: "ai", label: "AI Agent" }, { type: "time", label: "71 nodes (2 workflows)" }],
     steps: [["n:notetaker", "n:email_in"], ["e:e_notetaker_ai", "e:e_email_ai"], ["n:ai"], ["e:e_ai_email_out", "e:e_ai_chat", "e:e_ai_database"], ["n:email_out", "n:chat", "n:database"]],
     before: [
@@ -165,6 +171,8 @@ export const scenarios = [
     isAI: true,
     desc: "The AI scans every incoming client email and carefully reads it to understand key updates, red flags, and project signals. Each insight is matched to the correct client project and saved as a structured record. Every day, the AI then reviews all captured insights, identifies patterns and trends, and writes a narrative summary highlighting wins, risks, and items that need attention. A visual report card is generated and posted to the team automatically.",
     stat: "37 nodes (2 workflows) · AI-powered · ~10 min/email + 45-60 min daily",
+    executions30d: 604, // Gmail Insights Fetcher (579) + Scheduled PDEV Insights (25), Supabase workflow_executions
+    hoursSaved30d: 506.32, // (579×51m + 25×34m) / 60
     chips: [{ type: "live", label: "Active" }, { type: "ai", label: "AI Agent" }, { type: "time", label: "37 nodes (2 workflows)" }],
     steps: [["n:email_in"], ["e:e_email_ai"], ["n:ai"], ["e:e_ai_database", "e:e_ai_chat"], ["n:database", "n:chat"]],
     before: [
@@ -190,6 +198,8 @@ export const scenarios = [
     route: "Daily Health Digest & Metrics",
     desc: "Every day, health metrics are computed for every active client project — urgency, recency, and overall health scored objectively. A prioritized digest is posted to the team, surfacing the projects that need attention first. Historical snapshots enable trend analysis over time.",
     stat: "24 nodes (2 workflows) · ~20-30 min saved daily",
+    executions30d: 44, // Daily Scrubbing PDEV & Projects (22) + its Notifier (22), Supabase workflow_executions
+    hoursSaved30d: 32.63, // (22×66m + 22×23m) / 60
     chips: [{ type: "live", label: "Active" }, { type: "time", label: "24 nodes (2 workflows)" }],
     steps: [["n:sched"], ["e:e_sched_compute"], ["n:compute"], ["e:e_compute_database", "e:e_compute_chat"], ["n:database", "n:chat"]],
     before: [
@@ -213,6 +223,7 @@ export const scenarios = [
     route: "Error Monitoring",
     desc: "When any workflow hits an issue, it's caught instantly — a ticket is filed, the error is logged, and the team is notified, all within seconds.",
     stat: "6 nodes · zero-delay detection",
+    executions30d: 4, // PDev Error Trigger, Supabase workflow_executions
     chips: [{ type: "off", label: "Inactive" }, { type: "time", label: "6 nodes" }],
     steps: [["n:err"], ["e:e_err_task", "e:e_err_errorlog", "e:e_err_chat"], ["n:task", "n:errorlog", "n:chat"]],
     before: [

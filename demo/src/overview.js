@@ -1,5 +1,5 @@
 import { navigate } from "./router.js";
-import { mediaPlaceholder, metaRow } from "./ui.js";
+import { mediaPlaceholder, metaRow, systemHoursSaved30d, hoursSavedLabel } from "./ui.js";
 import { wireMedia } from "./media.js";
 import * as pdev from "./systems/pdev.js";
 import * as placements from "./systems/placements.js";
@@ -9,11 +9,9 @@ const SYSTEMS = [pdev, placements, linkedin];
 
 // Aggregate stats derived from the three system data modules (see each
 // system's meta + scenarios for the source numbers). "AI-powered processes"
-// counts scenarios flagged isAI across all three systems.
-// Open item (per combined-demo-spec.md): a rigorous "hours saved / month"
-// aggregate needs real usage volume and isn't computed here — the daily-
-// cadence figures on the system cards below are sourced directly from
-// each system's own station content instead of being extrapolated.
+// counts scenarios flagged isAI across all three systems. Each card's own
+// hours-saved figure (systemHoursSaved30d) is real: 30-day Supabase
+// execution counts × per-run minutes-saved rates, not an extrapolation.
 function aggregateStats() {
   const workflowCount = SYSTEMS.reduce((sum, s) => sum + s.meta.workflowCount, 0);
   const stationCount = SYSTEMS.reduce((sum, s) => sum + s.meta.stationCount, 0);
@@ -32,7 +30,7 @@ function card(system) {
       )}
       <div class="sys-card-body">
         <h2>${meta.name}</h2>
-        ${metaRow(meta)}
+        ${metaRow(meta, hoursSavedLabel(systemHoursSaved30d(system)))}
         <p class="sys-card-desc">${meta.cardLine}</p>
       </div>
     </a>`;

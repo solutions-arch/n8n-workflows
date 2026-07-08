@@ -1,6 +1,6 @@
 import { createMap } from "./map-engine.js";
 import { setScenarioSilently } from "./router.js";
-import { mediaPlaceholder, metaRow } from "./ui.js";
+import { mediaPlaceholder, metaRow, joinMetaParts, systemHoursSaved30d, hoursSavedLabel } from "./ui.js";
 import { narrationSrc, createNarrationControl } from "./narration.js";
 import { wireMedia } from "./media.js";
 import * as pdev from "./systems/pdev.js";
@@ -23,6 +23,18 @@ function aiStackHtml(stack) {
     </div>`;
 }
 
+// Real hours saved beats a node/workflow count — that's an implementation
+// detail, not a business result. Scenarios without a reliable hoursSaved30d
+// (currently just the two Error Monitors) fall back to their qualitative
+// descriptor instead of a time figure.
+function scenarioStatLine(scenario) {
+  if (typeof scenario.hoursSaved30d === "number") {
+    return `~${scenario.hoursSaved30d.toFixed(1)} hrs saved / 30 days`;
+  }
+  const qualitative = scenario.stat.split("·").slice(1).join("·").trim();
+  return qualitative || scenario.stat;
+}
+
 function scenarioPanelHtml(system, scenario) {
   if (!scenario) {
     return `<div class="scenario-panel"><p class="scenario-empty">Select a scenario above, or Play All to see every workflow in sequence.</p></div>`;
@@ -39,7 +51,7 @@ function scenarioPanelHtml(system, scenario) {
         `The output this workflow produces — e.g. the Slack message, email, or record it creates`,
         `Screenshot: output of "${scenario.route}"`
       )}
-      <span class="scenario-stat">${scenario.stat}</span>
+      <span class="scenario-stat">${scenarioStatLine(scenario)}</span>
       <div class="accordion">
         <button class="accordion-toggle" type="button" aria-expanded="false">
           <svg class="chev" width="10" height="10" viewBox="0 0 10 10"><path d="M2 1l5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -71,7 +83,7 @@ export function renderDetail(container, systemKey, scenarioKey) {
         <div class="detail-head">
           <p class="eyebrow">${meta.eyebrow}</p>
           <h1>${meta.name}</h1>
-          ${metaRow(meta)}
+          ${metaRow(meta, hoursSavedLabel(systemHoursSaved30d(system)))}
         </div>
         <div class="detail-split">
           <div class="map-col">
@@ -149,6 +161,26 @@ export function renderDetail(container, systemKey, scenarioKey) {
 
   const narrationBtn = container.querySelector("#narration-btn");
   const narration = createNarrationControl(narrationBtn);
+  const metaRowEl = container.querySelector(".detail-head .meta-row");
+  const totalHoursLabel = hoursSavedLabel(systemHoursSaved30d(system));
+
+  // Nothing selected: full structural stats + the system's rolled-up total.
+  // A scenario selected: just its own AI badge (if it's AI) + its own hours —
+  // station/workflow counts are implementation detail once you're looking at
+  // one specific process.
+  function updateMetaRow(sc) {
+    metaRowEl.innerHTML = sc
+      ? joinMetaParts([
+          sc.isAI ? `<span class="meta-ai">AI-powered</span>` : null,
+          `<span class="meta-hours">${scenarioStatLine(sc)}</span>`,
+        ])
+      : joinMetaParts([
+          `${meta.stationCount} stations`,
+          `${meta.workflowCount} workflows`,
+          meta.aiPowered ? `<span class="meta-ai">AI-powered</span>` : null,
+          `<span class="meta-hours">${totalHoursLabel}</span>`,
+        ]);
+  }
 
   scenarios.forEach((sc) => {
     const btn = document.createElement("button");
@@ -156,9 +188,16 @@ export function renderDetail(container, systemKey, scenarioKey) {
     btn.textContent = sc.label;
     btn.dataset.key = sc.key;
     btn.addEventListener("click", () => {
-      selectScenario(sc);
-      engine.play(sc);
-      setScenarioSilently(meta.key, sc.key);
+      if (btn.classList.contains("active")) {
+        // Toggling the active scenario off returns to the "nothing selected" state.
+        selectScenario(null);
+        engine.stop();
+        setScenarioSilently(meta.key, null);
+      } else {
+        selectScenario(sc);
+        engine.play(sc);
+        setScenarioSilently(meta.key, sc.key);
+      }
     });
     qbar.appendChild(btn);
   });
@@ -174,6 +213,7 @@ export function renderDetail(container, systemKey, scenarioKey) {
     panelSlot.innerHTML = scenarioPanelHtml(system, sc);
     wireAccordion();
     narrationBtn.classList.toggle("is-ai", !!(sc && sc.isAI));
+    updateMetaRow(sc);
     if (sc) {
       narration.load(narrationSrc(meta.key, sc.key));
       const mediaId = `${meta.key}-${sc.key}-output`;
