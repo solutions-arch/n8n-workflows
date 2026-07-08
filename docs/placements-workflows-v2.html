@@ -1,0 +1,635 @@
+<title>Placements Interface — VA Lifecycle Automation</title>
+<style>
+  :root {
+    --ground: #f2f0ec; --surface: #ffffff; --ink: #1a1917; --ink-2: #4d4a44;
+    --ink-3: #8a857c; --rule: #d6d1c9;
+    --accent: #1a5a8a; --accent-soft: #e4ecf3; --accent-muted: #2d7aab;
+    --warn: #b07318; --warn-soft: #faf0e0;
+    --ai: #6b52a3; --ai-soft: #eee9f7;
+    --live: #1a7a3a; --live-soft: #e3f2e8;
+    --off: #8a857c; --off-soft: #edebe7;
+    --shadow: 0 1px 3px rgba(26,25,23,0.07);
+    --shadow-lg: 0 4px 16px rgba(26,25,23,0.08);
+    --gemini: #4285F4; --openai: #10A37F; --mistral: #FF7000; --groq: #F55036;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#6aafe0;--accent-soft:#162230;--accent-muted:#5199cc;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --gemini:#6EA6F7;--openai:#2EB88A;--mistral:#FF8C33;--groq:#F77060;
+  }}
+  :root[data-theme="light"]{
+    --ground:#f2f0ec;--surface:#ffffff;--ink:#1a1917;--ink-2:#4d4a44;
+    --ink-3:#8a857c;--rule:#d6d1c9;
+    --accent:#1a5a8a;--accent-soft:#e4ecf3;--accent-muted:#2d7aab;
+    --warn:#b07318;--warn-soft:#faf0e0;
+    --ai:#6b52a3;--ai-soft:#eee9f7;
+    --live:#1a7a3a;--live-soft:#e3f2e8;
+    --off:#8a857c;--off-soft:#edebe7;
+    --shadow:0 1px 3px rgba(26,25,23,0.07);--shadow-lg:0 4px 16px rgba(26,25,23,0.08);
+    --gemini:#4285F4;--openai:#10A37F;--mistral:#FF7000;--groq:#F55036;
+  }
+  :root[data-theme="dark"]{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#6aafe0;--accent-soft:#162230;--accent-muted:#5199cc;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --gemini:#6EA6F7;--openai:#2EB88A;--mistral:#FF8C33;--groq:#F77060;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1360px;margin:0 auto;padding:32px 20px 64px}
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+  h1{font-size:26px;font-weight:720;margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+  .lead{font-size:15px;color:var(--ink-2);margin:0 0 24px;max-width:62ch}
+  .tabs{display:flex;gap:2px;border-bottom:2px solid var(--rule);margin-bottom:20px}
+  .tab{font:inherit;font-size:14px;font-weight:640;padding:10px 20px 9px;border:none;background:none;color:var(--ink-3);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .panel[hidden]{display:none}
+
+  /* ---- animated map ---- */
+  .qbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .qbtn{font:inherit;font-size:12.5px;padding:7px 14px;border-radius:20px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,background .15s,color .15s}
+  .qbtn:hover{border-color:var(--accent)}
+  .qbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .qbtn.active{background:var(--accent);border-color:var(--accent);color:var(--ground)}
+  .qbtn.ai-q.active{background:var(--ai);border-color:var(--ai)}
+  .qbtn.playall{font-weight:650}
+  .caption{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:14px 18px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow);margin-bottom:16px;min-height:62px}
+  .caption .route{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;padding:3px 10px;border-radius:20px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+  .caption .desc{font-size:13.5px;color:var(--ink-2);flex:1 1 300px}
+  .caption .stat{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .board{border:1px solid var(--rule);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);overflow-x:auto}
+  .board svg{display:block;min-width:900px;width:100%;height:auto}
+  svg text{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;fill:var(--ink)}
+  svg .t-title{font-size:13px;font-weight:650}
+  svg .t-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:9.5px;fill:var(--ink-3)}
+  svg .t-col{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.14em;fill:var(--ink-3);text-transform:uppercase}
+  svg .node rect.body{fill:var(--surface);stroke:var(--rule);stroke-width:1.4;rx:8}
+  svg .node.trigger rect.body{stroke:var(--warn)}
+  svg .node.proc rect.body{stroke:var(--accent)}
+  svg .node.dest rect.body{stroke:var(--rule)}
+  svg .node.ai-node rect.body{stroke:var(--ai)}
+
+  svg .node-icon{color:var(--ink-3)}
+  svg .node.trigger .node-icon{color:var(--warn)}
+  svg .node.proc .node-icon{color:var(--accent)}
+  svg .node.dest .node-icon{color:var(--ink-3)}
+  svg .node.ai-node .node-icon{color:var(--ai)}
+
+  svg .edge{fill:none;stroke:var(--rule);stroke-width:1.5}
+  svg.running .node,svg.running .edge{opacity:.15;transition:opacity .35s}
+  svg.running .node.on,svg.running .edge.on{opacity:1}
+  svg .node.on rect.body{stroke-width:2.6}
+  svg .node.trigger.on rect.body{stroke:var(--warn)}
+  svg .node.proc.on rect.body{stroke:var(--accent)}
+  svg .node.ai-node.on rect.body{stroke:var(--ai)}
+  svg .node.dest.on rect.body{stroke:var(--accent)}
+  svg .edge.on{stroke:var(--accent);stroke-width:2.4}
+  svg .node,svg .edge{transition:opacity .35s}
+  #pulse{fill:var(--accent);opacity:0;filter:url(#glow)}
+  #pulse.visible{opacity:1}
+  #pulse.ai-pulse{fill:var(--ai)}
+  svg .edge.on.ai-edge{stroke:var(--ai)}
+  svg .edge{stroke-dasharray:none}
+  svg .edge.on{stroke-dasharray:8 4;animation:edgeDash .6s linear infinite}
+  @keyframes edgeDash{to{stroke-dashoffset:-12}}
+
+  /* ---- deep dive ---- */
+  .dive-intro{font-size:15px;color:var(--ink-2);max-width:64ch;margin:0 0 28px;line-height:1.6}
+  .group-label{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:36px 0 14px 2px}
+  .group-label:first-child{margin-top:0}
+  .station{background:var(--surface);border:1px solid var(--rule);border-radius:11px;box-shadow:var(--shadow);padding:22px 26px 20px;margin-bottom:16px}
+  .station.ai-station{border-left:3px solid var(--ai);border-color:var(--ai) var(--rule) var(--rule) var(--ai)}
+  .st-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:10px}
+  .st-num{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--surface);background:var(--accent);min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .ai-station .st-num{background:var(--ai)}
+  .st-head h2{font-size:18px;font-weight:700;margin:0;line-height:1.3}
+  .st-chips-row{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .station p{font-size:14.5px;color:var(--ink);margin:0 0 12px;max-width:68ch;line-height:1.6}
+  .chip{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;padding:2px 9px;border-radius:20px;white-space:nowrap;font-weight:600}
+  .chip.ai{background:var(--ai-soft);color:var(--ai)}
+  .chip.live{background:var(--live-soft);color:var(--live)}
+  .chip.off{background:var(--off-soft);color:var(--off)}
+  .chip.sys{background:var(--accent-soft);color:var(--accent)}
+  .chip.time{background:var(--warn-soft);color:var(--warn)}
+  .ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 16px}
+  @media(max-width:640px){.ba-grid{grid-template-columns:1fr}}
+  .ba-col h3{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+  .ba-col.before h3{color:var(--warn)}
+  .ba-col.after h3{color:var(--live)}
+  .ba-col ul{margin:0;padding:0;list-style:none}
+  .ba-col li{font-size:13.5px;line-height:1.55;color:var(--ink-2);padding:5px 0 5px 18px;position:relative}
+  .ba-col.before li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--warn-soft);border:1.5px solid var(--warn)}
+  .ba-col.after li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--live-soft);border:1.5px solid var(--live)}
+  .ba-col li strong{color:var(--ink);font-weight:620}
+  .impact{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:4px}
+  .ai-station .impact{border-left-color:var(--ai);background:var(--ai-soft)}
+  .impact .impact-head{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;font-weight:700}
+  .ai-station .impact .impact-head{color:var(--ai)}
+  .impact ul{margin:0;padding:0;list-style:none}
+  .impact li{font-size:13.5px;color:var(--ink);line-height:1.5;padding:2px 0}
+  .impact li strong{font-weight:660;color:var(--accent-muted)}
+  .ai-station .impact li strong{color:var(--ai)}
+  .ai-stack{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 18px;border-radius:10px;background:var(--ai-soft);border:1px solid color-mix(in srgb, var(--ai) 20%, transparent);margin:0 0 20px}
+  .ai-stack-title{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ai);font-weight:700;flex-basis:100%}
+  .ai-stack-desc{font-size:13px;color:var(--ink-2);flex-basis:100%;margin-bottom:4px}
+  .ai-stack-note{font-size:12px;color:var(--ink-3);flex-basis:100%;font-style:italic;margin:0 0 4px}
+  .ai-stack-row{display:flex;flex-wrap:wrap;gap:8px}
+  .vendor-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 5px;border-radius:20px;background:var(--surface);border:1px solid var(--rule);font-size:12.5px;font-weight:620;color:var(--ink)}
+  .vendor-pill .vp-dot{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+
+  /* ---- mini flow diagrams ---- */
+  .mini-flow{overflow-x:auto;margin:14px 0 18px;padding:10px 6px;border-radius:10px;background:var(--ground);border:1px solid var(--rule)}
+  .mini-flow svg{display:block;width:100%;min-width:420px;height:auto}
+  .mf-node{fill:var(--surface);stroke:var(--accent);stroke-width:1.4}
+  .mf-trig{stroke:var(--warn)}
+  .mf-ai{stroke:var(--ai);fill:var(--ai-soft);stroke-width:2}
+  .mf-title{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;font-size:11px;font-weight:650;fill:var(--ink)}
+  .mf-title-ai{fill:var(--ai)}
+  .mf-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:8.5px;fill:var(--ink-3)}
+  .mf-edge{fill:none;stroke:var(--rule);stroke-width:1.5;stroke-dasharray:6 4;animation:mfPulse 1.2s linear infinite}
+  .mf-edge-ai{stroke:var(--ai)}
+  .mf-icon{color:var(--accent)}
+  .mf-icon-warn{color:var(--warn)}
+  .mf-icon-ai{color:var(--ai)}
+  @keyframes mfPulse{to{stroke-dashoffset:-10}}
+  @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+
+<!-- shared SVG defs: mini-flow arrowheads + tool-agnostic icon set -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <marker id="mf-arr" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--rule)"/></marker>
+    <marker id="mf-arr-ai" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--ai)"/></marker>
+
+    <symbol id="icon-sync" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12a8 8 0 0 1 13.66-5.66"/>
+      <path d="M20 12a8 8 0 0 1-13.66 5.66"/>
+      <path d="M18 3v5h-5"/>
+      <path d="M6 21v-5h5"/>
+    </symbol>
+    <symbol id="icon-envelope" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2"/>
+      <path d="M3 7l9 6 9-6"/>
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3.5 2"/>
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.5L21.5 20h-19z"/>
+      <line x1="12" y1="9.5" x2="12" y2="14.5"/>
+      <circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-gear" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.1 5.9l-1.5 1.5M7.4 16.6l-1.5 1.5M18.1 18.1l-1.5-1.5M7.4 7.4L5.9 5.9"/>
+    </symbol>
+    <symbol id="icon-brain" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1.5 5.6A3 3 0 0 0 7 17.5 3 3 0 0 0 9.9 21a3 3 0 0 0 2.1-.9V6a2.5 2.5 0 0 0-3-2z"/>
+      <path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1.5 5.6A3 3 0 0 1 17 17.5 3 3 0 0 1 14.1 21a3 3 0 0 1-2.1-.9V6a2.5 2.5 0 0 1 3-2z"/>
+    </symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="21" x2="21" y2="21"/>
+      <rect x="5" y="14" width="3" height="7"/>
+      <rect x="10.5" y="9" width="3" height="12"/>
+      <rect x="16" y="4" width="3" height="17"/>
+    </symbol>
+    <symbol id="icon-database" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="5.5" rx="8" ry="3"/>
+      <path d="M4 5.5V18c0 1.66 3.58 3 8 3s8-1.34 8-3V5.5"/>
+      <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>
+    </symbol>
+    <symbol id="icon-chat" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 5h16v11H9l-4 4V5z"/>
+      <line x1="8" y1="9" x2="16" y2="9"/>
+      <line x1="8" y1="12.5" x2="13" y2="12.5"/>
+    </symbol>
+    <symbol id="icon-checklist" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <path d="M8 8l1.5 1.5L12.5 6"/>
+      <line x1="8" y1="14" x2="16" y2="14"/>
+      <line x1="8" y1="17.5" x2="16" y2="17.5"/>
+    </symbol>
+    <symbol id="icon-document" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2h9l4 4v16H6z"/>
+      <path d="M15 2v4h4"/>
+      <line x1="9" y1="12" x2="16" y2="12"/>
+      <line x1="9" y1="16" x2="16" y2="16"/>
+    </symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="2"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+      <line x1="8" y1="2" x2="8" y2="7"/>
+      <line x1="16" y1="2" x2="16" y2="7"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <p class="eyebrow">scale virtually · placements interface</p>
+  <h1>Placements Interface — Automated VA Lifecycle Management</h1>
+  <p class="lead">Six stations — spanning 20 automated workflows, two powered by AI — handle the full VA lifecycle from endorsement through onboarding, status tracking, and daily reporting. No manual busywork, no missed steps, no forgotten follow-ups.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-map" id="tab-map">Animated map</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-dive" id="tab-dive">Step-by-step deep dive</button>
+  </div>
+
+  <!-- ===== TAB 1: ANIMATED MAP ===== -->
+  <section class="panel" id="panel-map" role="tabpanel">
+    <div class="qbar" id="qbar"></div>
+    <div class="caption">
+      <span class="route" id="cap-route">pick a process</span>
+      <span class="desc" id="cap-desc">Each button traces a different automated process through the system — from the moment something happens to the outcome it produces. Two of these processes are powered by AI models that read and understand written text.</span>
+      <span class="stat" id="cap-stat"></span>
+    </div>
+    <div class="board">
+      <svg id="flow" viewBox="0 0 1340 560" role="img" aria-label="Flow diagram of Placements automation system"></svg>
+    </div>
+  </section>
+
+  <!-- ===== TAB 2: DEEP DIVE ===== -->
+  <section class="panel" id="panel-dive" role="tabpanel" hidden>
+    <p class="dive-intro">Each station below shows the manual process it replaces, a step-by-step animated flow, and its measurable impact. Stations are organized by function — VA lifecycle management, AI-powered intelligence, and daily operations.</p>
+
+    <h3 class="group-label">VA lifecycle management</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">1</span><h2>VA Data Management</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">44 steps (8 workflows)</span></div></div><p>When a VA's status changes — endorsed, placement-ready, entering limbo, or fast-tracked — the system reacts immediately. Endorsement emails are built and sent with consistent formatting, placement-ready VAs get a two-touch notification sequence, stalled candidates are flagged daily before they slip through the cracks, and STP candidates get dedicated communication channels with automatic notifications at every stage.</p><div class="mini-flow" id="mf-1"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Endorsement emails written by hand with inconsistent formatting</li><li>VAs not always told promptly when they reached placement-ready status</li><li>Stalled candidates discovered during manual reviews, sometimes weeks late</li><li>STP communication channels created manually with inconsistent naming</li><li>Coordinators had to remember every follow-up for every VA</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Endorsement emails built and sent automatically, formatted consistently every time</li><li>Two-touch notification sequence for every placement-ready VA</li><li>Stalled candidates flagged daily — no one slips through the cracks</li><li>STP channels created automatically with consistent naming</li><li><strong>Every status change triggers the right action, every time</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> ~35 min per VA lifecycle event — no manual email drafting, no manual channel creation</li><li><strong>Cognitive load reduced:</strong> No forgotten follow-ups, no missed status changes, consistent process for every VA regardless of who's on shift</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">2</span><h2>Pipeline Management</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip sys">Integration</span><span class="chip time">59 steps (4 workflows)</span></div></div><p>From interview scheduling through onboarding and CRM sync — the full placement pipeline runs automatically. Calendar events are created with correct timezones and attendees, the complete onboarding email suite fires in sequence (logistics to client, endorsement to operations, congratulations to VA), a dedicated support channel is created, and external CRM records stay in sync in real time.</p><div class="mini-flow" id="mf-2"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Calendar events created by hand with risk of wrong times or missing attendees</li><li>Three separate onboarding messages sent manually — logistics, internal handoff, welcome note</li><li>Support channels created and welcome messages written every time</li><li>CRM records entered twice — once in the main system, once externally</li><li><strong>Total: 30–45 min per placement</strong></li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Calendar events created automatically — no timezone mistakes, no missed attendees</li><li>One trigger sends the entire onboarding sequence automatically</li><li>Support channel created and welcome message posted instantly</li><li>External CRM synced in real time with success/failure notifications</li><li><strong>Seconds, zero manual coordination</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> 30–45 min → seconds per placement — no manual scheduling, no dual-entry</li><li><strong>Cognitive load reduced:</strong> Zero scheduling errors, no missed onboarding steps, both systems always in sync</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">3</span><h2>Readiness &amp; Reporting</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">46 steps (3 workflows)</span></div></div><p>Every week, VAs receive automated check-ins about their availability and readiness for placement, and their responses are collected centrally. STP pipeline metrics are computed on daily and weekly schedules, with visual report cards delivered to stakeholders automatically. When a VA is cancelled, the team is notified instantly — no delays.</p><div class="mini-flow" id="mf-3"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>No structured way to check in with VAs about their readiness</li><li>No daily or weekly reporting existed for STP candidates</li><li>Cancellations communicated informally — the team sometimes found out days later</li><li>Getting a pipeline update meant someone stopping to compile one by hand</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>VAs get a weekly automated check-in — responses collected centrally</li><li>Visual report cards generated on daily and weekly cadences automatically</li><li>Cancellations trigger instant team notifications — zero delay</li><li><strong>Consistent reporting cadence — no one has to remember to ask</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>New capabilities:</strong> STP reporting and structured readiness tracking didn't exist before</li><li><strong>Cognitive load reduced:</strong> Consistent weekly check-in and reporting cadence without manual outreach or follow-up</li></ul></div></article>
+
+    <h3 class="group-label">AI-powered intelligence</h3>
+
+    <div class="ai-stack">
+      <span class="ai-stack-title">AI models powering 2 intelligent processes</span>
+      <span class="ai-stack-desc">These processes use AI to read, understand, and generate written output — they go beyond simple rule-based automation.</span>
+      <span class="ai-stack-note">These are the AI models powering the intelligence layer today — the solution works with any compatible AI provider.</span>
+      <div class="ai-stack-row">
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--groq)">G</span> Groq</span>
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--openai)">O</span> OpenAI</span>
+      </div>
+    </div>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">4</span><h2>AI Insights &amp; Daily Report</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Engine</span><span class="chip time">27 steps (2 workflows)</span></div></div><p>Every client reply to a candidate shortlist is read by the AI — it understands the intent (accept, reject, or request for more info) and updates the candidate record automatically. No reply goes unnoticed. At the end of each shift, the AI reviews all active placement records, writes an executive summary of the day's activity — wins, risks, and pipeline health — and delivers a visual report card to stakeholders.</p><div class="mini-flow" id="mf-4"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Coordinators manually checked for client replies throughout the day</li><li>Every reply had to be read, interpreted, and typed into the candidate record by hand</li><li>Replies sometimes missed or delayed, leaving candidates waiting</li><li>No daily placement summary existed — getting an update meant someone stopping to compile one</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Every client reply captured and processed automatically — intent understood instantly</li><li>Candidate records update themselves — no typing required</li><li>Executive summary written automatically at the end of every shift</li><li><strong>100% capture rate on replies + net-new daily reporting capability</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> ~10 min per reply + net-new end-of-shift reporting</li><li><strong>Cognitive load reduced:</strong> No split attention monitoring inboxes, no candidates left in limbo, consistent end-of-shift visibility for leadership</li></ul></div></article>
+
+    <h3 class="group-label">Daily operations &amp; monitoring</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">5</span><h2>Daily Placements Health Digest</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">30 steps (2 workflows)</span></div></div><p>Health metrics are computed daily for every active placement — scored objectively by urgency, not subjective review. A prioritized digest is posted to the team every morning, surfacing the placements that need attention first.</p><div class="mini-flow" id="mf-5"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Someone manually reviewed every active placement each morning</li><li>Urgency assessed subjectively — inconsistent from person to person</li><li>Some days the review didn't happen at all, and issues slipped through</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Health scores are calculated automatically every day for every active placement</li><li>A prioritized summary is shared with the team every morning</li><li><strong>The digest happens every day — no exceptions</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> ~20-30 min daily</li><li><strong>Cognitive load reduced:</strong> Objective scoring removes guesswork — consistent visibility, no missed mornings</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">6</span><h2>Error Monitoring</h2><div class="st-chips-row"><span class="chip off">Inactive</span><span class="chip time">6 steps</span></div></div><p>When any process encounters an issue, it's caught instantly. A ticket is created, the error is logged for analysis, and the team is notified — all within seconds.</p><div class="mini-flow" id="mf-6"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Failures noticed hours or days later, often by accident</li><li>Manual investigation and manual ticket creation for every issue</li><li>No centralized history of what went wrong and when</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Failures are caught the instant they happen</li><li>A ticket is created and the issue is logged automatically</li><li>The team is alerted within seconds</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Zero-delay detection</strong> — no risk of a missed failure</li><li><strong>Full audit trail</strong> for pattern analysis over time</li></ul></div></article>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  var XLINK="http://www.w3.org/1999/xlink";
+
+  function addIcon(parent,key,x,y,w,h,cls){
+    var u=document.createElementNS(NS,"use");
+    u.setAttributeNS(XLINK,"href","#icon-"+key);
+    u.setAttribute("href","#icon-"+key);
+    u.setAttribute("x",x);u.setAttribute("y",y);
+    u.setAttribute("width",w);u.setAttribute("height",h);
+    if(cls)u.setAttribute("class",cls);
+    parent.appendChild(u);
+    return u;
+  }
+
+  // ---- tabs ----
+  var tabs=document.querySelectorAll(".tab");
+  var panels=document.querySelectorAll(".panel");
+  tabs.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      tabs.forEach(function(t){t.classList.remove("active");t.setAttribute("aria-selected","false")});
+      btn.classList.add("active");btn.setAttribute("aria-selected","true");
+      var target=btn.getAttribute("aria-controls");
+      panels.forEach(function(p){p.hidden=p.id!==target});
+    });
+  });
+
+  // ---- mini flow generator (with icon support) ----
+  function buildMiniFlow(id,stages){
+    var c=document.getElementById(id);
+    if(!c)return;
+    var NW=170,NH=50,GAP=32,PAD=14;
+    var W=PAD*2+stages.length*NW+(stages.length-1)*GAP;
+    var H=NH+PAD*2;
+    var s=document.createElementNS(NS,"svg");
+    s.setAttribute("viewBox","0 0 "+W+" "+H);
+    var xs=[];
+    for(var i=0;i<stages.length;i++){xs.push(PAD+i*(NW+GAP));}
+    for(var i=0;i<stages.length-1;i++){
+      var x1=xs[i]+NW,x2=xs[i+1],y=PAD+NH/2;
+      var isAiEdge=stages[i].c==="ai"||stages[i+1].c==="ai";
+      var p=document.createElementNS(NS,"path");
+      p.setAttribute("d","M"+x1+" "+y+"L"+x2+" "+y);
+      p.setAttribute("class","mf-edge"+(isAiEdge?" mf-edge-ai":""));
+      p.setAttribute("marker-end","url(#"+(isAiEdge?"mf-arr-ai":"mf-arr")+")");
+      s.appendChild(p);
+    }
+    for(var i=0;i<stages.length;i++){
+      var st=stages[i],x=xs[i],y=PAD;
+      var g=document.createElementNS(NS,"g");
+      var r=document.createElementNS(NS,"rect");
+      r.setAttribute("x",x);r.setAttribute("y",y);
+      r.setAttribute("width",NW);r.setAttribute("height",NH);
+      r.setAttribute("rx",8);
+      r.setAttribute("class","mf-node"+(st.c==="ai"?" mf-ai":st.c==="warn"?" mf-trig":""));
+      g.appendChild(r);
+      if(st.icon){
+        var iconCls="mf-icon"+(st.c==="ai"?" mf-icon-ai":st.c==="warn"?" mf-icon-warn":"");
+        addIcon(g,st.icon,x+9,y+13,22,22,iconCls);
+      }
+      var cx=st.icon?x+104:x+NW/2;
+      var t=document.createElementNS(NS,"text");
+      t.setAttribute("x",cx);t.setAttribute("y",y+(st.s?20:28));
+      t.setAttribute("text-anchor","middle");
+      t.setAttribute("class","mf-title"+(st.c==="ai"?" mf-title-ai":""));
+      t.textContent=st.l;
+      g.appendChild(t);
+      if(st.s){
+        var u=document.createElementNS(NS,"text");
+        u.setAttribute("x",cx);u.setAttribute("y",y+35);
+        u.setAttribute("text-anchor","middle");u.setAttribute("class","mf-sub");
+        u.textContent=st.s;
+        g.appendChild(u);
+      }
+      s.appendChild(g);
+    }
+    c.appendChild(s);
+  }
+
+  var MF=[
+    ["mf-1",[{l:"Record / Status",s:"VA update",c:"warn",icon:"sync"},{l:"Process & Route",s:"validate · format",icon:"gear"},{l:"Email",s:"endorsement · notify",icon:"envelope"},{l:"Team Chat",s:"channels · alerts",icon:"chat"},{l:"Database",s:"update records",icon:"database"}]],
+    ["mf-2",[{l:"Record Change",s:"placement event",c:"warn",icon:"sync"},{l:"Schedule & Build",s:"calendar · emails",icon:"gear"},{l:"Email Suite",s:"logistics · congrats",icon:"envelope"},{l:"Calendar + CRM",s:"events · sync",icon:"calendar"},{l:"Team Chat",s:"support channel",icon:"chat"}]],
+    ["mf-3",[{l:"Scheduler",s:"daily · weekly",c:"warn",icon:"clock"},{l:"Check Status",s:"readiness · STP",icon:"gear"},{l:"Metrics Engine",s:"compute scores",icon:"chart"},{l:"Report Builder",s:"visual cards",icon:"document"},{l:"Email + Chat",s:"distribute",icon:"chat"}]],
+    ["mf-4",[{l:"Email Inbox",s:"client reply",c:"warn",icon:"envelope"},{l:"AI Engine",s:"read & classify",c:"ai",icon:"brain"},{l:"Database",s:"update record",icon:"database"},{l:"AI Engine",s:"daily summary",c:"ai",icon:"brain"},{l:"Team Chat",s:"report card",icon:"chat"}]],
+    ["mf-5",[{l:"Scheduler",s:"daily trigger",c:"warn",icon:"clock"},{l:"Database",s:"fetch placements",icon:"database"},{l:"Metrics Engine",s:"score & rank",icon:"chart"},{l:"Database",s:"save snapshot",icon:"database"},{l:"Team Chat",s:"post digest",icon:"chat"}]],
+    ["mf-6",[{l:"Error Trigger",s:"process failure",c:"warn",icon:"warning"},{l:"Task Manager",s:"create ticket",icon:"checklist"},{l:"Error Log",s:"record",icon:"document"},{l:"Team Chat",s:"alert",icon:"chat"}]]
+  ];
+  MF.forEach(function(m){buildMiniFlow(m[0],m[1])});
+
+  // ---- SVG ANIMATED MAP ----
+  var svg=document.getElementById("flow");
+  function el(tag,attrs,parent){
+    var e=document.createElementNS(NS,tag);
+    for(var k in attrs)e.setAttribute(k,attrs[k]);
+    (parent||svg).appendChild(e);return e;
+  }
+
+  var NODES={
+    wh_at:    {x:30, y:52,  w:170,h:50,title:"Record Change",  sub:"status change",          cls:"trigger",icon:"sync"},
+    gmail_in: {x:30, y:138, w:170,h:50,title:"Email Inbox",    sub:"new message",            cls:"trigger",icon:"envelope"},
+    sched:    {x:30, y:224, w:170,h:50,title:"Scheduler",      sub:"daily / weekly",         cls:"trigger",icon:"clock"},
+    wh_stp:   {x:30, y:310, w:170,h:50,title:"Status Change",  sub:"VA status change",       cls:"trigger",icon:"sync"},
+    err:      {x:30, y:396, w:170,h:50,title:"Error Trigger",  sub:"process failure",        cls:"trigger",icon:"warning"},
+
+    email_eng:{x:460,y:52,  w:200,h:54,title:"Email Engine",   sub:"build · send · follow-up",cls:"proc",icon:"envelope"},
+    ai:       {x:460,y:148, w:200,h:54,title:"AI Engine",      sub:"read · understand · decide",cls:"ai-node",icon:"brain"},
+    stp_mgr:  {x:460,y:244, w:200,h:54,title:"Lifecycle Engine",sub:"route · notify · track", cls:"proc",icon:"gear"},
+    metrics:  {x:460,y:340, w:200,h:54,title:"Metrics Engine", sub:"score · rank · sync",    cls:"proc",icon:"chart"},
+    report:   {x:460,y:436, w:200,h:54,title:"Report Builder", sub:"visual report cards",    cls:"proc",icon:"document"},
+
+    airtable: {x:930,y:42,  w:170,h:50,title:"Database",       sub:"create / update",        cls:"dest",icon:"database"},
+    gmail_out:{x:930,y:128, w:170,h:50,title:"Email",          sub:"send message",           cls:"dest",icon:"envelope"},
+    slack:    {x:930,y:214, w:170,h:50,title:"Team Chat",      sub:"team notifications",     cls:"dest",icon:"chat"},
+    gcal:     {x:930,y:300, w:170,h:50,title:"Calendar",       sub:"events & invites",       cls:"dest",icon:"calendar"},
+    podio:    {x:930,y:386, w:170,h:50,title:"External CRM",   sub:"sync records",           cls:"dest",icon:"sync"},
+    clickup:  {x:930,y:472, w:170,h:50,title:"Task Manager",   sub:"create ticket",          cls:"dest",icon:"checklist"},
+    supa:     {x:1140,y:472,w:170,h:50,title:"Error Log",      sub:"audit trail",            cls:"dest",icon:"document"}
+  };
+
+  var K=90;
+  function anchor(id,side,off){
+    var n=NODES[id],o=off||0;
+    if(side==="r")return{x:n.x+n.w,y:n.y+n.h/2+o};
+    if(side==="l")return{x:n.x,y:n.y+n.h/2+o};
+    if(side==="t")return{x:n.x+n.w/2+o,y:n.y};
+    return{x:n.x+n.w/2+o,y:n.y+n.h};
+  }
+  function edgeD(from,fs,to,ts,fo,to2,k1,k2){
+    var a=anchor(from,fs,fo),b=anchor(to,ts,to2);
+    var c1=k1||K,c2=k2||K;
+    var dx=fs==="r"?1:fs==="l"?-1:0,dy=fs==="t"?-1:fs==="b"?1:0;
+    var dx2=ts==="r"?1:ts==="l"?-1:0,dy2=ts==="t"?-1:ts==="b"?1:0;
+    return"M "+a.x+" "+a.y+" C "+(a.x+dx*c1)+" "+(a.y+dy*c1)+", "+(b.x+dx2*c2)+" "+(b.y+dy2*c2)+", "+b.x+" "+b.y;
+  }
+
+  var EDGES={
+    e_wh_email:      {d:edgeD("wh_at","r","email_eng","l")},
+    e_gmail_ai:      {d:edgeD("gmail_in","r","ai","l")},
+    e_sched_metrics: {d:edgeD("sched","r","metrics","l")},
+    e_sched_ai:      {d:edgeD("sched","r","ai","l",0,0,140,120)},
+    e_sched_report:  {d:edgeD("sched","r","report","l",0,0,110,130)},
+    e_stp_stp:       {d:edgeD("wh_stp","r","stp_mgr","l")},
+    e_wh_metrics:    {d:edgeD("wh_at","r","metrics","l",0,0,150,130)},
+    e_err_clickup:   {d:edgeD("err","r","clickup","l",0,0,140,140)},
+    e_err_supa:      {d:edgeD("err","r","supa","l",0,0,120,100)},
+    e_err_slack:     {d:edgeD("err","r","slack","l",0,0,160,180)},
+
+    e_email_gmail:   {d:edgeD("email_eng","r","gmail_out","l")},
+    e_email_at:      {d:edgeD("email_eng","r","airtable","l",0,0,80,60)},
+    e_email_slack:   {d:edgeD("email_eng","r","slack","l",0,0,110,130)},
+    e_email_gcal:    {d:edgeD("email_eng","r","gcal","l",0,0,140,160)},
+    e_ai_at:         {d:edgeD("ai","r","airtable","l",0,0,140,170)},
+    e_ai_report:     {d:edgeD("ai","b","report","t",0,0,50,50)},
+    e_stp_slack:     {d:edgeD("stp_mgr","r","slack","l")},
+    e_stp_gmail:     {d:edgeD("stp_mgr","r","gmail_out","l",0,0,130,160)},
+    e_metrics_at:    {d:edgeD("metrics","r","airtable","l",0,0,150,200)},
+    e_metrics_slack: {d:edgeD("metrics","r","slack","l",0,0,130,160)},
+    e_metrics_podio: {d:edgeD("metrics","r","podio","l",0,0,80,60)},
+    e_report_gmail:  {d:edgeD("report","r","gmail_out","l",0,0,180,220)},
+    e_report_slack:  {d:edgeD("report","r","slack","l",0,0,160,200)},
+    e_report_clickup:{d:edgeD("report","r","clickup","l",0,0,80,60)},
+    e_report_supa:   {d:edgeD("report","r","supa","l",0,0,60,40)}
+  };
+
+  el("text",{x:115,y:32,class:"t-col","text-anchor":"middle"}).textContent="TRIGGERS";
+  el("text",{x:560,y:32,class:"t-col","text-anchor":"middle"}).textContent="PROCESSING";
+  el("text",{x:1015,y:26,class:"t-col","text-anchor":"middle"}).textContent="DESTINATIONS";
+
+  var defs=el("defs",{});
+  var filt=el("filter",{id:"glow",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  el("feGaussianBlur",{stdDeviation:"4",result:"blur"},filt);
+  var mg=el("feMerge",{},filt);
+  el("feMergeNode",{"in":"blur"},mg);
+  el("feMergeNode",{"in":"SourceGraphic"},mg);
+  var marker=el("marker",{id:"arrow",viewBox:"0 0 10 8",refX:"9",refY:"4",markerWidth:"8",markerHeight:"6",orient:"auto-start-reverse"},defs);
+  el("path",{d:"M 0 0 L 10 4 L 0 8 z",fill:"var(--rule)",class:"arrow-fill"},marker);
+
+  Object.keys(EDGES).forEach(function(id){
+    el("path",{id:id,d:EDGES[id].d,class:"edge","marker-end":"url(#arrow)"});
+  });
+  Object.keys(NODES).forEach(function(id){
+    var n=NODES[id];
+    var g=el("g",{id:"n_"+id,class:"node "+n.cls});
+    el("rect",{x:n.x,y:n.y,width:n.w,height:n.h,rx:8,class:"body"},g);
+    var iconSize=20;
+    addIcon(g,n.icon,n.x+12,n.y+n.h/2-iconSize/2,iconSize,iconSize,"node-icon");
+    var textX=n.x+40+(n.w-40)/2;
+    var t=el("text",{x:textX,y:n.y+n.h/2-5,"text-anchor":"middle",class:"t-title"},g);
+    t.textContent=n.title;
+    var s=el("text",{x:textX,y:n.y+n.h/2+11,"text-anchor":"middle",class:"t-sub"},g);
+    s.textContent=n.sub;
+  });
+  var pulse=el("circle",{id:"pulse",cx:0,cy:0,r:6});
+
+  // ---- workflow scenarios ----
+  var SCENARIOS=[
+    {key:"vadata",btn:"VA Data Management",route:"VA Data Management",
+     desc:"When a VA's status changes — endorsed, placement-ready, stalled, or fast-tracked — the system handles endorsement emails, placement notifications, limbo flagging, and STP channel creation automatically.",
+     stat:"44 steps (8 workflows) · ~35 min saved per lifecycle event",
+     steps:[["n:wh_at","n:wh_stp","n:sched"],["e:e_wh_email","e:e_stp_stp","e:e_sched_metrics"],["n:email_eng","n:stp_mgr","n:metrics"],["e:e_email_gmail","e:e_email_slack","e:e_stp_slack","e:e_stp_gmail","e:e_metrics_at"],["n:gmail_out","n:slack","n:airtable"]]},
+    {key:"pipeline",btn:"Pipeline Management",route:"Pipeline Management",
+     desc:"From interview scheduling through logistics, onboarding, and CRM sync — calendar events created, the full email suite sent, external CRM synced, and a support channel opened — all from a single trigger.",
+     stat:"59 steps (4 workflows) · 30-45 min → seconds",
+     steps:[["n:wh_at"],["e:e_wh_email","e:e_wh_metrics"],["n:email_eng","n:metrics"],["e:e_email_gmail","e:e_email_slack","e:e_email_gcal","e:e_email_at","e:e_metrics_podio","e:e_metrics_slack"],["n:gmail_out","n:slack","n:gcal","n:airtable","n:podio"]]},
+    {key:"readiness",btn:"Readiness & Reporting",route:"VA Readiness & Reporting",
+     desc:"Automated weekly readiness check-ins for VAs, scheduled STP pipeline reports with visual report cards, and instant cancellation alerts — all delivered to stakeholders on a set cadence.",
+     stat:"46 steps (3 workflows) · weekly + daily cadence",
+     steps:[["n:sched"],["e:e_sched_metrics","e:e_sched_report"],["n:metrics","n:report"],["e:e_metrics_at","e:e_metrics_slack","e:e_report_gmail","e:e_report_slack"],["n:gmail_out","n:slack","n:airtable"]]},
+    {key:"ai_insights",btn:"AI Insights & Daily Report",route:"AI Insights & Daily Report",isAI:true,
+     desc:"Every client reply to a shortlist is read by the AI — intent understood and records updated automatically. At the end of each shift, the AI writes an executive summary and delivers a visual report card to stakeholders.",
+     stat:"27 steps (2 workflows) · AI-powered · 100% capture rate",
+     steps:[["n:gmail_in","n:sched"],["e:e_gmail_ai","e:e_sched_ai"],["n:ai"],["e:e_ai_at","e:e_ai_report"],["n:airtable","n:report"],["e:e_report_gmail","e:e_report_slack"],["n:gmail_out","n:slack"]]},
+    {key:"digest",btn:"Health Digest & Metrics",route:"Daily Health Digest",
+     desc:"Health metrics are calculated daily for every active placement and scored objectively by urgency. A prioritized summary is shared with the team every morning.",
+     stat:"30 steps (2 workflows) · ~20-30 min saved daily",
+     steps:[["n:sched"],["e:e_sched_metrics"],["n:metrics"],["e:e_metrics_at","e:e_metrics_slack"],["n:airtable","n:slack"]]},
+    {key:"error",btn:"Error Monitor",route:"Error Monitoring",
+     desc:"When any process encounters an issue, it's caught instantly — a ticket is created, the issue is logged, and the team is alerted, all within seconds.",
+     stat:"6 steps · zero-delay detection",
+     steps:[["n:err"],["e:e_err_clickup","e:e_err_supa","e:e_err_slack"],["n:clickup","n:supa","n:slack"]]}
+  ];
+
+  var qbar=document.getElementById("qbar");
+  var capRoute=document.getElementById("cap-route");
+  var capDesc=document.getElementById("cap-desc");
+  var capStat=document.getElementById("cap-stat");
+
+  SCENARIOS.forEach(function(sc){
+    var b=document.createElement("button");
+    b.className="qbtn"+(sc.isAI?" ai-q":"");
+    b.textContent=sc.btn;
+    b.dataset.key=sc.key;
+    b.addEventListener("click",function(){play(sc)});
+    qbar.appendChild(b);
+  });
+
+  var animId=0;
+  var playAllTimer=null;
+
+  function clearAnim(){
+    animId++;
+    if(playAllTimer){clearTimeout(playAllTimer);playAllTimer=null;}
+    svg.classList.remove("running");
+    svg.querySelectorAll(".on").forEach(function(e){e.classList.remove("on")});
+    svg.querySelectorAll(".ai-edge").forEach(function(e){e.classList.remove("ai-edge")});
+    pulse.classList.remove("visible","ai-pulse");
+    qbar.querySelectorAll(".qbtn").forEach(function(b){b.classList.remove("active")});
+  }
+
+  function animateAlongPath(pathElem,dur,myId,cb){
+    var len=pathElem.getTotalLength();
+    var t0=null;
+    pulse.classList.add("visible");
+    function frame(ts){
+      if(myId!==animId)return;
+      if(!t0)t0=ts;
+      var p=Math.min((ts-t0)/dur,1);
+      var pt=pathElem.getPointAtLength(p*len);
+      pulse.setAttribute("cx",pt.x);
+      pulse.setAttribute("cy",pt.y);
+      if(p<1)requestAnimationFrame(frame);
+      else if(cb)cb();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function runSteps(steps,isAI,myId,done){
+    var i=0;
+    function next(){
+      if(myId!==animId||i>=steps.length){
+        if(myId===animId)pulse.classList.remove("visible");
+        if(done)done();
+        return;
+      }
+      var ids=steps[i];i++;
+      var nodes=[],edges=[];
+      ids.forEach(function(id){
+        var pre=id.substring(0,2),eid=id.substring(2),elem;
+        if(pre==="n:"){
+          elem=document.getElementById("n_"+eid);
+          if(elem){elem.classList.add("on");nodes.push(eid);}
+        }else{
+          elem=document.getElementById(eid);
+          if(elem){elem.classList.add("on");if(isAI)elem.classList.add("ai-edge");edges.push(elem);}
+        }
+      });
+      if(edges.length>0){
+        var done0=0,total=edges.length;
+        edges.forEach(function(pathEl,idx){
+          if(idx===0){
+            animateAlongPath(pathEl,380,myId,function(){done0++;if(done0>=total)setTimeout(next,80);});
+          }else{
+            setTimeout(function(){done0++;if(done0>=total&&myId===animId)setTimeout(next,80);},380);
+          }
+        });
+      }else if(nodes.length>0){
+        var nd=NODES[nodes[0]];
+        if(nd){pulse.setAttribute("cx",nd.x+nd.w/2);pulse.setAttribute("cy",nd.y+nd.h/2);pulse.classList.add("visible");}
+        setTimeout(next,320);
+      }else{setTimeout(next,200);}
+    }
+    next();
+  }
+
+  function play(sc,cb){
+    clearAnim();
+    qbar.querySelectorAll(".qbtn").forEach(function(b){if(b.dataset.key===sc.key)b.classList.add("active")});
+    capRoute.textContent=sc.route;
+    capRoute.style.background=sc.isAI?"var(--ai-soft)":"";
+    capRoute.style.color=sc.isAI?"var(--ai)":"";
+    capDesc.textContent=sc.desc;
+    capStat.textContent=sc.stat;
+    if(sc.isAI)pulse.classList.add("ai-pulse");
+    svg.classList.add("running");
+    var myId=animId;
+    runSteps(sc.steps,sc.isAI,myId,cb);
+  }
+
+  function playAll(){
+    var idx=0;
+    function nextScenario(){
+      if(idx>=SCENARIOS.length)return;
+      play(SCENARIOS[idx],function(){idx++;if(idx<SCENARIOS.length){playAllTimer=setTimeout(nextScenario,900);}});
+    }
+    nextScenario();
+  }
+
+  var pab=document.createElement("button");
+  pab.className="qbtn playall";
+  pab.textContent="Play All";
+  pab.addEventListener("click",playAll);
+  qbar.insertBefore(pab,qbar.firstChild);
+
+})();
+</script>

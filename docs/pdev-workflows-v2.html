@@ -1,0 +1,669 @@
+<title>Process Engineering Interface — Automated Workflows</title>
+<style>
+  :root {
+    --ground: #f2f0ec; --surface: #ffffff; --ink: #1a1917; --ink-2: #4d4a44;
+    --ink-3: #8a857c; --rule: #d6d1c9;
+    --accent: #1a6b5a; --accent-soft: #e4f0ec; --accent-muted: #2d8b76;
+    --warn: #b07318; --warn-soft: #faf0e0;
+    --ai: #6b52a3; --ai-soft: #eee9f7;
+    --live: #1a7a3a; --live-soft: #e3f2e8;
+    --off: #8a857c; --off-soft: #edebe7;
+    --shadow: 0 1px 3px rgba(26,25,23,0.07);
+    --shadow-lg: 0 4px 16px rgba(26,25,23,0.08);
+    --mistral: #FF7000; --openai: #10A37F; --anthropic: #D4845A;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#5cc4a8;--accent-soft:#1a2e28;--accent-muted:#4aab90;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --mistral:#FF8C33;--openai:#2EB88A;--anthropic:#E09A70;
+  }}
+  :root[data-theme="light"]{
+    --ground:#f2f0ec;--surface:#ffffff;--ink:#1a1917;--ink-2:#4d4a44;
+    --ink-3:#8a857c;--rule:#d6d1c9;
+    --accent:#1a6b5a;--accent-soft:#e4f0ec;--accent-muted:#2d8b76;
+    --warn:#b07318;--warn-soft:#faf0e0;
+    --ai:#6b52a3;--ai-soft:#eee9f7;
+    --live:#1a7a3a;--live-soft:#e3f2e8;
+    --off:#8a857c;--off-soft:#edebe7;
+    --shadow:0 1px 3px rgba(26,25,23,0.07);--shadow-lg:0 4px 16px rgba(26,25,23,0.08);
+    --mistral:#FF7000;--openai:#10A37F;--anthropic:#D4845A;
+  }
+  :root[data-theme="dark"]{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#5cc4a8;--accent-soft:#1a2e28;--accent-muted:#4aab90;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --mistral:#FF8C33;--openai:#2EB88A;--anthropic:#E09A70;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+
+  .wrap{max-width:1360px;margin:0 auto;padding:32px 20px 64px}
+
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+  h1{font-size:26px;font-weight:720;margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+  .lead{font-size:15px;color:var(--ink-2);margin:0 0 24px;max-width:62ch}
+
+  .tabs{display:flex;gap:2px;border-bottom:2px solid var(--rule);margin-bottom:20px}
+  .tab{font:inherit;font-size:14px;font-weight:640;padding:10px 20px 9px;border:none;background:none;color:var(--ink-3);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .panel[hidden]{display:none}
+
+  /* ---- animated map ---- */
+  .qbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .qbtn{font:inherit;font-size:12.5px;padding:7px 14px;border-radius:20px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,background .15s,color .15s}
+  .qbtn:hover{border-color:var(--accent)}
+  .qbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .qbtn.active{background:var(--accent);border-color:var(--accent);color:var(--ground)}
+  .qbtn.ai-q.active{background:var(--ai);border-color:var(--ai)}
+  .qbtn.playall{font-weight:650}
+
+  .caption{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:14px 18px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow);margin-bottom:16px;min-height:62px}
+  .caption .route{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;padding:3px 10px;border-radius:20px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+  .caption .desc{font-size:13.5px;color:var(--ink-2);flex:1 1 300px}
+  .caption .stat{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+  .board{border:1px solid var(--rule);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);overflow-x:auto}
+  .board svg{display:block;min-width:900px;width:100%;height:auto}
+
+  svg text{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;fill:var(--ink)}
+  svg .t-title{font-size:13px;font-weight:650}
+  svg .t-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:9.5px;fill:var(--ink-3)}
+  svg .t-col{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.14em;fill:var(--ink-3);text-transform:uppercase}
+
+  svg .node rect.body{fill:var(--surface);stroke:var(--rule);stroke-width:1.4;rx:8}
+  svg .node.trigger rect.body{stroke:var(--warn)}
+  svg .node.proc rect.body{stroke:var(--accent)}
+  svg .node.dest rect.body{stroke:var(--rule)}
+  svg .node.ai-node rect.body{stroke:var(--ai)}
+
+  svg .node-icon{color:var(--ink-3)}
+  svg .node.trigger .node-icon{color:var(--warn)}
+  svg .node.proc .node-icon{color:var(--accent)}
+  svg .node.dest .node-icon{color:var(--ink-3)}
+  svg .node.ai-node .node-icon{color:var(--ai)}
+
+  svg .edge{fill:none;stroke:var(--rule);stroke-width:1.5}
+
+  svg.running .node,svg.running .edge{opacity:.15;transition:opacity .35s}
+  svg.running .node.on,svg.running .edge.on{opacity:1}
+  svg .node.on rect.body{stroke-width:2.6}
+  svg .node.trigger.on rect.body{stroke:var(--warn)}
+  svg .node.proc.on rect.body{stroke:var(--accent)}
+  svg .node.ai-node.on rect.body{stroke:var(--ai)}
+  svg .node.dest.on rect.body{stroke:var(--accent)}
+  svg .edge.on{stroke:var(--accent);stroke-width:2.4}
+  svg .node,svg .edge{transition:opacity .35s}
+
+  #pulse{fill:var(--accent);opacity:0;filter:url(#glow)}
+  #pulse.visible{opacity:1}
+  #pulse.ai-pulse{fill:var(--ai)}
+  svg .edge.on.ai-edge{stroke:var(--ai)}
+  svg .edge{stroke-dasharray:none}
+  svg .edge.on{stroke-dasharray:8 4;animation:edgeDash .6s linear infinite}
+  @keyframes edgeDash{to{stroke-dashoffset:-12}}
+
+  /* ---- deep dive ---- */
+  .dive-intro{font-size:15px;color:var(--ink-2);max-width:64ch;margin:0 0 28px;line-height:1.6}
+  .group-label{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:36px 0 14px 2px}
+  .group-label:first-child{margin-top:0}
+
+  .station{background:var(--surface);border:1px solid var(--rule);border-radius:11px;box-shadow:var(--shadow);padding:22px 26px 20px;margin-bottom:16px}
+  .station.ai-station{border-left:3px solid var(--ai);border-color:var(--ai) var(--rule) var(--rule) var(--ai)}
+  .st-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:10px}
+  .st-num{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--surface);background:var(--accent);min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .ai-station .st-num{background:var(--ai)}
+  .st-head h2{font-size:18px;font-weight:700;margin:0;line-height:1.3}
+  .st-chips-row{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .station p{font-size:14.5px;color:var(--ink);margin:0 0 12px;max-width:68ch;line-height:1.6}
+
+  .chip{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;padding:2px 9px;border-radius:20px;white-space:nowrap;font-weight:600}
+  .chip.ai{background:var(--ai-soft);color:var(--ai)}
+  .chip.live{background:var(--live-soft);color:var(--live)}
+  .chip.off{background:var(--off-soft);color:var(--off)}
+  .chip.sys{background:var(--accent-soft);color:var(--accent)}
+  .chip.time{background:var(--warn-soft);color:var(--warn)}
+
+  .ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 16px}
+  @media(max-width:640px){.ba-grid{grid-template-columns:1fr}}
+  .ba-col h3{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+  .ba-col.before h3{color:var(--warn)}
+  .ba-col.after h3{color:var(--live)}
+  .ba-col ul{margin:0;padding:0;list-style:none}
+  .ba-col li{font-size:13.5px;line-height:1.55;color:var(--ink-2);padding:5px 0 5px 18px;position:relative}
+  .ba-col.before li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--warn-soft);border:1.5px solid var(--warn)}
+  .ba-col.after li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--live-soft);border:1.5px solid var(--live)}
+  .ba-col li strong{color:var(--ink);font-weight:620}
+
+  .impact{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:4px}
+  .ai-station .impact{border-left-color:var(--ai);background:var(--ai-soft)}
+  .impact .impact-head{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;font-weight:700}
+  .ai-station .impact .impact-head{color:var(--ai)}
+  .impact ul{margin:0;padding:0;list-style:none}
+  .impact li{font-size:13.5px;color:var(--ink);line-height:1.5;padding:2px 0}
+  .impact li strong{font-weight:660;color:var(--accent-muted)}
+  .ai-station .impact li strong{color:var(--ai)}
+
+  /* ---- AI stack banner ---- */
+  .ai-stack{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 18px;border-radius:10px;background:var(--ai-soft);border:1px solid color-mix(in srgb, var(--ai) 20%, transparent);margin:0 0 20px}
+  .ai-stack-title{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ai);font-weight:700;flex-basis:100%}
+  .ai-stack-desc{font-size:13px;color:var(--ink-2);flex-basis:100%;margin-bottom:4px}
+  .ai-stack-note{font-size:12px;color:var(--ink-3);flex-basis:100%;font-style:italic;margin:0 0 4px}
+  .ai-stack-row{display:flex;flex-wrap:wrap;gap:8px}
+  .vendor-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 5px;border-radius:20px;background:var(--surface);border:1px solid var(--rule);font-size:12.5px;font-weight:620;color:var(--ink)}
+  .vendor-pill .vp-dot{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+
+  /* ---- mini flow diagrams ---- */
+  .mini-flow{overflow-x:auto;margin:14px 0 18px;padding:10px 6px;border-radius:10px;background:var(--ground);border:1px solid var(--rule)}
+  .mini-flow svg{display:block;width:100%;min-width:420px;height:auto}
+  .mf-node{fill:var(--surface);stroke:var(--accent);stroke-width:1.4}
+  .mf-trig{stroke:var(--warn)}
+  .mf-ai{stroke:var(--ai);fill:var(--ai-soft);stroke-width:2}
+  .mf-title{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;font-size:11px;font-weight:650;fill:var(--ink)}
+  .mf-title-ai{fill:var(--ai)}
+  .mf-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:8.5px;fill:var(--ink-3)}
+  .mf-edge{fill:none;stroke:var(--rule);stroke-width:1.5;stroke-dasharray:6 4;animation:mfPulse 1.2s linear infinite}
+  .mf-edge-ai{stroke:var(--ai)}
+  .mf-icon{color:var(--accent)}
+  .mf-icon-warn{color:var(--warn)}
+  .mf-icon-ai{color:var(--ai)}
+  @keyframes mfPulse{to{stroke-dashoffset:-10}}
+
+  @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+
+<!-- shared SVG defs: mini-flow arrowheads + tool-agnostic icon set -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <marker id="mf-arr" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--rule)"/></marker>
+    <marker id="mf-arr-ai" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--ai)"/></marker>
+
+    <symbol id="icon-form" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="4" width="14" height="17" rx="2"/>
+      <rect x="9" y="2" width="6" height="4" rx="1"/>
+      <line x1="8" y1="11" x2="16" y2="11"/>
+      <line x1="8" y1="15" x2="16" y2="15"/>
+    </symbol>
+    <symbol id="icon-sync" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 12a8 8 0 0 1 13.66-5.66"/>
+      <path d="M20 12a8 8 0 0 1-13.66 5.66"/>
+      <path d="M18 3v5h-5"/>
+      <path d="M6 21v-5h5"/>
+    </symbol>
+    <symbol id="icon-mic" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 11a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="18" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </symbol>
+    <symbol id="icon-envelope" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2"/>
+      <path d="M3 7l9 6 9-6"/>
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3.5 2"/>
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.5L21.5 20h-19z"/>
+      <line x1="12" y1="9.5" x2="12" y2="14.5"/>
+      <circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-gear" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.1 5.9l-1.5 1.5M7.4 16.6l-1.5 1.5M18.1 18.1l-1.5-1.5M7.4 7.4L5.9 5.9"/>
+    </symbol>
+    <symbol id="icon-brain" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1.5 5.6A3 3 0 0 0 7 17.5 3 3 0 0 0 9.9 21a3 3 0 0 0 2.1-.9V6a2.5 2.5 0 0 0-3-2z"/>
+      <path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1.5 5.6A3 3 0 0 1 17 17.5 3 3 0 0 1 14.1 21a3 3 0 0 1-2.1-.9V6a2.5 2.5 0 0 1 3-2z"/>
+    </symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="21" x2="21" y2="21"/>
+      <rect x="5" y="14" width="3" height="7"/>
+      <rect x="10.5" y="9" width="3" height="12"/>
+      <rect x="16" y="4" width="3" height="17"/>
+    </symbol>
+    <symbol id="icon-database" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="5.5" rx="8" ry="3"/>
+      <path d="M4 5.5V18c0 1.66 3.58 3 8 3s8-1.34 8-3V5.5"/>
+      <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/>
+    </symbol>
+    <symbol id="icon-window" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2"/>
+      <line x1="3" y1="9" x2="21" y2="9"/>
+      <circle cx="6" cy="6.5" r="0.6" fill="currentColor" stroke="none"/>
+      <circle cx="8.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-checklist" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <path d="M8 8l1.5 1.5L12.5 6"/>
+      <line x1="8" y1="14" x2="16" y2="14"/>
+      <line x1="8" y1="17.5" x2="16" y2="17.5"/>
+    </symbol>
+    <symbol id="icon-chat" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 5h16v11H9l-4 4V5z"/>
+      <line x1="8" y1="9" x2="16" y2="9"/>
+      <line x1="8" y1="12.5" x2="13" y2="12.5"/>
+    </symbol>
+    <symbol id="icon-document" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2h9l4 4v16H6z"/>
+      <path d="M15 2v4h4"/>
+      <line x1="9" y1="12" x2="16" y2="12"/>
+      <line x1="9" y1="16" x2="16" y2="16"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <p class="eyebrow">scale virtually · process engineering interface</p>
+  <h1>Process Engineering Interface</h1>
+  <p class="lead">Six stations — spanning 12 automated workflows, three powered by AI — handle meeting documentation, client intake, cross-system syncing, and daily reporting automatically, without manual data entry.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-map" id="tab-map">Animated map</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-dive" id="tab-dive">Step-by-step deep dive</button>
+  </div>
+
+  <!-- ===== TAB 1: ANIMATED MAP ===== -->
+  <section class="panel" id="panel-map" role="tabpanel">
+    <div class="qbar" id="qbar"></div>
+    <div class="caption">
+      <span class="route" id="cap-route">pick a workflow</span>
+      <span class="desc" id="cap-desc">Each button traces a workflow through the system — from trigger to output. Workflows marked AI use inference models to read, analyze, and generate content, instead of following fixed rules.</span>
+      <span class="stat" id="cap-stat"></span>
+    </div>
+    <div class="board">
+      <svg id="flow" viewBox="0 0 1340 620" role="img" aria-label="Flow diagram of the Process Engineering Interface automation system"></svg>
+    </div>
+  </section>
+
+  <!-- ===== TAB 2: DEEP DIVE ===== -->
+  <section class="panel" id="panel-dive" role="tabpanel" hidden>
+    <p class="dive-intro">Each station below shows the manual process it replaces, a step-by-step animated flow, and measurable impact. AI-powered stations first, then the client intake pipeline and daily operations.</p>
+
+    <h3 class="group-label">AI-powered intelligence</h3>
+
+    <div class="ai-stack">
+      <span class="ai-stack-title">AI models powering 3 automated workflows</span>
+      <span class="ai-stack-desc">These stations call AI inference APIs to read, analyze, and generate structured output — they are not fixed, rule-based automations.</span>
+      <span class="ai-stack-note">These are the AI models powering the intelligence layer — the solution works with any compatible AI provider.</span>
+      <div class="ai-stack-row">
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--mistral)">M</span> Mistral AI</span>
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--openai)">O</span> OpenAI</span>
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--anthropic)">C</span> Anthropic Claude</span>
+      </div>
+    </div>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">1</span><h2>AI Meeting Minutes &amp; Email Processing</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">71 nodes (2 workflows)</span></div></div><p>Meetings are recorded automatically. The AI reads the full transcript and generates structured minutes — attendees, agenda, decisions, and action items. Minutes are emailed to the client, posted to the team chat, and stored in the database. Separately, when meeting-related emails arrive, the AI reads them, matches them to the correct client project, and logs them automatically.</p><div class="mini-flow" id="mf-1"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Someone takes notes during meetings, splitting attention</li><li>15–30 min writing minutes afterward</li><li>MoM emails not tracked</li><li>Insights buried in inboxes</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>AI generates structured minutes from every recorded meeting</li><li>MoM emails automatically matched to the right project</li><li><strong>Everything stored and searchable</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> 15–30 min per meeting + 10 min per MoM email</li><li><strong>Cognitive load:</strong> No split attention during meetings, no manual email triage, no forgotten follow-ups</li></ul></div></article>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">2</span><h2>AI Insight Extraction &amp; Daily Report</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">37 nodes (2 workflows)</span></div></div><p>The AI scans every incoming client email and carefully reads it to understand key updates, red flags, and project signals. Each insight is matched to the correct client project and saved as a structured record. Every day, the AI then reviews all captured insights, identifies patterns and trends, and writes a narrative summary highlighting wins, risks, and items that need attention. A visual report card is generated and posted to the team automatically.</p><div class="mini-flow" id="mf-2"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Client email insights not captured — signals buried in inboxes</li><li>No structured record of client sentiment or updates</li><li>Daily insight review done by hand — rarely consistent</li><li>Synthesizing patterns is time-consuming; summary shared ad-hoc</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>AI scans every qualifying email — extracts updates, sentiment, project signals</li><li>Matched to correct project and saved automatically</li><li>Daily narrative summary written by AI with wins, risks, trends</li><li><strong>Visual report card posted to the team, every day</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> ~10 min per email + 45–60 min daily on reporting</li><li><strong>Cognitive load:</strong> No risk of missing important client signals; no one needs to drive the daily review; consistent reporting without effort</li></ul></div></article>
+
+    <h3 class="group-label">Client intake pipeline</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">3</span><h2>Client Onboarding Pipeline</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">106 nodes (3 workflows)</span></div></div><p>When a new client request comes in through the intake form, the system automatically checks for existing records to avoid duplicates, creates all necessary entries across systems, sets up the internal portal, and sends a confirmation email. For requests with multiple roles, each role is processed individually — all in seconds, with zero manual data entry.</p><div class="mini-flow" id="mf-3"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Someone manually extracts company, client, and contact details</li><li>Checks for duplicates one by one</li><li>Creates records by hand</li><li>Multi-role requests multiply the work</li><li>30–60 minutes per request</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Form submitted once</li><li>All records created and deduplicated automatically</li><li>Portal updated instantly, confirmation sent</li><li><strong>Seconds, zero manual intervention</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> 30–60 min → seconds per intake</li><li><strong>Cognitive load:</strong> No repetitive data entry, no risk of duplicates or missed records</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">4</span><h2>Cross-System Sync &amp; Portal Integration</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">48 nodes (2 workflows)</span></div></div><p>All databases and portals stay in sync automatically. When a record changes in one system, the others update to match — including team member assignments. No manual dual-entry, no data drift between systems.</p><div class="mini-flow" id="mf-4"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Changes require updating multiple systems manually</li><li>Data drifts apart over time</li><li>Assignments tracked inconsistently</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Update once — all systems follow</li><li>Team assignments synced automatically</li><li><strong>Notification sent on completion</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> 15–20 min per update</li><li><strong>Cognitive load:</strong> No dual-entry, no worry about systems being out of sync</li></ul></div></article>
+
+    <h3 class="group-label">Daily operations &amp; monitoring</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">5</span><h2>Daily Health Digest &amp; Metrics</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">24 nodes (2 workflows)</span></div></div><p>Every day, health metrics are computed for every active client project — urgency, recency, and overall health scored objectively. A prioritized digest is posted to the team, surfacing the projects that need attention first. Historical snapshots enable trend analysis over time.</p><div class="mini-flow" id="mf-5"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Someone manually reviews all active projects each morning</li><li>Urgency assessed subjectively</li><li>Some days it doesn't happen</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Health metrics computed daily for every project</li><li>Objective scoring — not guessing</li><li><strong>Ranked digest posted automatically, every day</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> 20–30 min daily</li><li><strong>Cognitive load:</strong> Consistent daily visibility without effort; objective scoring removes guesswork</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">6</span><h2>Error Monitoring</h2><div class="st-chips-row"><span class="chip off">Inactive</span><span class="chip time">6 nodes</span></div></div><p>When any workflow encounters an issue, it's caught instantly. A ticket is created, the error is logged for analysis, and the team is notified — all within seconds.</p><div class="mini-flow" id="mf-6"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Failures noticed hours or days later</li><li>Manual investigation</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Instant detection</li><li>Automatic ticket creation</li><li><strong>Team notification</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Zero-delay detection</strong></li><li><strong>Full audit trail</strong> for pattern analysis</li></ul></div></article>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  var XLINK="http://www.w3.org/1999/xlink";
+
+  function addIcon(parent,key,x,y,w,h,cls){
+    var u=document.createElementNS(NS,"use");
+    u.setAttributeNS(XLINK,"href","#icon-"+key);
+    u.setAttribute("href","#icon-"+key);
+    u.setAttribute("x",x);u.setAttribute("y",y);
+    u.setAttribute("width",w);u.setAttribute("height",h);
+    if(cls)u.setAttribute("class",cls);
+    parent.appendChild(u);
+    return u;
+  }
+
+  // ---- tabs ----
+  var tabs=document.querySelectorAll(".tab");
+  var panels=document.querySelectorAll(".panel");
+  tabs.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      tabs.forEach(function(t){t.classList.remove("active");t.setAttribute("aria-selected","false")});
+      btn.classList.add("active");btn.setAttribute("aria-selected","true");
+      var target=btn.getAttribute("aria-controls");
+      panels.forEach(function(p){p.hidden=p.id!==target});
+    });
+  });
+
+  // ---- mini flow generator ----
+  function buildMiniFlow(id, stages){
+    var c=document.getElementById(id);
+    if(!c)return;
+    var NW=170,NH=50,GAP=32,PAD=14;
+    var W=PAD*2+stages.length*NW+(stages.length-1)*GAP;
+    var H=NH+PAD*2;
+    var s=document.createElementNS(NS,"svg");
+    s.setAttribute("viewBox","0 0 "+W+" "+H);
+    // x positions
+    var xs=[];
+    for(var i=0;i<stages.length;i++){xs.push(PAD+i*(NW+GAP));}
+    // edges
+    for(var i=0;i<stages.length-1;i++){
+      var x1=xs[i]+NW,x2=xs[i+1],y=PAD+NH/2;
+      var isAiEdge=stages[i].c==="ai"||stages[i+1].c==="ai";
+      var p=document.createElementNS(NS,"path");
+      p.setAttribute("d","M"+x1+" "+y+"L"+x2+" "+y);
+      p.setAttribute("class","mf-edge"+(isAiEdge?" mf-edge-ai":""));
+      p.setAttribute("marker-end","url(#"+(isAiEdge?"mf-arr-ai":"mf-arr")+")");
+      s.appendChild(p);
+    }
+    // nodes
+    for(var i=0;i<stages.length;i++){
+      var st=stages[i],x=xs[i],y=PAD;
+      var g=document.createElementNS(NS,"g");
+      var r=document.createElementNS(NS,"rect");
+      r.setAttribute("x",x);r.setAttribute("y",y);
+      r.setAttribute("width",NW);r.setAttribute("height",NH);
+      r.setAttribute("rx",8);
+      r.setAttribute("class","mf-node"+(st.c==="ai"?" mf-ai":st.c==="warn"?" mf-trig":""));
+      g.appendChild(r);
+      if(st.icon){
+        var iconCls="mf-icon"+(st.c==="ai"?" mf-icon-ai":st.c==="warn"?" mf-icon-warn":"");
+        addIcon(g,st.icon,x+9,y+13,22,22,iconCls);
+      }
+      var cx=st.icon?x+104:x+NW/2;
+      var t=document.createElementNS(NS,"text");
+      t.setAttribute("x",cx);t.setAttribute("y",y+(st.s?20:28));
+      t.setAttribute("text-anchor","middle");
+      t.setAttribute("class","mf-title"+(st.c==="ai"?" mf-title-ai":""));
+      t.textContent=st.l;
+      g.appendChild(t);
+      if(st.s){
+        var u=document.createElementNS(NS,"text");
+        u.setAttribute("x",cx);u.setAttribute("y",y+35);
+        u.setAttribute("text-anchor","middle");u.setAttribute("class","mf-sub");
+        u.textContent=st.s;
+        g.appendChild(u);
+      }
+      s.appendChild(g);
+    }
+    c.appendChild(s);
+  }
+
+  // render all mini flows
+  var MF=[
+    ["mf-1",[{l:"AI Notetaker",s:"recording",c:"warn",icon:"mic"},{l:"Transcript Cleanup",s:"normalize",icon:"gear"},{l:"AI Engine",s:"inference",c:"ai",icon:"brain"},{l:"Email + Chat + Database",s:"distribute",icon:"chat"}]],
+    ["mf-2",[{l:"Email Inbox",s:"client email",c:"warn",icon:"envelope"},{l:"AI Engine",s:"extract signals",c:"ai",icon:"brain"},{l:"Database",s:"save insights",icon:"database"},{l:"AI Engine",s:"daily summary",c:"ai",icon:"brain"},{l:"Team Chat",s:"report card",icon:"chat"}]],
+    ["mf-3",[{l:"Intake Form",s:"submission",c:"warn",icon:"form"},{l:"Dedup & Build",s:"company · client · contact",icon:"gear"},{l:"Database + Portal + Email",s:"create & confirm",icon:"database"}]],
+    ["mf-4",[{l:"Record Change",s:"trigger",c:"warn",icon:"sync"},{l:"Sync Engine",s:"reconcile",icon:"gear"},{l:"Database + Portal + Team Chat",s:"update & notify",icon:"chat"}]],
+    ["mf-5",[{l:"Scheduler",s:"daily",c:"warn",icon:"clock"},{l:"Metrics Engine",s:"score · rank",icon:"chart"},{l:"Database",s:"save snapshot",icon:"database"},{l:"Team Chat",s:"post digest",icon:"chat"}]],
+    ["mf-6",[{l:"Error Trigger",s:"workflow failure",c:"warn",icon:"warning"},{l:"Task Manager",s:"create ticket",icon:"checklist"},{l:"Error Log",s:"record",icon:"document"},{l:"Team Chat",s:"notify",icon:"chat"}]]
+  ];
+  MF.forEach(function(m){buildMiniFlow(m[0],m[1])});
+
+  // ---- SVG system map ----
+  var svg=document.getElementById("flow");
+  function el(tag,attrs,parent){
+    var e=document.createElementNS(NS,tag);
+    for(var k in attrs)e.setAttribute(k,attrs[k]);
+    (parent||svg).appendChild(e);return e;
+  }
+
+  var NODES={
+    form:      {x:30, y:52,  w:170,h:50,title:"Intake Form",    sub:"webhook trigger",     cls:"trigger", icon:"form"},
+    record:    {x:30, y:138, w:170,h:50,title:"Record Change",  sub:"automation trigger",  cls:"trigger", icon:"sync"},
+    notetaker: {x:30, y:224, w:170,h:50,title:"AI Notetaker",   sub:"meeting recording",   cls:"trigger", icon:"mic"},
+    email_in:  {x:30, y:310, w:170,h:50,title:"Email Inbox",    sub:"email trigger",       cls:"trigger", icon:"envelope"},
+    sched:     {x:30, y:396, w:170,h:50,title:"Scheduler",      sub:"daily cron",          cls:"trigger", icon:"clock"},
+    err:       {x:30, y:482, w:170,h:50,title:"Error Trigger",  sub:"workflow failure",    cls:"trigger", icon:"warning"},
+    dedup:     {x:460,y:70,  w:200,h:54,title:"Dedup & Build",  sub:"company · client · POC",cls:"proc",  icon:"gear"},
+    sync_eng:  {x:460,y:175, w:200,h:54,title:"Sync Engine",    sub:"cross-system reconcile",cls:"proc",  icon:"sync"},
+    ai:        {x:460,y:285, w:200,h:54,title:"AI Engine",      sub:"LLM inference",       cls:"ai-node", icon:"brain"},
+    compute:   {x:460,y:400, w:200,h:54,title:"Metrics Engine", sub:"scoring · snapshots", cls:"proc",   icon:"chart"},
+    database:  {x:930,y:42,  w:170,h:50,title:"Database",       sub:"create / update",     cls:"dest",   icon:"database"},
+    portal:    {x:930,y:128, w:170,h:50,title:"Portal",         sub:"internal portal",     cls:"dest",   icon:"window"},
+    task:      {x:930,y:214, w:170,h:50,title:"Task Manager",   sub:"project management",  cls:"dest",   icon:"checklist"},
+    email_out: {x:930,y:300, w:170,h:50,title:"Email",          sub:"send email",          cls:"dest",   icon:"envelope"},
+    chat:      {x:930,y:386, w:170,h:50,title:"Team Chat",      sub:"team notifications",  cls:"dest",   icon:"chat"},
+    errorlog:  {x:930,y:472, w:170,h:50,title:"Error Log",      sub:"database storage",    cls:"dest",   icon:"document"}
+  };
+
+  var K=90;
+  function anchor(id,side,off){
+    var n=NODES[id],o=off||0;
+    if(side==="r")return{x:n.x+n.w,y:n.y+n.h/2+o};
+    if(side==="l")return{x:n.x,y:n.y+n.h/2+o};
+    if(side==="t")return{x:n.x+n.w/2+o,y:n.y};
+    return{x:n.x+n.w/2+o,y:n.y+n.h};
+  }
+  function edgeD(from,fs,to,ts,fo,to2,k1,k2){
+    var a=anchor(from,fs,fo),b=anchor(to,ts,to2);
+    var c1=k1||K,c2=k2||K;
+    var dx=fs==="r"?1:fs==="l"?-1:0,dy=fs==="t"?-1:fs==="b"?1:0;
+    var dx2=ts==="r"?1:ts==="l"?-1:0,dy2=ts==="t"?-1:ts==="b"?1:0;
+    return"M "+a.x+" "+a.y+" C "+(a.x+dx*c1)+" "+(a.y+dy*c1)+", "+(b.x+dx2*c2)+" "+(b.y+dy2*c2)+", "+b.x+" "+b.y;
+  }
+
+  var EDGES={
+    e_form_dedup:      {d:edgeD("form","r","dedup","l")},
+    e_record_sync:     {d:edgeD("record","r","sync_eng","l")},
+    e_record_dedup:    {d:edgeD("record","r","dedup","l",0,0,100,80)},
+    e_notetaker_ai:    {d:edgeD("notetaker","r","ai","l")},
+    e_email_ai:        {d:edgeD("email_in","r","ai","l")},
+    e_sched_compute:   {d:edgeD("sched","r","compute","l")},
+    e_sched_ai:        {d:edgeD("sched","r","ai","l",0,0,140,120)},
+    e_err_compute:     {d:edgeD("err","r","compute","l",0,0,120,100)},
+    e_dedup_database:  {d:edgeD("dedup","r","database","l")},
+    e_dedup_portal:    {d:edgeD("dedup","r","portal","l",0,0,80,60)},
+    e_dedup_email_out: {d:edgeD("dedup","r","email_out","l",0,0,110,130)},
+    e_sync_database:   {d:edgeD("sync_eng","r","database","l",0,0,110,130)},
+    e_sync_portal:     {d:edgeD("sync_eng","r","portal","l")},
+    e_sync_task:       {d:edgeD("sync_eng","r","task","l",0,0,80,60)},
+    e_sync_chat:       {d:edgeD("sync_eng","r","chat","l",0,0,110,130)},
+    e_ai_database:     {d:edgeD("ai","r","database","l",0,0,140,170)},
+    e_ai_email_out:    {d:edgeD("ai","r","email_out","l")},
+    e_ai_chat:         {d:edgeD("ai","r","chat","l",0,0,80,60)},
+    e_ai_errorlog:     {d:edgeD("ai","r","errorlog","l",0,0,100,130)},
+    e_ai_compute:      {d:edgeD("ai","b","compute","t",0,0,50,50)},
+    e_compute_database:{d:edgeD("compute","r","database","l",0,0,150,200)},
+    e_compute_chat:    {d:edgeD("compute","r","chat","l")},
+    e_compute_task:    {d:edgeD("compute","r","task","l",0,0,130,160)},
+    e_compute_errorlog:{d:edgeD("compute","r","errorlog","l",0,0,80,60)},
+    e_err_task:        {d:edgeD("err","r","task","l",0,0,160,180)},
+    e_err_errorlog:    {d:edgeD("err","r","errorlog","l",0,0,140,140)},
+    e_err_chat:        {d:edgeD("err","r","chat","l",0,0,180,160)}
+  };
+
+  el("text",{x:115,y:32,class:"t-col","text-anchor":"middle"}).textContent="TRIGGERS";
+  el("text",{x:560,y:50,class:"t-col","text-anchor":"middle"}).textContent="PROCESSING";
+  el("text",{x:1015,y:26,class:"t-col","text-anchor":"middle"}).textContent="DESTINATIONS";
+
+  var defs=el("defs",{});
+  var filt=el("filter",{id:"glow",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  el("feGaussianBlur",{stdDeviation:"4",result:"blur"},filt);
+  var merge=el("feMerge",{},filt);
+  el("feMergeNode",{"in":"blur"},merge);
+  el("feMergeNode",{"in":"SourceGraphic"},merge);
+
+  var marker=el("marker",{id:"arrow",viewBox:"0 0 10 8",refX:"9",refY:"4",markerWidth:"8",markerHeight:"6",orient:"auto-start-reverse"},defs);
+  el("path",{d:"M 0 0 L 10 4 L 0 8 z",fill:"var(--rule)",class:"arrow-fill"},marker);
+
+  Object.keys(EDGES).forEach(function(id){
+    el("path",{id:id,d:EDGES[id].d,class:"edge","marker-end":"url(#arrow)"});
+  });
+
+  Object.keys(NODES).forEach(function(id){
+    var n=NODES[id];
+    var g=el("g",{id:"n_"+id,class:"node "+n.cls});
+    el("rect",{x:n.x,y:n.y,width:n.w,height:n.h,rx:8,class:"body"},g);
+    var iconSize=20;
+    addIcon(g,n.icon,n.x+12,n.y+n.h/2-iconSize/2,iconSize,iconSize,"node-icon");
+    var textX=n.x+40+(n.w-40)/2;
+    var t=el("text",{x:textX,y:n.y+n.h/2-5,"text-anchor":"middle",class:"t-title"},g);
+    t.textContent=n.title;
+    var s=el("text",{x:textX,y:n.y+n.h/2+11,"text-anchor":"middle",class:"t-sub"},g);
+    s.textContent=n.sub;
+  });
+
+  var pulse=el("circle",{id:"pulse",cx:0,cy:0,r:6});
+
+  // ---- scenarios ----
+  var SCENARIOS=[
+    {key:"onboarding",btn:"Client Onboarding",route:"Client Onboarding Pipeline",
+     desc:"A single intake form submission checks for existing records to avoid duplicates, creates everything needed across systems, updates the internal portal, and sends a confirmation — automatically, in seconds.",
+     stat:"106 nodes (3 workflows) · 30-60 min → seconds",
+     steps:[["n:form"],["e:e_form_dedup"],["n:dedup"],["e:e_dedup_database","e:e_dedup_portal","e:e_dedup_email_out"],["n:database","n:portal","n:email_out"]]},
+    {key:"sync",btn:"Cross-System Sync",route:"Cross-System Sync & Portal Integration",
+     desc:"When a record changes anywhere — including team assignments — every connected system updates automatically to match, with a notification sent once it's done.",
+     stat:"48 nodes (2 workflows) · ~15-20 min saved per update",
+     steps:[["n:record"],["e:e_record_sync"],["n:sync_eng"],["e:e_sync_database","e:e_sync_portal","e:e_sync_chat"],["n:database","n:portal","n:chat"]]},
+    {key:"mom",btn:"AI Meeting Minutes",route:"AI Meeting Minutes & Email Processing",isAI:true,
+     desc:"Meetings are recorded and transcribed automatically, then the AI generates structured minutes with action items and distributes them by email, chat, and database record. The same AI also reads incoming meeting-related emails and matches them to the right project.",
+     stat:"71 nodes (2 workflows) · AI-powered · 15-30 min + 10 min saved",
+     steps:[["n:notetaker","n:email_in"],["e:e_notetaker_ai","e:e_email_ai"],["n:ai"],["e:e_ai_email_out","e:e_ai_chat","e:e_ai_database"],["n:email_out","n:chat","n:database"]]},
+    {key:"insights",btn:"AI Insights & Daily Report",route:"AI Insight Extraction & Daily Report",isAI:true,
+     desc:"Every incoming client email is read by the AI, which extracts key updates and signals and files them under the correct project. Every day, the AI then reviews all insights, writes a narrative summary of wins and risks, and posts a visual report card to the team.",
+     stat:"37 nodes (2 workflows) · AI-powered · ~10 min/email + 45-60 min daily",
+     steps:[["n:email_in"],["e:e_email_ai"],["n:ai"],["e:e_ai_database","e:e_ai_chat"],["n:database","n:chat"]]},
+    {key:"health",btn:"Health Digest & Metrics",route:"Daily Health Digest & Metrics",
+     desc:"Health metrics are computed daily for every active project and saved as dated snapshots. Projects are then scored by urgency and a ranked digest is posted to the team automatically.",
+     stat:"24 nodes (2 workflows) · ~20-30 min saved daily",
+     steps:[["n:sched"],["e:e_sched_compute"],["n:compute"],["e:e_compute_database","e:e_compute_chat"],["n:database","n:chat"]]},
+    {key:"error",btn:"Error Monitor",route:"Error Monitoring",
+     desc:"When any workflow hits an issue, it's caught instantly — a ticket is filed, the error is logged, and the team is notified, all within seconds.",
+     stat:"6 nodes · zero-delay detection",
+     steps:[["n:err"],["e:e_err_task","e:e_err_errorlog","e:e_err_chat"],["n:task","n:errorlog","n:chat"]]}
+  ];
+
+  var qbar=document.getElementById("qbar");
+  var capRoute=document.getElementById("cap-route");
+  var capDesc=document.getElementById("cap-desc");
+  var capStat=document.getElementById("cap-stat");
+
+  SCENARIOS.forEach(function(sc){
+    var b=document.createElement("button");
+    b.className="qbtn"+(sc.isAI?" ai-q":"");
+    b.textContent=sc.btn;
+    b.dataset.key=sc.key;
+    b.addEventListener("click",function(){play(sc)});
+    qbar.appendChild(b);
+  });
+
+  var animId=0;
+  var playAllTimer=null;
+
+  function clearAnim(){
+    animId++;
+    if(playAllTimer){clearTimeout(playAllTimer);playAllTimer=null;}
+    svg.classList.remove("running");
+    svg.querySelectorAll(".on").forEach(function(e){e.classList.remove("on")});
+    svg.querySelectorAll(".ai-edge").forEach(function(e){e.classList.remove("ai-edge")});
+    pulse.classList.remove("visible","ai-pulse");
+    qbar.querySelectorAll(".qbtn").forEach(function(b){b.classList.remove("active")});
+  }
+
+  function animateAlongPath(pathElem,dur,myId,cb){
+    var len=pathElem.getTotalLength();
+    var t0=null;
+    pulse.classList.add("visible");
+    function frame(ts){
+      if(myId!==animId)return;
+      if(!t0)t0=ts;
+      var p=Math.min((ts-t0)/dur,1);
+      var pt=pathElem.getPointAtLength(p*len);
+      pulse.setAttribute("cx",pt.x);
+      pulse.setAttribute("cy",pt.y);
+      if(p<1)requestAnimationFrame(frame);
+      else if(cb)cb();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function runSteps(steps,isAI,myId,done){
+    var i=0;
+    function next(){
+      if(myId!==animId||i>=steps.length){
+        if(myId===animId)pulse.classList.remove("visible");
+        if(done)done();
+        return;
+      }
+      var ids=steps[i];i++;
+      var nodes=[],edges=[];
+      ids.forEach(function(id){
+        var pre=id.substring(0,2),eid=id.substring(2),elem;
+        if(pre==="n:"){
+          elem=document.getElementById("n_"+eid);
+          if(elem){elem.classList.add("on");nodes.push(eid);}
+        }else{
+          elem=document.getElementById(eid);
+          if(elem){elem.classList.add("on");if(isAI)elem.classList.add("ai-edge");edges.push(elem);}
+        }
+      });
+      if(edges.length>0){
+        var done0=0,total=edges.length;
+        edges.forEach(function(pathEl,idx){
+          if(idx===0){
+            animateAlongPath(pathEl,380,myId,function(){done0++;if(done0>=total)setTimeout(next,80);});
+          }else{
+            setTimeout(function(){done0++;if(done0>=total&&myId===animId)setTimeout(next,80);},380);
+          }
+        });
+      }else if(nodes.length>0){
+        var nd=NODES[nodes[0]];
+        if(nd){pulse.setAttribute("cx",nd.x+nd.w/2);pulse.setAttribute("cy",nd.y+nd.h/2);pulse.classList.add("visible");}
+        setTimeout(next,320);
+      }else{setTimeout(next,200);}
+    }
+    next();
+  }
+
+  function play(sc,cb){
+    clearAnim();
+    qbar.querySelectorAll(".qbtn").forEach(function(b){if(b.dataset.key===sc.key)b.classList.add("active")});
+    capRoute.textContent=sc.route;
+    capRoute.style.background=sc.isAI?"var(--ai-soft)":"";
+    capRoute.style.color=sc.isAI?"var(--ai)":"";
+    capDesc.textContent=sc.desc;
+    capStat.textContent=sc.stat;
+    if(sc.isAI)pulse.classList.add("ai-pulse");
+    svg.classList.add("running");
+    var myId=animId;
+    runSteps(sc.steps,sc.isAI,myId,cb);
+  }
+
+  function playAll(){
+    var idx=0;
+    function nextScenario(){
+      if(idx>=SCENARIOS.length)return;
+      play(SCENARIOS[idx],function(){idx++;if(idx<SCENARIOS.length){playAllTimer=setTimeout(nextScenario,900);}});
+    }
+    nextScenario();
+  }
+
+  var pab=document.createElement("button");
+  pab.className="qbtn playall";
+  pab.textContent="Play All";
+  pab.addEventListener("click",playAll);
+  qbar.insertBefore(pab,qbar.firstChild);
+
+})();
+</script>

@@ -1,0 +1,603 @@
+<title>LinkedIn Outreach — Automated Campaign Operations</title>
+<style>
+  :root {
+    --ground: #f2f0ec; --surface: #ffffff; --ink: #1a1917; --ink-2: #4d4a44;
+    --ink-3: #8a857c; --rule: #d6d1c9;
+    --accent: #a05a1a; --accent-soft: #f5ede4; --accent-muted: #c07a3a;
+    --warn: #b07318; --warn-soft: #faf0e0;
+    --ai: #6b52a3; --ai-soft: #eee9f7;
+    --live: #1a7a3a; --live-soft: #e3f2e8;
+    --off: #8a857c; --off-soft: #edebe7;
+    --shadow: 0 1px 3px rgba(26,25,23,0.07);
+    --shadow-lg: 0 4px 16px rgba(26,25,23,0.08);
+    --anthropic: #D4845A;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#d4944a;--accent-soft:#2a2014;--accent-muted:#c0843a;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --anthropic:#E09A70;
+  }}
+  :root[data-theme="light"]{
+    --ground:#f2f0ec;--surface:#ffffff;--ink:#1a1917;--ink-2:#4d4a44;
+    --ink-3:#8a857c;--rule:#d6d1c9;
+    --accent:#a05a1a;--accent-soft:#f5ede4;--accent-muted:#c07a3a;
+    --warn:#b07318;--warn-soft:#faf0e0;
+    --ai:#6b52a3;--ai-soft:#eee9f7;
+    --live:#1a7a3a;--live-soft:#e3f2e8;
+    --off:#8a857c;--off-soft:#edebe7;
+    --shadow:0 1px 3px rgba(26,25,23,0.07);--shadow-lg:0 4px 16px rgba(26,25,23,0.08);
+    --anthropic:#D4845A;
+  }
+  :root[data-theme="dark"]{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#d4944a;--accent-soft:#2a2014;--accent-muted:#c0843a;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --anthropic:#E09A70;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1360px;margin:0 auto;padding:32px 20px 64px}
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+  h1{font-size:26px;font-weight:720;margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+  .lead{font-size:15px;color:var(--ink-2);margin:0 0 24px;max-width:62ch}
+  .tabs{display:flex;gap:2px;border-bottom:2px solid var(--rule);margin-bottom:20px}
+  .tab{font:inherit;font-size:14px;font-weight:640;padding:10px 20px 9px;border:none;background:none;color:var(--ink-3);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .panel[hidden]{display:none}
+
+  /* ---- animated map ---- */
+  .qbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .qbtn{font:inherit;font-size:12.5px;padding:7px 14px;border-radius:20px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,background .15s,color .15s}
+  .qbtn:hover{border-color:var(--accent)}
+  .qbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .qbtn.active{background:var(--accent);border-color:var(--accent);color:var(--ground)}
+  .qbtn.ai-q.active{background:var(--ai);border-color:var(--ai)}
+  .qbtn.playall{font-weight:650}
+  .caption{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:14px 18px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow);margin-bottom:16px;min-height:62px}
+  .caption .route{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;padding:3px 10px;border-radius:20px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+  .caption .desc{font-size:13.5px;color:var(--ink-2);flex:1 1 300px}
+  .caption .stat{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .board{border:1px solid var(--rule);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);overflow-x:auto}
+  .board svg{display:block;min-width:900px;width:100%;height:auto}
+  svg text{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;fill:var(--ink)}
+  svg .t-title{font-size:13px;font-weight:650}
+  svg .t-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:9.5px;fill:var(--ink-3)}
+  svg .t-col{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.14em;fill:var(--ink-3);text-transform:uppercase}
+  svg .node rect.body{fill:var(--surface);stroke:var(--rule);stroke-width:1.4;rx:8}
+  svg .node.trigger rect.body{stroke:var(--warn)}
+  svg .node.proc rect.body{stroke:var(--accent)}
+  svg .node.dest rect.body{stroke:var(--rule)}
+  svg .node.ai-node rect.body{stroke:var(--ai)}
+
+  svg .node-icon{color:var(--ink-3)}
+  svg .node.trigger .node-icon{color:var(--warn)}
+  svg .node.proc .node-icon{color:var(--accent)}
+  svg .node.dest .node-icon{color:var(--ink-3)}
+  svg .node.ai-node .node-icon{color:var(--ai)}
+
+  svg .edge{fill:none;stroke:var(--rule);stroke-width:1.5}
+  svg.running .node,svg.running .edge{opacity:.15;transition:opacity .35s}
+  svg.running .node.on,svg.running .edge.on{opacity:1}
+  svg .node.on rect.body{stroke-width:2.6}
+  svg .node.trigger.on rect.body{stroke:var(--warn)}
+  svg .node.proc.on rect.body{stroke:var(--accent)}
+  svg .node.ai-node.on rect.body{stroke:var(--ai)}
+  svg .node.dest.on rect.body{stroke:var(--accent)}
+  svg .edge.on{stroke:var(--accent);stroke-width:2.4}
+  svg .node,svg .edge{transition:opacity .35s}
+  #pulse{fill:var(--accent);opacity:0;filter:url(#glow)}
+  #pulse.visible{opacity:1}
+  #pulse.ai-pulse{fill:var(--ai)}
+  svg .edge.on.ai-edge{stroke:var(--ai)}
+  svg .edge{stroke-dasharray:none}
+  svg .edge.on{stroke-dasharray:8 4;animation:edgeDash .6s linear infinite}
+  @keyframes edgeDash{to{stroke-dashoffset:-12}}
+
+  /* ---- deep dive ---- */
+  .dive-intro{font-size:15px;color:var(--ink-2);max-width:64ch;margin:0 0 28px;line-height:1.6}
+  .group-label{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:36px 0 14px 2px}
+  .group-label:first-child{margin-top:0}
+  .station{background:var(--surface);border:1px solid var(--rule);border-radius:11px;box-shadow:var(--shadow);padding:22px 26px 20px;margin-bottom:16px}
+  .station.ai-station{border-left:3px solid var(--ai);border-color:var(--ai) var(--rule) var(--rule) var(--ai)}
+  .st-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:10px}
+  .st-num{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--surface);background:var(--accent);min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .ai-station .st-num{background:var(--ai)}
+  .st-head h2{font-size:18px;font-weight:700;margin:0;line-height:1.3}
+  .st-chips-row{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .station p{font-size:14.5px;color:var(--ink);margin:0 0 12px;max-width:68ch;line-height:1.6}
+  .chip{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;padding:2px 9px;border-radius:20px;white-space:nowrap;font-weight:600}
+  .chip.ai{background:var(--ai-soft);color:var(--ai)}
+  .chip.live{background:var(--live-soft);color:var(--live)}
+  .chip.off{background:var(--off-soft);color:var(--off)}
+  .chip.sys{background:var(--accent-soft);color:var(--accent)}
+  .chip.time{background:var(--warn-soft);color:var(--warn)}
+  .ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 16px}
+  @media(max-width:640px){.ba-grid{grid-template-columns:1fr}}
+  .ba-col h3{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+  .ba-col.before h3{color:var(--warn)}
+  .ba-col.after h3{color:var(--live)}
+  .ba-col ul{margin:0;padding:0;list-style:none}
+  .ba-col li{font-size:13.5px;line-height:1.55;color:var(--ink-2);padding:5px 0 5px 18px;position:relative}
+  .ba-col.before li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--warn-soft);border:1.5px solid var(--warn)}
+  .ba-col.after li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--live-soft);border:1.5px solid var(--live)}
+  .ba-col li strong{color:var(--ink);font-weight:620}
+  .impact{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:4px}
+  .ai-station .impact{border-left-color:var(--ai);background:var(--ai-soft)}
+  .impact .impact-head{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;font-weight:700}
+  .ai-station .impact .impact-head{color:var(--ai)}
+  .impact ul{margin:0;padding:0;list-style:none}
+  .impact li{font-size:13.5px;color:var(--ink);line-height:1.5;padding:2px 0}
+  .impact li strong{font-weight:660;color:var(--accent-muted)}
+  .ai-station .impact li strong{color:var(--ai)}
+  .ai-stack{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 18px;border-radius:10px;background:var(--ai-soft);border:1px solid color-mix(in srgb, var(--ai) 20%, transparent);margin:0 0 20px}
+  .ai-stack-title{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ai);font-weight:700;flex-basis:100%}
+  .ai-stack-desc{font-size:13px;color:var(--ink-2);flex-basis:100%;margin-bottom:4px}
+  .ai-stack-note{font-size:12px;color:var(--ink-3);flex-basis:100%;font-style:italic;margin:0 0 4px}
+  .ai-stack-row{display:flex;flex-wrap:wrap;gap:8px}
+  .vendor-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 5px;border-radius:20px;background:var(--surface);border:1px solid var(--rule);font-size:12.5px;font-weight:620;color:var(--ink)}
+  .vendor-pill .vp-dot{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+
+  /* ---- mini flow diagrams ---- */
+  .mini-flow{overflow-x:auto;margin:14px 0 18px;padding:10px 6px;border-radius:10px;background:var(--ground);border:1px solid var(--rule)}
+  .mini-flow svg{display:block;width:100%;min-width:420px;height:auto}
+  .mf-node{fill:var(--surface);stroke:var(--accent);stroke-width:1.4}
+  .mf-trig{stroke:var(--warn)}
+  .mf-ai{stroke:var(--ai);fill:var(--ai-soft);stroke-width:2}
+  .mf-title{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;font-size:11px;font-weight:650;fill:var(--ink)}
+  .mf-title-ai{fill:var(--ai)}
+  .mf-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:8.5px;fill:var(--ink-3)}
+  .mf-edge{fill:none;stroke:var(--rule);stroke-width:1.5;stroke-dasharray:6 4;animation:mfPulse 1.2s linear infinite}
+  .mf-edge-ai{stroke:var(--ai)}
+  .mf-icon{color:var(--accent)}
+  .mf-icon-warn{color:var(--warn)}
+  .mf-icon-ai{color:var(--ai)}
+  @keyframes mfPulse{to{stroke-dashoffset:-10}}
+  @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+
+<!-- shared SVG defs: mini-flow arrowheads + tool-agnostic icon set -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <marker id="mf-arr" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--rule)"/></marker>
+    <marker id="mf-arr-ai" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--ai)"/></marker>
+
+    <symbol id="icon-calendar" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="2"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+      <line x1="8" y1="2" x2="8" y2="7"/>
+      <line x1="16" y1="2" x2="16" y2="7"/>
+    </symbol>
+    <symbol id="icon-envelope" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2"/>
+      <path d="M3 7l9 6 9-6"/>
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3.5 2"/>
+    </symbol>
+    <symbol id="icon-warning" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.5L21.5 20h-19z"/>
+      <line x1="12" y1="9.5" x2="12" y2="14.5"/>
+      <circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/>
+    </symbol>
+    <symbol id="icon-gear" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3.2"/>
+      <path d="M12 3v2.2M12 18.8V21M21 12h-2.2M5.2 12H3M18.1 5.9l-1.5 1.5M7.4 16.6l-1.5 1.5M18.1 18.1l-1.5-1.5M7.4 7.4L5.9 5.9"/>
+    </symbol>
+    <symbol id="icon-brain" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-1.5 5.6A3 3 0 0 0 7 17.5 3 3 0 0 0 9.9 21a3 3 0 0 0 2.1-.9V6a2.5 2.5 0 0 0-3-2z"/>
+      <path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 1.5 5.6A3 3 0 0 1 17 17.5 3 3 0 0 1 14.1 21a3 3 0 0 1-2.1-.9V6a2.5 2.5 0 0 1 3-2z"/>
+    </symbol>
+    <symbol id="icon-chart" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="21" x2="21" y2="21"/>
+      <rect x="5" y="14" width="3" height="7"/>
+      <rect x="10.5" y="9" width="3" height="12"/>
+      <rect x="16" y="4" width="3" height="17"/>
+    </symbol>
+    <symbol id="icon-checklist" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2"/>
+      <path d="M8 8l1.5 1.5L12.5 6"/>
+      <line x1="8" y1="14" x2="16" y2="14"/>
+      <line x1="8" y1="17.5" x2="16" y2="17.5"/>
+    </symbol>
+    <symbol id="icon-chat" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 5h16v11H9l-4 4V5z"/>
+      <line x1="8" y1="9" x2="16" y2="9"/>
+      <line x1="8" y1="12.5" x2="13" y2="12.5"/>
+    </symbol>
+    <symbol id="icon-document" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 2h9l4 4v16H6z"/>
+      <path d="M15 2v4h4"/>
+      <line x1="9" y1="12" x2="16" y2="12"/>
+      <line x1="9" y1="16" x2="16" y2="16"/>
+    </symbol>
+    <symbol id="icon-table" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <line x1="3" y1="9" x2="21" y2="9"/>
+      <line x1="3" y1="15" x2="21" y2="15"/>
+      <line x1="9" y1="3" x2="9" y2="21"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <p class="eyebrow">scale virtually · linkedin outreach</p>
+  <h1>LinkedIn Outreach — Automated Campaign Operations</h1>
+  <p class="lead">Four stations — spanning 8 automated workflows, one powered by AI — classify prospect replies, capture meeting bookings, report campaign performance, and manage system operations across multi-client LinkedIn outreach campaigns.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-map" id="tab-map">Animated map</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-dive" id="tab-dive">Step-by-step deep dive</button>
+  </div>
+
+  <!-- ===== TAB 1: ANIMATED MAP ===== -->
+  <section class="panel" id="panel-map" role="tabpanel">
+    <div class="qbar" id="qbar"></div>
+    <div class="caption">
+      <span class="route" id="cap-route">pick a process</span>
+      <span class="desc" id="cap-desc">Each button traces a different automated process through the system — from trigger to outcome. The AI-powered process uses a language model to read and classify prospect replies automatically.</span>
+      <span class="stat" id="cap-stat"></span>
+    </div>
+    <div class="board">
+      <svg id="flow" viewBox="0 0 1340 520" role="img" aria-label="Flow diagram of LinkedIn Outreach automation system"></svg>
+    </div>
+  </section>
+
+  <!-- ===== TAB 2: DEEP DIVE ===== -->
+  <section class="panel" id="panel-dive" role="tabpanel" hidden>
+    <p class="dive-intro">Each station below shows the manual process it replaces, a step-by-step animated flow, and its measurable impact. AI-powered classification first, then booking capture, campaign reporting, and system operations.</p>
+
+    <h3 class="group-label">AI-powered intelligence</h3>
+
+    <div class="ai-stack">
+      <span class="ai-stack-title">AI model powering 1 intelligent process</span>
+      <span class="ai-stack-desc">This process uses AI to read, understand, and classify prospect replies — it goes beyond simple rule-based automation.</span>
+      <span class="ai-stack-note">This is the AI model powering the classification layer today — the solution works with any compatible AI provider.</span>
+      <div class="ai-stack-row">
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--anthropic)">C</span> Anthropic Claude</span>
+      </div>
+    </div>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">1</span><h2>AI Reply Classification</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Engine</span><span class="chip time">12 steps</span></div></div><p>When a prospect replies to an outreach message, the outreach platform captures the reply and forwards it to the system. The AI reads the response and classifies the intent — interested, not interested, out of office, or requesting more information. The classification is logged to the tracking sheets and the team is notified with the result. No reply goes unclassified.</p><div class="mini-flow" id="mf-1"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Replies read and classified manually by team members</li><li>Inconsistent classification — different people categorized differently</li><li>Some replies missed or delayed, especially during high-volume campaigns</li><li>No centralized record of classification decisions</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Every reply classified automatically by AI — consistent categories every time</li><li>Classification logged to tracking sheets instantly</li><li>Team notified with the result in real time</li><li><strong>100% capture rate — no reply goes unclassified</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> ~3-5 min per reply — no manual reading and categorizing</li><li><strong>Cognitive load reduced:</strong> No inconsistent classifications, no missed replies, no split attention monitoring inboxes</li></ul></div></article>
+
+    <h3 class="group-label">Lead capture</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">2</span><h2>Meeting Booking Tracker</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">27 steps (3 workflows)</span></div></div><p>When a prospect books a meeting through the scheduling platform, the system captures the booking instantly, validates the lead against existing warm-lead and previously-contacted lists, and logs it to the tracking sheets. A real-time notification is sent to the team the moment a booking comes in. Each client campaign has its own dedicated tracker.</p><div class="mini-flow" id="mf-2"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Bookings manually checked and logged from the scheduling platform</li><li>No automated validation against warm leads or previously contacted lists</li><li>Data scattered across sheets with inconsistent formatting</li><li>Team notified informally, sometimes hours after a booking</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Every booking captured, validated, and logged instantly</li><li>Each client campaign tracked separately with consistent format</li><li><strong>Real-time team notification the moment a booking comes in</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> ~5-10 min per booking — no manual logging or cross-referencing</li><li><strong>Cognitive load reduced:</strong> Zero missed bookings, no manual dedup, consistent tracking across all clients</li></ul></div></article>
+
+    <h3 class="group-label">Campaign reporting</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">3</span><h2>Daily Campaign Reporting</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">14 steps</span></div></div><p>Every morning, the system connects to the outreach platform, fetches campaign statistics for all active clients, aggregates the data per client, and updates the daily stats sheet. A summary notification is posted to the team — ready for review before the day starts.</p><div class="mini-flow" id="mf-3"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Campaign stats pulled manually from the outreach platform for each client</li><li>Data aggregated by hand into spreadsheets</li><li>Reporting inconsistent — some days it didn't happen at all</li><li>No centralized view of multi-client campaign performance</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Stats fetched automatically every morning for all active clients</li><li>Data aggregated per client and upserted into the daily stats sheet</li><li>Summary notification posted automatically — consistent daily cadence</li><li><strong>Multi-client performance visible before the day starts</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Time saved:</strong> ~15-20 min daily — no manual platform login or copy-paste</li><li><strong>Cognitive load reduced:</strong> Consistent morning reporting without effort — no risk of missed days</li></ul></div></article>
+
+    <h3 class="group-label">System operations</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">4</span><h2>System Operations</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip sys">Integration</span><span class="chip time">16 steps (3 workflows)</span></div></div><p>When a client's campaign status changes in the tracking sheet, the system automatically activates or deactivates the corresponding booking tracker workflow and notifies the team. Webhook registrations for new clients are handled through a setup utility. When any workflow encounters an error, a ticket is created, the issue is logged for analysis, and the team is alerted within seconds.</p><div class="mini-flow" id="mf-4"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Workflows manually activated or deactivated when client campaigns changed status</li><li>Webhook registrations set up by hand for every new client</li><li>Errors discovered hours or days later, with manual investigation</li><li>No centralized history of what went wrong and when</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Campaign status changes automatically activate/deactivate the right workflows</li><li>Webhook registration automated through a setup utility</li><li>Errors caught instantly with automatic ticket creation and logging</li><li><strong>Campaign on/off state always matches the source of truth</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Cognitive load reduced:</strong> No manual workflow management, no missed errors, no stale campaign states</li><li><strong>Consistency:</strong> Campaign activation always matches the tracking sheet — single source of truth</li></ul></div></article>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+  var XLINK="http://www.w3.org/1999/xlink";
+
+  function addIcon(parent,key,x,y,w,h,cls){
+    var u=document.createElementNS(NS,"use");
+    u.setAttributeNS(XLINK,"href","#icon-"+key);
+    u.setAttribute("href","#icon-"+key);
+    u.setAttribute("x",x);u.setAttribute("y",y);
+    u.setAttribute("width",w);u.setAttribute("height",h);
+    if(cls)u.setAttribute("class",cls);
+    parent.appendChild(u);
+    return u;
+  }
+
+  // ---- tabs ----
+  var tabs=document.querySelectorAll(".tab");
+  var panels=document.querySelectorAll(".panel");
+  tabs.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      tabs.forEach(function(t){t.classList.remove("active");t.setAttribute("aria-selected","false")});
+      btn.classList.add("active");btn.setAttribute("aria-selected","true");
+      var target=btn.getAttribute("aria-controls");
+      panels.forEach(function(p){p.hidden=p.id!==target});
+    });
+  });
+
+  // ---- mini flow generator (with icon support) ----
+  function buildMiniFlow(id,stages){
+    var c=document.getElementById(id);
+    if(!c)return;
+    var NW=170,NH=50,GAP=32,PAD=14;
+    var W=PAD*2+stages.length*NW+(stages.length-1)*GAP;
+    var H=NH+PAD*2;
+    var s=document.createElementNS(NS,"svg");
+    s.setAttribute("viewBox","0 0 "+W+" "+H);
+    var xs=[];
+    for(var i=0;i<stages.length;i++){xs.push(PAD+i*(NW+GAP));}
+    for(var i=0;i<stages.length-1;i++){
+      var x1=xs[i]+NW,x2=xs[i+1],y=PAD+NH/2;
+      var isAiEdge=stages[i].c==="ai"||stages[i+1].c==="ai";
+      var p=document.createElementNS(NS,"path");
+      p.setAttribute("d","M"+x1+" "+y+"L"+x2+" "+y);
+      p.setAttribute("class","mf-edge"+(isAiEdge?" mf-edge-ai":""));
+      p.setAttribute("marker-end","url(#"+(isAiEdge?"mf-arr-ai":"mf-arr")+")");
+      s.appendChild(p);
+    }
+    for(var i=0;i<stages.length;i++){
+      var st=stages[i],x=xs[i],y=PAD;
+      var g=document.createElementNS(NS,"g");
+      var r=document.createElementNS(NS,"rect");
+      r.setAttribute("x",x);r.setAttribute("y",y);
+      r.setAttribute("width",NW);r.setAttribute("height",NH);
+      r.setAttribute("rx",8);
+      r.setAttribute("class","mf-node"+(st.c==="ai"?" mf-ai":st.c==="warn"?" mf-trig":""));
+      g.appendChild(r);
+      if(st.icon){
+        var iconCls="mf-icon"+(st.c==="ai"?" mf-icon-ai":st.c==="warn"?" mf-icon-warn":"");
+        addIcon(g,st.icon,x+9,y+13,22,22,iconCls);
+      }
+      var cx=st.icon?x+104:x+NW/2;
+      var t=document.createElementNS(NS,"text");
+      t.setAttribute("x",cx);t.setAttribute("y",y+(st.s?20:28));
+      t.setAttribute("text-anchor","middle");
+      t.setAttribute("class","mf-title"+(st.c==="ai"?" mf-title-ai":""));
+      t.textContent=st.l;
+      g.appendChild(t);
+      if(st.s){
+        var u=document.createElementNS(NS,"text");
+        u.setAttribute("x",cx);u.setAttribute("y",y+35);
+        u.setAttribute("text-anchor","middle");u.setAttribute("class","mf-sub");
+        u.textContent=st.s;
+        g.appendChild(u);
+      }
+      s.appendChild(g);
+    }
+    c.appendChild(s);
+  }
+
+  var MF=[
+    ["mf-1",[{l:"Outreach Inbox",s:"prospect replies",c:"warn",icon:"envelope"},{l:"Lead Router",s:"check status",icon:"gear"},{l:"AI Engine",s:"classify intent",c:"ai",icon:"brain"},{l:"Tracking Sheet",s:"log result",icon:"table"},{l:"Team Chat",s:"alert",icon:"chat"}]],
+    ["mf-2",[{l:"Booking Event",s:"prospect schedules",c:"warn",icon:"calendar"},{l:"Lead Validator",s:"warm · DC check",icon:"checklist"},{l:"Tracking Sheet",s:"log booking",icon:"table"},{l:"Team Chat",s:"booking alert",icon:"chat"}]],
+    ["mf-3",[{l:"Scheduler",s:"daily 7 AM",c:"warn",icon:"clock"},{l:"Outreach Platform",s:"fetch campaigns",icon:"gear"},{l:"Metrics Engine",s:"aggregate stats",icon:"chart"},{l:"Tracking Sheet",s:"upsert daily",icon:"table"},{l:"Team Chat",s:"report",icon:"chat"}]],
+    ["mf-4",[{l:"Campaign / Error",s:"change · failure",c:"warn",icon:"warning"},{l:"Workflow Manager",s:"activate · deactivate",icon:"gear"},{l:"Task Manager",s:"create ticket",icon:"checklist"},{l:"Error Log",s:"audit trail",icon:"document"},{l:"Team Chat",s:"notify",icon:"chat"}]]
+  ];
+  MF.forEach(function(m){buildMiniFlow(m[0],m[1])});
+
+  // ---- SVG ANIMATED MAP ----
+  var svg=document.getElementById("flow");
+  function el(tag,attrs,parent){
+    var e=document.createElementNS(NS,tag);
+    for(var k in attrs)e.setAttribute(k,attrs[k]);
+    (parent||svg).appendChild(e);return e;
+  }
+
+  var NODES={
+    inbox:     {x:30, y:50,  w:170,h:50,title:"Outreach Inbox",   sub:"reply received",         cls:"trigger",icon:"envelope"},
+    webhook:   {x:30, y:145, w:170,h:50,title:"Booking Event",    sub:"webhook trigger",        cls:"trigger",icon:"calendar"},
+    sched:     {x:30, y:240, w:170,h:50,title:"Scheduler",        sub:"daily cron",             cls:"trigger",icon:"clock"},
+    campaign_u:{x:30, y:335, w:170,h:50,title:"Campaign Update",  sub:"client status change",   cls:"trigger",icon:"gear"},
+    err:       {x:30, y:430, w:170,h:50,title:"Error Trigger",    sub:"process failure",        cls:"trigger",icon:"warning"},
+
+    ai:        {x:460,y:80,  w:200,h:54,title:"AI Engine",        sub:"classify intent",        cls:"ai-node",icon:"brain"},
+    validator: {x:460,y:185, w:200,h:54,title:"Lead Validator",   sub:"warm · dedup · log",     cls:"proc",icon:"checklist"},
+    campaign:  {x:460,y:290, w:200,h:54,title:"Campaign Engine",  sub:"fetch · aggregate",      cls:"proc",icon:"chart"},
+    wfmgr:     {x:460,y:395, w:200,h:54,title:"Workflow Manager", sub:"activate · deactivate",  cls:"proc",icon:"gear"},
+
+    sheets:    {x:930,y:55,  w:170,h:50,title:"Tracking Sheet",   sub:"log results",            cls:"dest",icon:"table"},
+    chat:      {x:930,y:170, w:170,h:50,title:"Team Chat",        sub:"notifications",          cls:"dest",icon:"chat"},
+    task:      {x:930,y:290, w:170,h:50,title:"Task Manager",     sub:"create ticket",          cls:"dest",icon:"checklist"},
+    errorlog:  {x:930,y:400, w:170,h:50,title:"Error Log",        sub:"audit trail",            cls:"dest",icon:"document"}
+  };
+
+  var K=90;
+  function anchor(id,side,off){
+    var n=NODES[id],o=off||0;
+    if(side==="r")return{x:n.x+n.w,y:n.y+n.h/2+o};
+    if(side==="l")return{x:n.x,y:n.y+n.h/2+o};
+    if(side==="t")return{x:n.x+n.w/2+o,y:n.y};
+    return{x:n.x+n.w/2+o,y:n.y+n.h};
+  }
+  function edgeD(from,fs,to,ts,fo,to2,k1,k2){
+    var a=anchor(from,fs,fo),b=anchor(to,ts,to2);
+    var c1=k1||K,c2=k2||K;
+    var dx=fs==="r"?1:fs==="l"?-1:0,dy=fs==="t"?-1:fs==="b"?1:0;
+    var dx2=ts==="r"?1:ts==="l"?-1:0,dy2=ts==="t"?-1:ts==="b"?1:0;
+    return"M "+a.x+" "+a.y+" C "+(a.x+dx*c1)+" "+(a.y+dy*c1)+", "+(b.x+dx2*c2)+" "+(b.y+dy2*c2)+", "+b.x+" "+b.y;
+  }
+
+  var EDGES={
+    e_inbox_ai:        {d:edgeD("inbox","r","ai","l")},
+    e_wh_validator:    {d:edgeD("webhook","r","validator","l")},
+    e_sched_campaign:  {d:edgeD("sched","r","campaign","l")},
+    e_cu_wfmgr:        {d:edgeD("campaign_u","r","wfmgr","l")},
+
+    e_ai_sheets:       {d:edgeD("ai","r","sheets","l")},
+    e_ai_chat:         {d:edgeD("ai","r","chat","l",0,0,110,120)},
+    e_validator_sheets:{d:edgeD("validator","r","sheets","l",0,0,130,150)},
+    e_validator_chat:  {d:edgeD("validator","r","chat","l")},
+    e_campaign_sheets: {d:edgeD("campaign","r","sheets","l",0,0,160,190)},
+    e_campaign_chat:   {d:edgeD("campaign","r","chat","l",0,0,130,150)},
+    e_wfmgr_chat:      {d:edgeD("wfmgr","r","chat","l",0,0,170,200)},
+
+    e_err_task:        {d:edgeD("err","r","task","l",0,0,140,130)},
+    e_err_errorlog:    {d:edgeD("err","r","errorlog","l")},
+    e_err_chat:        {d:edgeD("err","r","chat","l",0,0,180,210)}
+  };
+
+  el("text",{x:115,y:32,class:"t-col","text-anchor":"middle"}).textContent="TRIGGERS";
+  el("text",{x:560,y:62,class:"t-col","text-anchor":"middle"}).textContent="PROCESSING";
+  el("text",{x:1015,y:38,class:"t-col","text-anchor":"middle"}).textContent="DESTINATIONS";
+
+  var defs=el("defs",{});
+  var filt=el("filter",{id:"glow",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  el("feGaussianBlur",{stdDeviation:"4",result:"blur"},filt);
+  var mg=el("feMerge",{},filt);
+  el("feMergeNode",{"in":"blur"},mg);
+  el("feMergeNode",{"in":"SourceGraphic"},mg);
+  var marker=el("marker",{id:"arrow",viewBox:"0 0 10 8",refX:"9",refY:"4",markerWidth:"8",markerHeight:"6",orient:"auto-start-reverse"},defs);
+  el("path",{d:"M 0 0 L 10 4 L 0 8 z",fill:"var(--rule)",class:"arrow-fill"},marker);
+
+  Object.keys(EDGES).forEach(function(id){
+    el("path",{id:id,d:EDGES[id].d,class:"edge","marker-end":"url(#arrow)"});
+  });
+  Object.keys(NODES).forEach(function(id){
+    var n=NODES[id];
+    var g=el("g",{id:"n_"+id,class:"node "+n.cls});
+    el("rect",{x:n.x,y:n.y,width:n.w,height:n.h,rx:8,class:"body"},g);
+    var iconSize=20;
+    addIcon(g,n.icon,n.x+12,n.y+n.h/2-iconSize/2,iconSize,iconSize,"node-icon");
+    var textX=n.x+40+(n.w-40)/2;
+    var t=el("text",{x:textX,y:n.y+n.h/2-5,"text-anchor":"middle",class:"t-title"},g);
+    t.textContent=n.title;
+    var s=el("text",{x:textX,y:n.y+n.h/2+11,"text-anchor":"middle",class:"t-sub"},g);
+    s.textContent=n.sub;
+  });
+  var pulse=el("circle",{id:"pulse",cx:0,cy:0,r:6});
+
+  // ---- workflow scenarios ----
+  var SCENARIOS=[
+    {key:"ai_classify",btn:"AI Reply Classification",route:"AI Reply Classification",isAI:true,
+     desc:"When a prospect replies via the outreach platform, the AI reads the message and classifies intent — interested, not interested, out of office, or requesting more info. The result is logged and the team is notified instantly.",
+     stat:"12 steps · AI-powered · 100% capture rate",
+     steps:[["n:inbox"],["e:e_inbox_ai"],["n:ai"],["e:e_ai_sheets","e:e_ai_chat"],["n:sheets","n:chat"]]},
+    {key:"booking",btn:"Meeting Booking Tracker",route:"Meeting Booking Tracker",
+     desc:"When a prospect books a meeting, the system captures the booking, validates the lead against warm-lead and DC booked lists, logs it to the tracking sheets, and sends a real-time notification.",
+     stat:"27 steps (3 workflows) · ~5-10 min saved per booking",
+     steps:[["n:webhook"],["e:e_wh_validator"],["n:validator"],["e:e_validator_sheets","e:e_validator_chat"],["n:sheets","n:chat"]]},
+    {key:"reporting",btn:"Daily Campaign Reporting",route:"Daily Campaign Reporting",
+     desc:"Every morning, the system fetches campaign stats for all active clients from the outreach platform, aggregates per client, updates the daily stats sheet, and posts a summary to the team.",
+     stat:"14 steps · ~15-20 min saved daily",
+     steps:[["n:sched"],["e:e_sched_campaign"],["n:campaign"],["e:e_campaign_sheets","e:e_campaign_chat"],["n:sheets","n:chat"]]},
+    {key:"sysops",btn:"System Operations",route:"System Operations",
+     desc:"When a client campaign status changes, the corresponding workflow is activated or deactivated automatically. Errors are caught instantly with automatic ticket creation, logging, and team alerts.",
+     stat:"16 steps (3 workflows) · single source of truth",
+     steps:[["n:campaign_u","n:err"],["e:e_cu_wfmgr","e:e_err_task","e:e_err_errorlog","e:e_err_chat"],["n:wfmgr","n:task","n:errorlog"],["e:e_wfmgr_chat"],["n:chat"]]}
+  ];
+
+  var qbar=document.getElementById("qbar");
+  var capRoute=document.getElementById("cap-route");
+  var capDesc=document.getElementById("cap-desc");
+  var capStat=document.getElementById("cap-stat");
+
+  SCENARIOS.forEach(function(sc){
+    var b=document.createElement("button");
+    b.className="qbtn"+(sc.isAI?" ai-q":"");
+    b.textContent=sc.btn;
+    b.dataset.key=sc.key;
+    b.addEventListener("click",function(){play(sc)});
+    qbar.appendChild(b);
+  });
+
+  var animId=0;
+  var playAllTimer=null;
+
+  function clearAnim(){
+    animId++;
+    if(playAllTimer){clearTimeout(playAllTimer);playAllTimer=null;}
+    svg.classList.remove("running");
+    svg.querySelectorAll(".on").forEach(function(e){e.classList.remove("on")});
+    svg.querySelectorAll(".ai-edge").forEach(function(e){e.classList.remove("ai-edge")});
+    pulse.classList.remove("visible","ai-pulse");
+    qbar.querySelectorAll(".qbtn").forEach(function(b){b.classList.remove("active")});
+  }
+
+  function animateAlongPath(pathElem,dur,myId,cb){
+    var len=pathElem.getTotalLength();
+    var t0=null;
+    pulse.classList.add("visible");
+    function frame(ts){
+      if(myId!==animId)return;
+      if(!t0)t0=ts;
+      var p=Math.min((ts-t0)/dur,1);
+      var pt=pathElem.getPointAtLength(p*len);
+      pulse.setAttribute("cx",pt.x);
+      pulse.setAttribute("cy",pt.y);
+      if(p<1)requestAnimationFrame(frame);
+      else if(cb)cb();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function runSteps(steps,isAI,myId,done){
+    var i=0;
+    function next(){
+      if(myId!==animId||i>=steps.length){
+        if(myId===animId)pulse.classList.remove("visible");
+        if(done)done();
+        return;
+      }
+      var ids=steps[i];i++;
+      var nodes=[],edges=[];
+      ids.forEach(function(id){
+        var pre=id.substring(0,2),eid=id.substring(2),elem;
+        if(pre==="n:"){
+          elem=document.getElementById("n_"+eid);
+          if(elem){elem.classList.add("on");nodes.push(eid);}
+        }else{
+          elem=document.getElementById(eid);
+          if(elem){elem.classList.add("on");if(isAI)elem.classList.add("ai-edge");edges.push(elem);}
+        }
+      });
+      if(edges.length>0){
+        var done0=0,total=edges.length;
+        edges.forEach(function(pathEl,idx){
+          if(idx===0){
+            animateAlongPath(pathEl,380,myId,function(){done0++;if(done0>=total)setTimeout(next,80);});
+          }else{
+            setTimeout(function(){done0++;if(done0>=total&&myId===animId)setTimeout(next,80);},380);
+          }
+        });
+      }else if(nodes.length>0){
+        var nd=NODES[nodes[0]];
+        if(nd){pulse.setAttribute("cx",nd.x+nd.w/2);pulse.setAttribute("cy",nd.y+nd.h/2);pulse.classList.add("visible");}
+        setTimeout(next,320);
+      }else{setTimeout(next,200);}
+    }
+    next();
+  }
+
+  function play(sc,cb){
+    clearAnim();
+    qbar.querySelectorAll(".qbtn").forEach(function(b){if(b.dataset.key===sc.key)b.classList.add("active")});
+    capRoute.textContent=sc.route;
+    capRoute.style.background=sc.isAI?"var(--ai-soft)":"";
+    capRoute.style.color=sc.isAI?"var(--ai)":"";
+    capDesc.textContent=sc.desc;
+    capStat.textContent=sc.stat;
+    if(sc.isAI)pulse.classList.add("ai-pulse");
+    svg.classList.add("running");
+    var myId=animId;
+    runSteps(sc.steps,sc.isAI,myId,cb);
+  }
+
+  function playAll(){
+    var idx=0;
+    function nextScenario(){
+      if(idx>=SCENARIOS.length)return;
+      play(SCENARIOS[idx],function(){idx++;if(idx<SCENARIOS.length){playAllTimer=setTimeout(nextScenario,900);}});
+    }
+    nextScenario();
+  }
+
+  var pab=document.createElement("button");
+  pab.className="qbtn playall";
+  pab.textContent="Play All";
+  pab.addEventListener("click",playAll);
+  qbar.insertBefore(pab,qbar.firstChild);
+
+})();
+</script>
