@@ -1,0 +1,948 @@
+{
+  "updatedAt": "2026-05-05T20:37:26.469Z",
+  "createdAt": "2026-04-10T13:27:15.245Z",
+  "id": "toZk8fLW9s9OWJYj",
+  "name": "Placements Error Trigger",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        0
+      ],
+      "id": "c7fe0499-9fa4-4a65-af03-930ea75c722a",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09ESC12MA5",
+          "mode": "id"
+        },
+        "text": "=A *Placements workflow* encountered an error. \n\nError Message: \n{{ $('Normalize Bug Metadata').first().json.error_message }}\n\nTimestamp: {{ $('Normalize Bug Metadata').first().json.readableTimestamp }}\n\nLast Node Executed: {{ $('Normalize Bug Metadata').first().json.last_node_executed }}\n\nPlease investigate the failure here: <{{ $('Normalize Bug Metadata').first().json.raw_payload.execution.url }}|View Execution Details>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        848,
+        0
+      ],
+      "id": "560de14a-fbf4-4806-adbb-0beb9185f1ae",
+      "name": "Send a message",
+      "webhookId": "b90cb9e5-ad3a-4ada-b8ba-ff903eae04f3",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9014746495",
+        "space": "90144231827",
+        "folder": "90146582200",
+        "list": "901412150674",
+        "name": "={{ $json.workflow_name }} - {{ $json.last_node_executed }} Error",
+        "additionalFields": {
+          "assignees": [
+            95098109
+          ],
+          "content": "=Error Details:\n{{ $json.error_message }}"
+        }
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ],
+      "id": "f4ba2720-0192-432c-9cc7-e586de493ef2",
+      "name": "Create a task",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "pov43Hd26gF6W6Cp",
+          "name": "ClickUp OAuth2 Sol"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const execution = item.json.execution ?? {};\n  const workflow = item.json.workflow ?? {};\n  const error = execution.error ?? {};\n\n  const timestamp = error.timestamp;\n\n  let readableTimestamp = \"N/A\";\n  let errorTimestamp = null;\n\n  if (timestamp) {\n    const date = new Date(timestamp);\n\n    errorTimestamp = date.toISOString();\n\n    const formatter = new Intl.DateTimeFormat(\"en-US\", {\n      timeZone: \"Asia/Manila\",\n      month: \"long\",\n      day: \"2-digit\",\n      year: \"numeric\",\n      hour: \"2-digit\",\n      minute: \"2-digit\",\n      second: \"2-digit\",\n      hour12: false\n    });\n\n    readableTimestamp = formatter.format(date);\n  }\n\n  return {\n    json: {\n      // n8n execution details\n      execution_id: String(execution.id ?? \"\"),\n      execution_url: execution.url ?? null,\n\n      // workflow details\n      workflow_id: workflow.id ?? null,\n      workflow_name: workflow.name ?? null,\n\n      // execution metadata\n      mode: execution.mode ?? null,\n      last_node_executed: execution.lastNodeExecuted ?? null,\n\n      // error details\n      error_name: error.name ?? null,\n      error_message: error.message ?? null,\n      error_timestamp: errorTimestamp,\n\n      // for ClickUp/Slack only\n      readableTimestamp,\n\n      // bug tracking\n      status: \"reported\",\n      severity: error.name === \"WorkflowCrashedError\" ? \"high\" : \"medium\",\n      source: \"n8n_error_trigger\",\n\n      // raw/debug fields\n      error_context: error.context ?? {},\n      raw_payload: item.json\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "f0450774-ad30-49c1-9140-ddc1468b0f8d",
+      "name": "Normalize Bug Metadata"
+    },
+    {
+      "parameters": {
+        "tableId": "workflow_bug_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "execution_id",
+              "fieldValue": "={{ $json.execution_id }}"
+            },
+            {
+              "fieldId": "workflow_id",
+              "fieldValue": "={{ $json.workflow_id }}"
+            },
+            {
+              "fieldId": "workflow_name",
+              "fieldValue": "={{ $json.workflow_name }}"
+            },
+            {
+              "fieldId": "execution_url",
+              "fieldValue": "={{ $json.execution_url }}"
+            },
+            {
+              "fieldId": "mode",
+              "fieldValue": "={{ $json.mode }}"
+            },
+            {
+              "fieldId": "last_node_executed",
+              "fieldValue": "={{ $json.last_node_executed }}"
+            },
+            {
+              "fieldId": "error_name",
+              "fieldValue": "={{ $json.error_name }}"
+            },
+            {
+              "fieldId": "error_message",
+              "fieldValue": "={{ $json.error_message }}"
+            },
+            {
+              "fieldId": "error_timestamp",
+              "fieldValue": "={{ $json.error_timestamp }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "severity",
+              "fieldValue": "={{ $json.severity }}"
+            },
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $json.source }}"
+            },
+            {
+              "fieldId": "error_context",
+              "fieldValue": "={{ $json.error_context }}"
+            },
+            {
+              "fieldId": "raw_payload",
+              "fieldValue": "={{ $json.raw_payload }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "10133ee0-bd96-46e2-81f2-5d5596fa1f00",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "workflow_bug_logs",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "execution_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Create a row').item.json.execution_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "clickup_task_id",
+              "fieldValue": "={{ $('Create a task').item.json.id }}"
+            },
+            {
+              "fieldId": "clickup_task_url",
+              "fieldValue": "={{ $('Create a task').item.json.url }}"
+            },
+            {
+              "fieldId": "clickup_task_status",
+              "fieldValue": "REPORTED"
+            },
+            {
+              "fieldId": "clickup_task_created_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            },
+            {
+              "fieldId": "clickup_response",
+              "fieldValue": "={{ JSON.stringify($('Create a task').item.json) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        624,
+        0
+      ],
+      "id": "36bf57b3-d20b-4d96-8732-172a0a2d0ab8",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "6igLhSgAHJqsX9Pd",
+          "name": "n8n metadata"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Bug Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Bug Metadata": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Create a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a task": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Error Trigger": [
+      {
+        "json": {
+          "execution": {
+            "id": "37168",
+            "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+            "error": {
+              "message": "Workflow did not finish, possible out-of-memory issue",
+              "timestamp": 1777673235911,
+              "name": "WorkflowCrashedError",
+              "context": {}
+            },
+            "lastNodeExecuted": "Code in JavaScript",
+            "mode": "webhook"
+          },
+          "workflow": {
+            "id": "NlzPBiHYmeXTD5jV",
+            "name": "[AT] New VA Endorsement"
+          }
+        }
+      }
+    ],
+    "Send a message": [
+      {
+        "json": {
+          "ok": true,
+          "channel": "C09ESC12MA5",
+          "message": {
+            "user": "U09DY2Q1FN3",
+            "type": "message",
+            "ts": "1777675626.302329",
+            "bot_id": "B09DY2Q1CMV",
+            "app_id": "A09DY1SCJA3",
+            "text": "A *Placements workflow* encountered an error. \n\nError Message: \n\nWorkflow did not finish, possible out-of-memory issue\n\nTimestamp: May-01-2026 22:07:15\n\nLast Node Executed: Code in JavaScript\n\nPlease investigate the failure here: <https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168|View Execution Details>",
+            "team": "T03N8PRACSD",
+            "bot_profile": {
+              "id": "B09DY2Q1CMV",
+              "app_id": "A09DY1SCJA3",
+              "user_id": "U09DY2Q1FN3",
+              "name": "SV Portal",
+              "icons": {
+                "image_36": "https://avatars.slack-edge.com/2025-09-09/9515818056272_71a027dec9f988dee064_36.png",
+                "image_48": "https://avatars.slack-edge.com/2025-09-09/9515818056272_71a027dec9f988dee064_48.png",
+                "image_72": "https://avatars.slack-edge.com/2025-09-09/9515818056272_71a027dec9f988dee064_72.png"
+              },
+              "deleted": false,
+              "updated": 1757442752,
+              "team_id": "T03N8PRACSD"
+            },
+            "blocks": [
+              {
+                "type": "rich_text",
+                "block_id": "RnvGW",
+                "elements": [
+                  {
+                    "type": "rich_text_section",
+                    "elements": [
+                      {
+                        "type": "text",
+                        "text": "A "
+                      },
+                      {
+                        "type": "text",
+                        "text": "Placements workflow",
+                        "style": {
+                          "bold": true
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "text": " encountered an error. \n\nError Message: \n\nWorkflow did not finish, possible out-of-memory issue\n\nTimestamp: May-01-2026 22:07:15\n\nLast Node Executed: Code in JavaScript\n\nPlease investigate the failure here: "
+                      },
+                      {
+                        "type": "link",
+                        "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+                        "text": "View Execution Details"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "message_timestamp": "1777675626.302329"
+        }
+      }
+    ],
+    "Create a row": [
+      {
+        "json": {
+          "execution_id": "37168",
+          "workflow_id": "NlzPBiHYmeXTD5jV",
+          "workflow_name": "[AT] New VA Endorsement",
+          "execution_url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+          "mode": "webhook",
+          "last_node_executed": "Code in JavaScript",
+          "error_name": "WorkflowCrashedError",
+          "error_message": "Workflow did not finish, possible out-of-memory issue",
+          "error_timestamp": "2026-05-01T22:07:15.911+00:00",
+          "status": "reported",
+          "severity": "high",
+          "source": "n8n_error_trigger",
+          "clickup_task_id": null,
+          "clickup_task_url": null,
+          "clickup_task_status": null,
+          "clickup_task_created_at": null,
+          "clickup_response": null,
+          "resolved_at": null,
+          "resolved_by": null,
+          "resolution_notes": null,
+          "error_context": {},
+          "raw_payload": {
+            "workflow": {
+              "id": "NlzPBiHYmeXTD5jV",
+              "name": "[AT] New VA Endorsement"
+            },
+            "execution": {
+              "id": "37168",
+              "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+              "mode": "webhook",
+              "error": {
+                "name": "WorkflowCrashedError",
+                "context": {},
+                "message": "Workflow did not finish, possible out-of-memory issue",
+                "timestamp": 1777673235911
+              },
+              "lastNodeExecuted": "Code in JavaScript"
+            }
+          },
+          "created_at": "2026-05-05T13:43:54.0581+00:00",
+          "updated_at": "2026-05-05T13:43:54.0581+00:00",
+          "workflow_active": null,
+          "workflow_tags": [],
+          "workflow_tag_names": null,
+          "workflow_created_at": null,
+          "workflow_updated_at": null,
+          "workflow_metadata": null
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Create a task": [
+      {
+        "json": {
+          "id": "86b9rur8b",
+          "custom_id": null,
+          "custom_item_id": 0,
+          "name": " -  Error",
+          "text_content": "Error Details:",
+          "description": "Error Details:",
+          "status": {
+            "id": "sc901412150674_f7kP5fbP",
+            "status": "reported",
+            "color": "#87909e",
+            "orderindex": 0,
+            "type": "open"
+          },
+          "orderindex": "120499524.00000000000000000000000000000000",
+          "date_created": "1777988634451",
+          "date_updated": "1777988634451",
+          "date_closed": null,
+          "date_done": null,
+          "archived": false,
+          "creator": {
+            "id": 95098109,
+            "username": "Patrick Jansen Villanueva",
+            "color": "#0f9d9f",
+            "email": "pj@scalevirtually.com",
+            "profilePicture": null
+          },
+          "assignees": [
+            {
+              "id": 95098109,
+              "username": "Patrick Jansen Villanueva",
+              "color": "#0f9d9f",
+              "initials": "PV",
+              "email": "pj@scalevirtually.com",
+              "profilePicture": null
+            }
+          ],
+          "group_assignees": [],
+          "watchers": [
+            {
+              "id": 95098109,
+              "username": "Patrick Jansen Villanueva",
+              "color": "#0f9d9f",
+              "initials": "PV",
+              "email": "pj@scalevirtually.com",
+              "profilePicture": null
+            }
+          ],
+          "checklists": [],
+          "tags": [],
+          "parent": null,
+          "top_level_parent": null,
+          "priority": null,
+          "due_date": null,
+          "start_date": null,
+          "points": null,
+          "time_estimate": null,
+          "time_spent": 0,
+          "custom_fields": [
+            {
+              "id": "fef858cd-d5cf-4313-98b3-7064bd91c268",
+              "name": "Dev Team",
+              "type": "labels",
+              "type_config": {
+                "options": [
+                  {
+                    "id": "0b483b09-c138-44a7-8f3e-045cb2be89ab",
+                    "label": "Dev Team 1",
+                    "color": null,
+                    "orderindex": 0
+                  },
+                  {
+                    "id": "bc16d129-99cc-4aee-8649-32eca8c91f55",
+                    "label": "Dev Team 2",
+                    "color": null,
+                    "orderindex": 1
+                  },
+                  {
+                    "id": "afffeba5-ee4b-4ee1-a87e-b8f6b1074d70",
+                    "label": "Dev Team 3",
+                    "color": null,
+                    "orderindex": 2
+                  }
+                ]
+              },
+              "date_created": "1754674849501",
+              "hide_from_guests": false,
+              "required": false
+            },
+            {
+              "id": "29477675-18ad-494c-82ff-b07b4be4a8f3",
+              "name": "[SV] Bug Type",
+              "type": "drop_down",
+              "type_config": {
+                "sorting": "manual",
+                "options": [
+                  {
+                    "id": "85fc1e07-1551-4f66-a03b-daee29947a43",
+                    "name": "Functional Bug",
+                    "color": "#FF4081",
+                    "orderindex": 0
+                  },
+                  {
+                    "id": "61725bd0-3e97-4129-a226-86b5f9bc59c6",
+                    "name": "Integration Bug",
+                    "color": "#7C4DFF",
+                    "orderindex": 1
+                  },
+                  {
+                    "id": "9a4629aa-71e4-4c53-8243-8b6aaa0266db",
+                    "name": "Data Bug",
+                    "color": "#b6b6ff",
+                    "orderindex": 2
+                  },
+                  {
+                    "id": "074fe15a-0f8b-4fc9-94f5-3c30724a2c09",
+                    "name": "AI / Logic Bug",
+                    "color": "#aec0f5",
+                    "orderindex": 3
+                  },
+                  {
+                    "id": "c1817114-88f2-41b9-a7e6-f0c3d240fec5",
+                    "name": "UI / UX Bug",
+                    "color": "#96c7f2",
+                    "orderindex": 4
+                  },
+                  {
+                    "id": "f4928224-3be5-4500-8fc2-f4298993af6b",
+                    "name": "Performance Bug",
+                    "color": "#8dcec3",
+                    "orderindex": 5
+                  },
+                  {
+                    "id": "03512cf6-ed55-4eb5-a930-e58e05edb5e4",
+                    "name": "Permission / Access Bug",
+                    "color": "#92ceac",
+                    "orderindex": 6
+                  },
+                  {
+                    "id": "97f030d0-5a53-429e-9fb8-d268b5b91e0a",
+                    "name": "Regression Bug",
+                    "color": "#e9c162",
+                    "orderindex": 7
+                  },
+                  {
+                    "id": "a0584073-5242-4590-90eb-dda4fbee9abf",
+                    "name": "Configuration Bug",
+                    "color": "#ffaa7d",
+                    "orderindex": 8
+                  },
+                  {
+                    "id": "04d96584-6e8b-477a-b72e-59240b68f5ad",
+                    "name": "Edge Case Bug",
+                    "color": "#6647f0",
+                    "orderindex": 9
+                  }
+                ]
+              },
+              "date_created": "1776259506652",
+              "hide_from_guests": false,
+              "required": false
+            },
+            {
+              "id": "c2156698-4e96-4623-a5af-e44a27102def",
+              "name": "[SV] Testing Type",
+              "type": "drop_down",
+              "type_config": {
+                "sorting": "manual",
+                "options": [
+                  {
+                    "id": "273bbe66-b280-46c3-b516-c5856d0f35d6",
+                    "name": "Functional Testing",
+                    "color": "#FF4081",
+                    "orderindex": 0
+                  },
+                  {
+                    "id": "b37eab2a-a408-4cc7-8399-710f7e7a8158",
+                    "name": "Integration Testing",
+                    "color": "#7C4DFF",
+                    "orderindex": 1
+                  },
+                  {
+                    "id": "a166d538-e1af-4651-9342-005d4c5f8362",
+                    "name": "Data Validation Testing",
+                    "color": "#b6b6ff",
+                    "orderindex": 2
+                  },
+                  {
+                    "id": "1f3931c7-9c5b-440f-9bea-25765232f21b",
+                    "name": "AI / Logic Testing",
+                    "color": "#aec0f5",
+                    "orderindex": 3
+                  },
+                  {
+                    "id": "6ea65dd5-260c-4f75-8b01-d28f49c770a1",
+                    "name": "UI / UX Testing",
+                    "color": "#96c7f2",
+                    "orderindex": 4
+                  },
+                  {
+                    "id": "272243fb-af96-404e-9d0d-3f31d3c1c558",
+                    "name": "Regression Testing",
+                    "color": "#8dcec3",
+                    "orderindex": 5
+                  },
+                  {
+                    "id": "1eabec7a-1350-4e17-9326-bfdfe3587c9d",
+                    "name": "Performance Testing",
+                    "color": "#92ceac",
+                    "orderindex": 6
+                  },
+                  {
+                    "id": "7189c86c-4d68-446c-be52-0fee2fc7582d",
+                    "name": "Permission / Access Testing",
+                    "color": "#e9c162",
+                    "orderindex": 7
+                  },
+                  {
+                    "id": "c0553b00-804f-4ecc-aaeb-a22356c5f291",
+                    "name": "Configuration Testing",
+                    "color": "#ffaa7d",
+                    "orderindex": 8
+                  },
+                  {
+                    "id": "c3639d70-8dff-4c54-9f4b-8d4cbf990ce6",
+                    "name": "End-to-End (E2E) Testing",
+                    "color": "#6647f0",
+                    "orderindex": 9
+                  }
+                ]
+              },
+              "date_created": "1776260304636",
+              "hide_from_guests": false,
+              "required": false
+            },
+            {
+              "id": "9dc27b60-0ef9-4ed5-a183-5b43fe7f775b",
+              "name": "[SV] Epics",
+              "type": "drop_down",
+              "type_config": {
+                "sorting": "manual",
+                "options": [
+                  {
+                    "id": "64f4eca0-7a80-44f6-98c5-e26de97ffc4b",
+                    "name": "Discovery & Requirements",
+                    "color": "#8d8d8d",
+                    "orderindex": 0
+                  },
+                  {
+                    "id": "c022c744-8652-404a-9272-47938a064f8f",
+                    "name": "Solution Design (Architecture)",
+                    "color": "#a18072",
+                    "orderindex": 1
+                  },
+                  {
+                    "id": "ccb0ec5d-5f87-44f6-82bf-009ddb75f78c",
+                    "name": "Data & Schema Setup",
+                    "color": "#7e4318",
+                    "orderindex": 2
+                  },
+                  {
+                    "id": "43266597-b751-4dc8-b6f7-d18f938f5ba3",
+                    "name": "Integration & API Setup",
+                    "color": "#714f19",
+                    "orderindex": 3
+                  },
+                  {
+                    "id": "68a022e9-2bd1-4d02-aa03-30e08bff6539",
+                    "name": "Automation Development",
+                    "color": "#6647f0",
+                    "orderindex": 4
+                  },
+                  {
+                    "id": "9bbb30c6-8059-4871-9350-1371a9c8cf5b",
+                    "name": "AI / Logic Layer (if applicable)",
+                    "color": "#4d42a5",
+                    "orderindex": 5
+                  },
+                  {
+                    "id": "063a46cc-05c5-49b2-b1fa-62e172e3bad8",
+                    "name": "Interface / Frontend Build",
+                    "color": "#ffc53d",
+                    "orderindex": 6
+                  },
+                  {
+                    "id": "e337783b-146a-4be0-8d03-7055eb01775e",
+                    "name": "Testing & QA (UAT)",
+                    "color": "#f76808",
+                    "orderindex": 7
+                  },
+                  {
+                    "id": "e440fc76-d23b-4da3-add6-cd3b51c771c3",
+                    "name": "Deployment & Go-Live",
+                    "color": "#30a46c",
+                    "orderindex": 8
+                  },
+                  {
+                    "id": "70b3c091-a5ae-47a6-95fc-3ee2a55f4267",
+                    "name": "Documentation & SOPs",
+                    "color": "#3e63dd",
+                    "orderindex": 9
+                  },
+                  {
+                    "id": "de97d9e3-e7d6-45c1-b08d-889417a9e8b6",
+                    "name": "Training & Handover",
+                    "color": "#0091ff",
+                    "orderindex": 10
+                  }
+                ]
+              },
+              "date_created": "1776257489910",
+              "hide_from_guests": false,
+              "required": false
+            },
+            {
+              "id": "d46a7136-9232-42f6-af14-49b55c44d199",
+              "name": "[SV] Type",
+              "type": "drop_down",
+              "type_config": {
+                "sorting": "manual",
+                "options": [
+                  {
+                    "id": "7e664138-9d4b-46b4-9149-8a50599e29e4",
+                    "name": "User Story",
+                    "color": "#ffc53d",
+                    "orderindex": 0
+                  },
+                  {
+                    "id": "430a3280-dbd8-4548-ad1e-34a95e1505fc",
+                    "name": "Task",
+                    "color": "#f76808",
+                    "orderindex": 1
+                  }
+                ]
+              },
+              "date_created": "1776257547586",
+              "hide_from_guests": false,
+              "required": false
+            }
+          ],
+          "dependencies": [],
+          "linked_tasks": [],
+          "locations": [],
+          "team_id": "9014746495",
+          "url": "https://app.clickup.com/t/86b9rur8b",
+          "sharing": {
+            "public": false,
+            "public_share_expires_on": null,
+            "public_fields": [
+              "assignees",
+              "priority",
+              "due_date",
+              "content",
+              "comments",
+              "attachments",
+              "customFields",
+              "subtasks",
+              "tags",
+              "checklists",
+              "coverimage"
+            ],
+            "token": null,
+            "seo_optimized": false
+          },
+          "permission_level": "create",
+          "list": {
+            "id": "901412150674",
+            "name": "Bugs",
+            "access": true
+          },
+          "project": {
+            "id": "90146582200",
+            "name": "Placements Interface",
+            "hidden": false,
+            "access": true
+          },
+          "folder": {
+            "id": "90146582200",
+            "name": "Placements Interface",
+            "hidden": false,
+            "access": true
+          },
+          "space": {
+            "id": "90144231827"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Update a row": [
+      {
+        "json": {
+          "execution_id": "37168",
+          "workflow_id": "NlzPBiHYmeXTD5jV",
+          "workflow_name": "[AT] New VA Endorsement",
+          "execution_url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+          "mode": "webhook",
+          "last_node_executed": "Code in JavaScript",
+          "error_name": "WorkflowCrashedError",
+          "error_message": "Workflow did not finish, possible out-of-memory issue",
+          "error_timestamp": "2026-05-01T22:07:15.911+00:00",
+          "status": "reported",
+          "severity": "high",
+          "source": "n8n_error_trigger",
+          "clickup_task_id": "86b9rur8b",
+          "clickup_task_url": "https://app.clickup.com/t/86b9rur8b",
+          "clickup_task_status": "REPORTED",
+          "clickup_task_created_at": "2026-05-05T13:49:46.632+00:00",
+          "clickup_response": "{\"id\":\"86b9rur8b\",\"custom_id\":null,\"custom_item_id\":0,\"name\":\" -  Error\",\"text_content\":\"Error Details:\",\"description\":\"Error Details:\",\"status\":{\"id\":\"sc901412150674_f7kP5fbP\",\"status\":\"reported\",\"color\":\"#87909e\",\"orderindex\":0,\"type\":\"open\"},\"orderindex\":\"120499524.00000000000000000000000000000000\",\"date_created\":\"1777988634451\",\"date_updated\":\"1777988634451\",\"date_closed\":null,\"date_done\":null,\"archived\":false,\"creator\":{\"id\":95098109,\"username\":\"Patrick Jansen Villanueva\",\"color\":\"#0f9d9f\",\"email\":\"pj@scalevirtually.com\",\"profilePicture\":null},\"assignees\":[{\"id\":95098109,\"username\":\"Patrick Jansen Villanueva\",\"color\":\"#0f9d9f\",\"initials\":\"PV\",\"email\":\"pj@scalevirtually.com\",\"profilePicture\":null}],\"group_assignees\":[],\"watchers\":[{\"id\":95098109,\"username\":\"Patrick Jansen Villanueva\",\"color\":\"#0f9d9f\",\"initials\":\"PV\",\"email\":\"pj@scalevirtually.com\",\"profilePicture\":null}],\"checklists\":[],\"tags\":[],\"parent\":null,\"top_level_parent\":null,\"priority\":null,\"due_date\":null,\"start_date\":null,\"points\":null,\"time_estimate\":null,\"time_spent\":0,\"custom_fields\":[{\"id\":\"fef858cd-d5cf-4313-98b3-7064bd91c268\",\"name\":\"Dev Team\",\"type\":\"labels\",\"type_config\":{\"options\":[{\"id\":\"0b483b09-c138-44a7-8f3e-045cb2be89ab\",\"label\":\"Dev Team 1\",\"color\":null,\"orderindex\":0},{\"id\":\"bc16d129-99cc-4aee-8649-32eca8c91f55\",\"label\":\"Dev Team 2\",\"color\":null,\"orderindex\":1},{\"id\":\"afffeba5-ee4b-4ee1-a87e-b8f6b1074d70\",\"label\":\"Dev Team 3\",\"color\":null,\"orderindex\":2}]},\"date_created\":\"1754674849501\",\"hide_from_guests\":false,\"required\":false},{\"id\":\"29477675-18ad-494c-82ff-b07b4be4a8f3\",\"name\":\"[SV] Bug Type\",\"type\":\"drop_down\",\"type_config\":{\"sorting\":\"manual\",\"options\":[{\"id\":\"85fc1e07-1551-4f66-a03b-daee29947a43\",\"name\":\"Functional Bug\",\"color\":\"#FF4081\",\"orderindex\":0},{\"id\":\"61725bd0-3e97-4129-a226-86b5f9bc59c6\",\"name\":\"Integration Bug\",\"color\":\"#7C4DFF\",\"orderindex\":1},{\"id\":\"9a4629aa-71e4-4c53-8243-8b6aaa0266db\",\"name\":\"Data Bug\",\"color\":\"#b6b6ff\",\"orderindex\":2},{\"id\":\"074fe15a-0f8b-4fc9-94f5-3c30724a2c09\",\"name\":\"AI / Logic Bug\",\"color\":\"#aec0f5\",\"orderindex\":3},{\"id\":\"c1817114-88f2-41b9-a7e6-f0c3d240fec5\",\"name\":\"UI / UX Bug\",\"color\":\"#96c7f2\",\"orderindex\":4},{\"id\":\"f4928224-3be5-4500-8fc2-f4298993af6b\",\"name\":\"Performance Bug\",\"color\":\"#8dcec3\",\"orderindex\":5},{\"id\":\"03512cf6-ed55-4eb5-a930-e58e05edb5e4\",\"name\":\"Permission / Access Bug\",\"color\":\"#92ceac\",\"orderindex\":6},{\"id\":\"97f030d0-5a53-429e-9fb8-d268b5b91e0a\",\"name\":\"Regression Bug\",\"color\":\"#e9c162\",\"orderindex\":7},{\"id\":\"a0584073-5242-4590-90eb-dda4fbee9abf\",\"name\":\"Configuration Bug\",\"color\":\"#ffaa7d\",\"orderindex\":8},{\"id\":\"04d96584-6e8b-477a-b72e-59240b68f5ad\",\"name\":\"Edge Case Bug\",\"color\":\"#6647f0\",\"orderindex\":9}]},\"date_created\":\"1776259506652\",\"hide_from_guests\":false,\"required\":false},{\"id\":\"c2156698-4e96-4623-a5af-e44a27102def\",\"name\":\"[SV] Testing Type\",\"type\":\"drop_down\",\"type_config\":{\"sorting\":\"manual\",\"options\":[{\"id\":\"273bbe66-b280-46c3-b516-c5856d0f35d6\",\"name\":\"Functional Testing\",\"color\":\"#FF4081\",\"orderindex\":0},{\"id\":\"b37eab2a-a408-4cc7-8399-710f7e7a8158\",\"name\":\"Integration Testing\",\"color\":\"#7C4DFF\",\"orderindex\":1},{\"id\":\"a166d538-e1af-4651-9342-005d4c5f8362\",\"name\":\"Data Validation Testing\",\"color\":\"#b6b6ff\",\"orderindex\":2},{\"id\":\"1f3931c7-9c5b-440f-9bea-25765232f21b\",\"name\":\"AI / Logic Testing\",\"color\":\"#aec0f5\",\"orderindex\":3},{\"id\":\"6ea65dd5-260c-4f75-8b01-d28f49c770a1\",\"name\":\"UI / UX Testing\",\"color\":\"#96c7f2\",\"orderindex\":4},{\"id\":\"272243fb-af96-404e-9d0d-3f31d3c1c558\",\"name\":\"Regression Testing\",\"color\":\"#8dcec3\",\"orderindex\":5},{\"id\":\"1eabec7a-1350-4e17-9326-bfdfe3587c9d\",\"name\":\"Performance Testing\",\"color\":\"#92ceac\",\"orderindex\":6},{\"id\":\"7189c86c-4d68-446c-be52-0fee2fc7582d\",\"name\":\"Permission / Access Testing\",\"color\":\"#e9c162\",\"orderindex\":7},{\"id\":\"c0553b00-804f-4ecc-aaeb-a22356c5f291\",\"name\":\"Configuration Testing\",\"color\":\"#ffaa7d\",\"orderindex\":8},{\"id\":\"c3639d70-8dff-4c54-9f4b-8d4cbf990ce6\",\"name\":\"End-to-End (E2E) Testing\",\"color\":\"#6647f0\",\"orderindex\":9}]},\"date_created\":\"1776260304636\",\"hide_from_guests\":false,\"required\":false},{\"id\":\"9dc27b60-0ef9-4ed5-a183-5b43fe7f775b\",\"name\":\"[SV] Epics\",\"type\":\"drop_down\",\"type_config\":{\"sorting\":\"manual\",\"options\":[{\"id\":\"64f4eca0-7a80-44f6-98c5-e26de97ffc4b\",\"name\":\"Discovery & Requirements\",\"color\":\"#8d8d8d\",\"orderindex\":0},{\"id\":\"c022c744-8652-404a-9272-47938a064f8f\",\"name\":\"Solution Design (Architecture)\",\"color\":\"#a18072\",\"orderindex\":1},{\"id\":\"ccb0ec5d-5f87-44f6-82bf-009ddb75f78c\",\"name\":\"Data & Schema Setup\",\"color\":\"#7e4318\",\"orderindex\":2},{\"id\":\"43266597-b751-4dc8-b6f7-d18f938f5ba3\",\"name\":\"Integration & API Setup\",\"color\":\"#714f19\",\"orderindex\":3},{\"id\":\"68a022e9-2bd1-4d02-aa03-30e08bff6539\",\"name\":\"Automation Development\",\"color\":\"#6647f0\",\"orderindex\":4},{\"id\":\"9bbb30c6-8059-4871-9350-1371a9c8cf5b\",\"name\":\"AI / Logic Layer (if applicable)\",\"color\":\"#4d42a5\",\"orderindex\":5},{\"id\":\"063a46cc-05c5-49b2-b1fa-62e172e3bad8\",\"name\":\"Interface / Frontend Build\",\"color\":\"#ffc53d\",\"orderindex\":6},{\"id\":\"e337783b-146a-4be0-8d03-7055eb01775e\",\"name\":\"Testing & QA (UAT)\",\"color\":\"#f76808\",\"orderindex\":7},{\"id\":\"e440fc76-d23b-4da3-add6-cd3b51c771c3\",\"name\":\"Deployment & Go-Live\",\"color\":\"#30a46c\",\"orderindex\":8},{\"id\":\"70b3c091-a5ae-47a6-95fc-3ee2a55f4267\",\"name\":\"Documentation & SOPs\",\"color\":\"#3e63dd\",\"orderindex\":9},{\"id\":\"de97d9e3-e7d6-45c1-b08d-889417a9e8b6\",\"name\":\"Training & Handover\",\"color\":\"#0091ff\",\"orderindex\":10}]},\"date_created\":\"1776257489910\",\"hide_from_guests\":false,\"required\":false},{\"id\":\"d46a7136-9232-42f6-af14-49b55c44d199\",\"name\":\"[SV] Type\",\"type\":\"drop_down\",\"type_config\":{\"sorting\":\"manual\",\"options\":[{\"id\":\"7e664138-9d4b-46b4-9149-8a50599e29e4\",\"name\":\"User Story\",\"color\":\"#ffc53d\",\"orderindex\":0},{\"id\":\"430a3280-dbd8-4548-ad1e-34a95e1505fc\",\"name\":\"Task\",\"color\":\"#f76808\",\"orderindex\":1}]},\"date_created\":\"1776257547586\",\"hide_from_guests\":false,\"required\":false}],\"dependencies\":[],\"linked_tasks\":[],\"locations\":[],\"team_id\":\"9014746495\",\"url\":\"https://app.clickup.com/t/86b9rur8b\",\"sharing\":{\"public\":false,\"public_share_expires_on\":null,\"public_fields\":[\"assignees\",\"priority\",\"due_date\",\"content\",\"comments\",\"attachments\",\"customFields\",\"subtasks\",\"tags\",\"checklists\",\"coverimage\"],\"token\":null,\"seo_optimized\":false},\"permission_level\":\"create\",\"list\":{\"id\":\"901412150674\",\"name\":\"Bugs\",\"access\":true},\"project\":{\"id\":\"90146582200\",\"name\":\"Placements Interface\",\"hidden\":false,\"access\":true},\"folder\":{\"id\":\"90146582200\",\"name\":\"Placements Interface\",\"hidden\":false,\"access\":true},\"space\":{\"id\":\"90144231827\"}}",
+          "resolved_at": null,
+          "resolved_by": null,
+          "resolution_notes": null,
+          "error_context": {},
+          "raw_payload": {
+            "workflow": {
+              "id": "NlzPBiHYmeXTD5jV",
+              "name": "[AT] New VA Endorsement"
+            },
+            "execution": {
+              "id": "37168",
+              "url": "https://svsolutionarchitects.app.n8n.cloud/workflow/NlzPBiHYmeXTD5jV/executions/37168",
+              "mode": "webhook",
+              "error": {
+                "name": "WorkflowCrashedError",
+                "context": {},
+                "message": "Workflow did not finish, possible out-of-memory issue",
+                "timestamp": 1777673235911
+              },
+              "lastNodeExecuted": "Code in JavaScript"
+            }
+          },
+          "created_at": "2026-05-05T13:43:54.0581+00:00",
+          "updated_at": "2026-05-05T13:49:47.264868+00:00",
+          "workflow_active": null,
+          "workflow_tags": [],
+          "workflow_tag_names": null,
+          "workflow_created_at": null,
+          "workflow_updated_at": null,
+          "workflow_metadata": null
+        }
+      }
+    ]
+  },
+  "versionId": "8718de07-8788-4f98-a4bf-7a3dd49ceea2",
+  "activeVersionId": null,
+  "versionCounter": 24,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-04-10T13:27:15.249Z",
+      "createdAt": "2026-04-10T13:27:15.249Z",
+      "role": "workflow:owner",
+      "workflowId": "toZk8fLW9s9OWJYj",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-08T04:02:02.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-07",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": null
+}

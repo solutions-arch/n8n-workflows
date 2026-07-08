@@ -1,0 +1,937 @@
+{
+  "updatedAt": "2026-07-04T13:20:00.794Z",
+  "createdAt": "2025-09-25T13:49:43.278Z",
+  "id": "qFbOiBt0nKKwMQpa",
+  "name": "[AT] Podio Automation",
+  "description": "Checks whether a client already exists in Podio by email, creates a new Podio client record if no match is found, returns the result to Airtable, and sends Slack notifications for existing, successful, or failed record creation.",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        48
+      ],
+      "id": "817e944a-bfa1-4c03-957f-114e0f50eb89",
+      "name": "When clicking \u2018Execute workflow\u2019"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "926e2d24-efab-4729-bd6f-214f2aada80c",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -144
+      ],
+      "id": "fd01df66-b1bb-470d-9776-d198d73cb51e",
+      "name": "Webhook",
+      "webhookId": "926e2d24-efab-4729-bd6f-214f2aada80c"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08NSV0TPCG",
+          "mode": "id"
+        },
+        "text": "=<!channel> FYI. Podio record for {{ $('Webhook').item.json.body['Client First Name'] }} {{ $('Webhook').item.json.body['Client Last Name'] }} already exists.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        -240
+      ],
+      "id": "c270bd70-7af6-4408-a1f4-dc430cce6bc2",
+      "name": "Notif for existing record",
+      "webhookId": "6ae7b869-d310-4e7e-9755-309069680993",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C053KLFLVFU",
+          "mode": "id"
+        },
+        "text": "=<!channel> FYI. Podio record for {{ $('Webhook').item.json.body['Client First Name'] }} {{ $('Webhook').item.json.body['Client Last Name'] }} has been created.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1376,
+        -48
+      ],
+      "id": "1223f744-a1fe-49c3-9b39-fe8a91d40ae6",
+      "name": "Success Notif",
+      "webhookId": "6ae7b869-d310-4e7e-9755-309069680993",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08NSV0TPCG",
+          "mode": "id"
+        },
+        "text": "=<!channel> FYI. Podio record creation for {{ $('Webhook').item.json.body['Client First Name'] }} {{ $('Webhook').item.json.body['Client Last Name'] }} has Failed.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "mrkdwn": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1376,
+        144
+      ],
+      "id": "2b907e4f-f587-448f-9edc-7dd823e6f0cc",
+      "name": "Failure Notif",
+      "webhookId": "6ae7b869-d310-4e7e-9755-309069680993",
+      "credentials": {
+        "slackApi": {
+          "id": "nQNh2RyRJBqb9g09",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://podio.com/oauth/token",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "grant_type",
+              "value": "app"
+            },
+            {
+              "name": "client_id",
+              "value": "sv-solutions-architect"
+            },
+            {
+              "name": "client_secret",
+              "value": "Fc5H0JXHEJMJRMCKj6asqeFnkDfjEchzxERMZPHks1oT4tswFtU4H2IbC5DBnebM"
+            },
+            {
+              "name": "app_id",
+              "value": "25161223"
+            },
+            {
+              "name": "app_token",
+              "value": "97d6a8fdc76f4253a9b145e34835a327"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        224,
+        -48
+      ],
+      "id": "dcb82e13-ab76-4bf0-9206-3efbaba16722",
+      "name": "Get Podio Key"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.podio.com/item/app/{{ $json.ref.id }}/filter",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=OAuth2 {{ $json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"filters\": {\n    \"213548403\": \"{{ $('Webhook').item.json.body['Email (from Clients)'] }}\"\n  },\n  \"limit\": 1\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        -48
+      ],
+      "id": "336159d1-fa16-4f9c-a209-dd492845d6b0",
+      "name": "Filter Podio Clients by Email"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0c68d822-83ba-4453-a2ac-bddf25552c77",
+              "leftValue": "={{ $json.filtered }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -48
+      ],
+      "id": "bacb940c-3bd2-4c4a-8218-c31c16475140",
+      "name": "Check if email already exists"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.podio.com/item/app/{{ $('Get Podio Key').item.json.ref.id }}/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=OAuth2 {{ $('Get Podio Key').item.json.access_token }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"fields\": {\n  \"213548573 \": \"Active\",\n\"213887493\": 2,\n\"213549706\": \"{{ $('Webhook').item.json.body['Full/Part Time'] }}\",\n\"213549707\": \"{{ $('Webhook').item.json.body['REQUIRED MVA'] }}\",\n\"213549708\": \"{{ $('Webhook').item.json.body['REQUIRED MVA'] }}\",\n\"213549709\": \"{{ $('Webhook').item.json.body['CSA signed on: (from PDEV Requirement)'] }}\",\n\"213549710\": \"{{ $('Webhook').item.json.body.SUF }}\",\n\"213549711\": \"{{ $('Webhook').item.json.body['SUF paid on: (from PDEV Requirement)'] }}\",\n\"213548398\": \"{{ $('Webhook').item.json.body['Client First Name'] }}\",\n\"213548399\": \"{{ $('Webhook').item.json.body['Client Last Name'] }}\",\n\"213548400\": \"{{ $('Webhook').item.json.body['Client Role (from Clients)'] }}\",\n\"213548401\": \"{{ $('Webhook').item.json.body['Phone Number'] }}\",\n\"213548403\": \"{{ $('Webhook').item.json.body['Email (from Clients)'] }}\",\n\"248817228\": \"{{ $('Webhook').item.json.body['Company Email'] }}\",\n\"244396736\": \"{{ $('Webhook').item.json.body['Billing Address'] }}\",\n\"244396738\": \"{{ $('Webhook').item.json.body['Billing City'] }}\",\n\"244396739\": \"{{ $('Webhook').item.json.body['Billing State'] }}\",\n\"244396743\": \"{{ $('Webhook').item.json.body['Billing Zip Code'] }}\",\n\"213548405\": \"{{ $('Webhook').item.json.body['Time Zone'] }}\",\n\"213548458\": \"{{ $('Webhook').item.json.body['Company Rollup'] }}\",\n\"213548462\": \"{{ $('Webhook').item.json.body['Phone Number (from Clients)'] }}\"\n\n\n\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        48
+      ],
+      "id": "714e6306-f973-4177-8f10-ddd53b3a322c",
+      "name": "Create Podio Record",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"exists\": true,\n  \"message\": \"Record already exists in Podio\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        896,
+        -240
+      ],
+      "id": "62f3cf6d-e1c4-453c-9d81-a362a54ae414",
+      "name": "Return \"Already Exists\" to AT"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"exists\": false,\n  \"message\": \"Record creation Successful\"\n}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1120,
+        -48
+      ],
+      "id": "089909d4-9c42-41db-924d-97c3bdf5da8c",
+      "name": "Return Success to AT"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"error\": \"error\",\n  \"message\": \"Record creation Failed\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1120,
+        144
+      ],
+      "id": "8ab6a291-a70a-4573-b045-7e5d0c73d56e",
+      "name": "Return Failed to AT"
+    }
+  ],
+  "connections": {
+    "When clicking \u2018Execute workflow\u2019": {
+      "main": [
+        [
+          {
+            "node": "Get Podio Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Podio Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notif for existing record": {
+      "main": [
+        []
+      ]
+    },
+    "Get Podio Key": {
+      "main": [
+        [
+          {
+            "node": "Filter Podio Clients by Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Podio Clients by Email": {
+      "main": [
+        [
+          {
+            "node": "Check if email already exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if email already exists": {
+      "main": [
+        [
+          {
+            "node": "Return \"Already Exists\" to AT",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Podio Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Podio Record": {
+      "main": [
+        [
+          {
+            "node": "Return Success to AT",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Failed to AT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return \"Already Exists\" to AT": {
+      "main": [
+        [
+          {
+            "node": "Notif for existing record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Success to AT": {
+      "main": [
+        [
+          {
+            "node": "Success Notif",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Failed to AT": {
+      "main": [
+        [
+          {
+            "node": "Failure Notif",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "ff0d5c08-1212-4a7e-b11e-7ad2c32da3a8",
+  "activeVersionId": "ff0d5c08-1212-4a7e-b11e-7ad2c32da3a8",
+  "versionCounter": 166,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2025-09-25T13:49:43.282Z",
+      "createdAt": "2025-09-25T13:49:43.282Z",
+      "role": "workflow:owner",
+      "workflowId": "qFbOiBt0nKKwMQpa",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-08T04:02:02.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-07",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    {
+      "updatedAt": "2026-04-29T22:14:34.153Z",
+      "createdAt": "2026-04-29T22:14:34.153Z",
+      "id": "ACozkpgsqo0Bkzd7",
+      "name": "Workflow"
+    },
+    {
+      "updatedAt": "2026-04-29T17:59:51.861Z",
+      "createdAt": "2026-04-29T02:41:32.257Z",
+      "id": "payWifC8ZYhZceji",
+      "name": "Production"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:20:00.795Z",
+    "createdAt": "2026-07-04T13:20:00.795Z",
+    "versionId": "ff0d5c08-1212-4a7e-b11e-7ad2c32da3a8",
+    "workflowId": "qFbOiBt0nKKwMQpa",
+    "nodes": [
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.manualTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          48
+        ],
+        "id": "817e944a-bfa1-4c03-957f-114e0f50eb89",
+        "name": "When clicking \u2018Execute workflow\u2019"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "926e2d24-efab-4729-bd6f-214f2aada80c",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          0,
+          -144
+        ],
+        "id": "fd01df66-b1bb-470d-9776-d198d73cb51e",
+        "name": "Webhook",
+        "webhookId": "926e2d24-efab-4729-bd6f-214f2aada80c"
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C08NSV0TPCG",
+            "mode": "id"
+          },
+          "text": "=<!channel> FYI. Podio record for {{ $('Webhook').item.json.body['Client First Name'] }} {{ $('Webhook').item.json.body['Client Last Name'] }} already exists.",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          1120,
+          -240
+        ],
+        "id": "c270bd70-7af6-4408-a1f4-dc430cce6bc2",
+        "name": "Notif for existing record",
+        "webhookId": "6ae7b869-d310-4e7e-9755-309069680993",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C053KLFLVFU",
+            "mode": "id"
+          },
+          "text": "=<!channel> FYI. Podio record for {{ $('Webhook').item.json.body['Client First Name'] }} {{ $('Webhook').item.json.body['Client Last Name'] }} has been created.",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          1376,
+          -48
+        ],
+        "id": "1223f744-a1fe-49c3-9b39-fe8a91d40ae6",
+        "name": "Success Notif",
+        "webhookId": "6ae7b869-d310-4e7e-9755-309069680993",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "select": "channel",
+          "channelId": {
+            "__rl": true,
+            "value": "C08NSV0TPCG",
+            "mode": "id"
+          },
+          "text": "=<!channel> FYI. Podio record creation for {{ $('Webhook').item.json.body['Client First Name'] }} {{ $('Webhook').item.json.body['Client Last Name'] }} has Failed.",
+          "otherOptions": {
+            "includeLinkToWorkflow": false,
+            "mrkdwn": true
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.3,
+        "position": [
+          1376,
+          144
+        ],
+        "id": "2b907e4f-f587-448f-9edc-7dd823e6f0cc",
+        "name": "Failure Notif",
+        "webhookId": "6ae7b869-d310-4e7e-9755-309069680993",
+        "credentials": {
+          "slackApi": {
+            "id": "nQNh2RyRJBqb9g09",
+            "name": "Slack account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://podio.com/oauth/token",
+          "sendBody": true,
+          "contentType": "form-urlencoded",
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "grant_type",
+                "value": "app"
+              },
+              {
+                "name": "client_id",
+                "value": "sv-solutions-architect"
+              },
+              {
+                "name": "client_secret",
+                "value": "Fc5H0JXHEJMJRMCKj6asqeFnkDfjEchzxERMZPHks1oT4tswFtU4H2IbC5DBnebM"
+              },
+              {
+                "name": "app_id",
+                "value": "25161223"
+              },
+              {
+                "name": "app_token",
+                "value": "97d6a8fdc76f4253a9b145e34835a327"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          224,
+          -48
+        ],
+        "id": "dcb82e13-ab76-4bf0-9206-3efbaba16722",
+        "name": "Get Podio Key"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://api.podio.com/item/app/{{ $json.ref.id }}/filter",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=OAuth2 {{ $json.access_token }}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"filters\": {\n    \"213548403\": \"{{ $('Webhook').item.json.body['Email (from Clients)'] }}\"\n  },\n  \"limit\": 1\n} ",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          448,
+          -48
+        ],
+        "id": "336159d1-fa16-4f9c-a209-dd492845d6b0",
+        "name": "Filter Podio Clients by Email"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "0c68d822-83ba-4453-a2ac-bddf25552c77",
+                "leftValue": "={{ $json.filtered }}",
+                "rightValue": 0,
+                "operator": {
+                  "type": "number",
+                  "operation": "gt"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          672,
+          -48
+        ],
+        "id": "bacb940c-3bd2-4c4a-8218-c31c16475140",
+        "name": "Check if email already exists"
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "=https://api.podio.com/item/app/{{ $('Get Podio Key').item.json.ref.id }}/",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=OAuth2 {{ $('Get Podio Key').item.json.access_token }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"fields\": {\n  \"213548573 \": \"Active\",\n\"213887493\": 2,\n\"213549706\": \"{{ $('Webhook').item.json.body['Full/Part Time'] }}\",\n\"213549707\": \"{{ $('Webhook').item.json.body['REQUIRED MVA'] }}\",\n\"213549708\": \"{{ $('Webhook').item.json.body['REQUIRED MVA'] }}\",\n\"213549709\": \"{{ $('Webhook').item.json.body['CSA signed on: (from PDEV Requirement)'] }}\",\n\"213549710\": \"{{ $('Webhook').item.json.body.SUF }}\",\n\"213549711\": \"{{ $('Webhook').item.json.body['SUF paid on: (from PDEV Requirement)'] }}\",\n\"213548398\": \"{{ $('Webhook').item.json.body['Client First Name'] }}\",\n\"213548399\": \"{{ $('Webhook').item.json.body['Client Last Name'] }}\",\n\"213548400\": \"{{ $('Webhook').item.json.body['Client Role (from Clients)'] }}\",\n\"213548401\": \"{{ $('Webhook').item.json.body['Phone Number'] }}\",\n\"213548403\": \"{{ $('Webhook').item.json.body['Email (from Clients)'] }}\",\n\"248817228\": \"{{ $('Webhook').item.json.body['Company Email'] }}\",\n\"244396736\": \"{{ $('Webhook').item.json.body['Billing Address'] }}\",\n\"244396738\": \"{{ $('Webhook').item.json.body['Billing City'] }}\",\n\"244396739\": \"{{ $('Webhook').item.json.body['Billing State'] }}\",\n\"244396743\": \"{{ $('Webhook').item.json.body['Billing Zip Code'] }}\",\n\"213548405\": \"{{ $('Webhook').item.json.body['Time Zone'] }}\",\n\"213548458\": \"{{ $('Webhook').item.json.body['Company Rollup'] }}\",\n\"213548462\": \"{{ $('Webhook').item.json.body['Phone Number (from Clients)'] }}\"\n\n\n\n  }\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          896,
+          48
+        ],
+        "id": "714e6306-f973-4177-8f10-ddd53b3a322c",
+        "name": "Create Podio Record",
+        "onError": "continueErrorOutput"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\n  \"exists\": true,\n  \"message\": \"Record already exists in Podio\"\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          896,
+          -240
+        ],
+        "id": "62f3cf6d-e1c4-453c-9d81-a362a54ae414",
+        "name": "Return \"Already Exists\" to AT"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\n  \"exists\": false,\n  \"message\": \"Record creation Successful\"\n}\n\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          1120,
+          -48
+        ],
+        "id": "089909d4-9c42-41db-924d-97c3bdf5da8c",
+        "name": "Return Success to AT"
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\n  \"error\": \"error\",\n  \"message\": \"Record creation Failed\"\n}\n",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.4,
+        "position": [
+          1120,
+          144
+        ],
+        "id": "8ab6a291-a70a-4573-b045-7e5d0c73d56e",
+        "name": "Return Failed to AT"
+      }
+    ],
+    "connections": {
+      "When clicking \u2018Execute workflow\u2019": {
+        "main": [
+          [
+            {
+              "node": "Get Podio Key",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Get Podio Key",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notif for existing record": {
+        "main": [
+          []
+        ]
+      },
+      "Get Podio Key": {
+        "main": [
+          [
+            {
+              "node": "Filter Podio Clients by Email",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter Podio Clients by Email": {
+        "main": [
+          [
+            {
+              "node": "Check if email already exists",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check if email already exists": {
+        "main": [
+          [
+            {
+              "node": "Return \"Already Exists\" to AT",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Create Podio Record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Podio Record": {
+        "main": [
+          [
+            {
+              "node": "Return Success to AT",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Return Failed to AT",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Return \"Already Exists\" to AT": {
+        "main": [
+          [
+            {
+              "node": "Notif for existing record",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Return Success to AT": {
+        "main": [
+          [
+            {
+              "node": "Success Notif",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Return Failed to AT": {
+        "main": [
+          [
+            {
+              "node": "Failure Notif",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}

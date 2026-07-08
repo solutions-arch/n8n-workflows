@@ -1,0 +1,594 @@
+<title>Placements Workflows — VA Lifecycle Automation</title>
+<style>
+  :root {
+    --ground: #f2f0ec; --surface: #ffffff; --ink: #1a1917; --ink-2: #4d4a44;
+    --ink-3: #8a857c; --rule: #d6d1c9;
+    --accent: #1a5a8a; --accent-soft: #e4ecf3; --accent-muted: #2d7aab;
+    --warn: #b07318; --warn-soft: #faf0e0;
+    --ai: #6b52a3; --ai-soft: #eee9f7;
+    --live: #1a7a3a; --live-soft: #e3f2e8;
+    --off: #8a857c; --off-soft: #edebe7;
+    --shadow: 0 1px 3px rgba(26,25,23,0.07);
+    --shadow-lg: 0 4px 16px rgba(26,25,23,0.08);
+    --gemini: #4285F4; --openai: #10A37F; --mistral: #FF7000; --groq: #F55036;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#6aafe0;--accent-soft:#162230;--accent-muted:#5199cc;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --gemini:#6EA6F7;--openai:#2EB88A;--mistral:#FF8C33;--groq:#F77060;
+  }}
+  :root[data-theme="light"]{
+    --ground:#f2f0ec;--surface:#ffffff;--ink:#1a1917;--ink-2:#4d4a44;
+    --ink-3:#8a857c;--rule:#d6d1c9;
+    --accent:#1a5a8a;--accent-soft:#e4ecf3;--accent-muted:#2d7aab;
+    --warn:#b07318;--warn-soft:#faf0e0;
+    --ai:#6b52a3;--ai-soft:#eee9f7;
+    --live:#1a7a3a;--live-soft:#e3f2e8;
+    --off:#8a857c;--off-soft:#edebe7;
+    --shadow:0 1px 3px rgba(26,25,23,0.07);--shadow-lg:0 4px 16px rgba(26,25,23,0.08);
+    --gemini:#4285F4;--openai:#10A37F;--mistral:#FF7000;--groq:#F55036;
+  }
+  :root[data-theme="dark"]{
+    --ground:#111110;--surface:#1c1b19;--ink:#e8e5df;--ink-2:#a9a49b;
+    --ink-3:#706b63;--rule:#302e2a;
+    --accent:#6aafe0;--accent-soft:#162230;--accent-muted:#5199cc;
+    --warn:#daa24a;--warn-soft:#2a2214;
+    --ai:#a893d4;--ai-soft:#221d30;
+    --live:#5cb87a;--live-soft:#1a2a1e;
+    --off:#706b63;--off-soft:#252320;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);--shadow-lg:0 4px 16px rgba(0,0,0,0.25);
+    --gemini:#6EA6F7;--openai:#2EB88A;--mistral:#FF8C33;--groq:#F77060;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1360px;margin:0 auto;padding:32px 20px 64px}
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+  h1{font-size:26px;font-weight:720;margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+  .lead{font-size:15px;color:var(--ink-2);margin:0 0 24px;max-width:62ch}
+  .tabs{display:flex;gap:2px;border-bottom:2px solid var(--rule);margin-bottom:20px}
+  .tab{font:inherit;font-size:14px;font-weight:640;padding:10px 20px 9px;border:none;background:none;color:var(--ink-3);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:color .15s}
+  .tab:hover{color:var(--ink)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .panel[hidden]{display:none}
+
+  /* ---- animated map ---- */
+  .qbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .qbtn{font:inherit;font-size:12.5px;padding:7px 14px;border-radius:20px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);transition:border-color .15s,background .15s,color .15s}
+  .qbtn:hover{border-color:var(--accent)}
+  .qbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .qbtn.active{background:var(--accent);border-color:var(--accent);color:var(--ground)}
+  .qbtn.ai-q.active{background:var(--ai);border-color:var(--ai)}
+  .qbtn.playall{font-weight:650}
+  .caption{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:14px 18px;border-radius:10px;border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow);margin-bottom:16px;min-height:62px}
+  .caption .route{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;padding:3px 10px;border-radius:20px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+  .caption .desc{font-size:13.5px;color:var(--ink-2);flex:1 1 300px}
+  .caption .stat{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .board{border:1px solid var(--rule);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);overflow-x:auto}
+  .board svg{display:block;min-width:900px;width:100%;height:auto}
+  svg text{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;fill:var(--ink)}
+  svg .t-title{font-size:13px;font-weight:650}
+  svg .t-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:9.5px;fill:var(--ink-3)}
+  svg .t-col{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.14em;fill:var(--ink-3);text-transform:uppercase}
+  svg .node rect.body{fill:var(--surface);stroke:var(--rule);stroke-width:1.4;rx:8}
+  svg .node.trigger rect.body{stroke:var(--warn)}
+  svg .node.proc rect.body{stroke:var(--accent)}
+  svg .node.dest rect.body{stroke:var(--rule)}
+  svg .node.ai-node rect.body{stroke:var(--ai)}
+  svg .edge{fill:none;stroke:var(--rule);stroke-width:1.5}
+  svg.running .node,svg.running .edge{opacity:.15;transition:opacity .35s}
+  svg.running .node.on,svg.running .edge.on{opacity:1}
+  svg .node.on rect.body{stroke-width:2.6}
+  svg .node.trigger.on rect.body{stroke:var(--warn)}
+  svg .node.proc.on rect.body{stroke:var(--accent)}
+  svg .node.ai-node.on rect.body{stroke:var(--ai)}
+  svg .node.dest.on rect.body{stroke:var(--accent)}
+  svg .edge.on{stroke:var(--accent);stroke-width:2.4}
+  svg .node,svg .edge{transition:opacity .35s}
+  #pulse{fill:var(--accent);opacity:0;filter:url(#glow)}
+  #pulse.visible{opacity:1}
+  #pulse.ai-pulse{fill:var(--ai)}
+  svg .edge.on.ai-edge{stroke:var(--ai)}
+  svg .edge{stroke-dasharray:none}
+  svg .edge.on{stroke-dasharray:8 4;animation:edgeDash .6s linear infinite}
+  @keyframes edgeDash{to{stroke-dashoffset:-12}}
+
+  /* ---- deep dive ---- */
+  .dive-intro{font-size:15px;color:var(--ink-2);max-width:64ch;margin:0 0 28px;line-height:1.6}
+  .group-label{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:36px 0 14px 2px}
+  .group-label:first-child{margin-top:0}
+  .station{background:var(--surface);border:1px solid var(--rule);border-radius:11px;box-shadow:var(--shadow);padding:22px 26px 20px;margin-bottom:16px}
+  .station.ai-station{border-left:3px solid var(--ai);border-color:var(--ai) var(--rule) var(--rule) var(--ai)}
+  .st-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;margin-bottom:10px}
+  .st-num{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--surface);background:var(--accent);min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .ai-station .st-num{background:var(--ai)}
+  .st-head h2{font-size:18px;font-weight:700;margin:0;line-height:1.3}
+  .st-chips-row{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+  .st-fn{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:11px;color:var(--ink-3);width:100%}
+  .station p{font-size:14.5px;color:var(--ink);margin:0 0 12px;max-width:68ch;line-height:1.6}
+  .chip{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;padding:2px 9px;border-radius:20px;white-space:nowrap;font-weight:600}
+  .chip.ai{background:var(--ai-soft);color:var(--ai)}
+  .chip.live{background:var(--live-soft);color:var(--live)}
+  .chip.off{background:var(--off-soft);color:var(--off)}
+  .chip.sys{background:var(--accent-soft);color:var(--accent)}
+  .chip.time{background:var(--warn-soft);color:var(--warn)}
+  .ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 16px}
+  @media(max-width:640px){.ba-grid{grid-template-columns:1fr}}
+  .ba-col h3{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+  .ba-col.before h3{color:var(--warn)}
+  .ba-col.after h3{color:var(--live)}
+  .ba-col ul{margin:0;padding:0;list-style:none}
+  .ba-col li{font-size:13.5px;line-height:1.55;color:var(--ink-2);padding:5px 0 5px 18px;position:relative}
+  .ba-col.before li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--warn-soft);border:1.5px solid var(--warn)}
+  .ba-col.after li::before{content:'';position:absolute;left:2px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--live-soft);border:1.5px solid var(--live)}
+  .ba-col li strong{color:var(--ink);font-weight:620}
+  .impact{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:4px}
+  .ai-station .impact{border-left-color:var(--ai);background:var(--ai-soft)}
+  .impact .impact-head{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;font-weight:700}
+  .ai-station .impact .impact-head{color:var(--ai)}
+  .impact ul{margin:0;padding:0;list-style:none}
+  .impact li{font-size:13.5px;color:var(--ink);line-height:1.5;padding:2px 0}
+  .impact li strong{font-weight:660;color:var(--accent-muted)}
+  .ai-station .impact li strong{color:var(--ai)}
+  .ai-stack{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 18px;border-radius:10px;background:var(--ai-soft);border:1px solid color-mix(in srgb, var(--ai) 20%, transparent);margin:0 0 20px}
+  .ai-stack-title{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ai);font-weight:700;flex-basis:100%}
+  .ai-stack-desc{font-size:13px;color:var(--ink-2);flex-basis:100%;margin-bottom:4px}
+  .ai-stack-row{display:flex;flex-wrap:wrap;gap:8px}
+  .vendor-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 5px;border-radius:20px;background:var(--surface);border:1px solid var(--rule);font-size:12.5px;font-weight:620;color:var(--ink)}
+  .vendor-pill .vp-dot{width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+  .mini-flow{overflow-x:auto;margin:14px 0 18px;padding:10px 6px;border-radius:10px;background:var(--ground);border:1px solid var(--rule)}
+  .mini-flow svg{display:block;width:100%;min-width:420px;height:auto}
+  .mf-node{fill:var(--surface);stroke:var(--accent);stroke-width:1.4}
+  .mf-trig{stroke:var(--warn)}
+  .mf-ai{stroke:var(--ai);fill:var(--ai-soft);stroke-width:2}
+  .mf-title{font-family:"Helvetica Neue","Segoe UI",system-ui,sans-serif;font-size:11px;font-weight:650;fill:var(--ink)}
+  .mf-title-ai{fill:var(--ai)}
+  .mf-sub{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:8.5px;fill:var(--ink-3)}
+  .mf-edge{fill:none;stroke:var(--rule);stroke-width:1.5;stroke-dasharray:6 4;animation:mfPulse 1.2s linear infinite}
+  .mf-edge-ai{stroke:var(--ai)}
+  @keyframes mfPulse{to{stroke-dashoffset:-10}}
+  @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <marker id="mf-arr" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--rule)"/></marker>
+    <marker id="mf-arr-ai" viewBox="0 0 8 6" refX="7" refY="3" markerWidth="7" markerHeight="5" orient="auto"><path d="M0 0L8 3L0 6z" fill="var(--ai)"/></marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <p class="eyebrow">scale virtually · placements</p>
+  <h1>Placements Workflow Automation</h1>
+  <p class="lead">19 automated workflows — including 2 powered by AI inference models — orchestrate the full VA lifecycle from endorsement through onboarding, STP management, and daily health reporting.</p>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" role="tab" aria-selected="true" aria-controls="panel-map" id="tab-map">Animated map</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="panel-dive" id="tab-dive">Step-by-step deep dive</button>
+  </div>
+
+  <!-- ===== TAB 1: ANIMATED MAP ===== -->
+  <section class="panel" id="panel-map" role="tabpanel">
+    <div class="qbar" id="qbar"></div>
+    <div class="caption">
+      <span class="route" id="cap-route">pick a workflow</span>
+      <span class="desc" id="cap-desc">Each button traces a different workflow through the system — from trigger to output. The two AI-powered workflows use real inference models (Groq and OpenAI).</span>
+      <span class="stat" id="cap-stat"></span>
+    </div>
+    <div class="board">
+      <svg id="flow" viewBox="0 0 1340 600" role="img" aria-label="Flow diagram of Placements automation system"></svg>
+    </div>
+  </section>
+
+  <!-- ===== TAB 2: DEEP DIVE ===== -->
+  <section class="panel" id="panel-dive" role="tabpanel" hidden>
+    <p class="dive-intro">Each workflow below shows the manual process it replaces, a node-by-node animated flow, and measurable impact. AI-powered workflows first, then the endorsement-to-placement pipeline, STP management, and daily operations.</p>
+
+    <h3 class="group-label">AI-powered intelligence</h3>
+
+    <div class="ai-stack">
+      <span class="ai-stack-title">Inference models powering 2 agentic workflows</span>
+      <span class="ai-stack-desc">These workflows call external AI inference APIs to read, analyze, and generate structured output — they are not rule-based automations.</span>
+      <div class="ai-stack-row">
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--groq)">G</span> Groq</span>
+        <span class="vendor-pill"><span class="vp-dot" style="background:var(--openai)">O</span> OpenAI</span>
+      </div>
+    </div>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">1</span><h2>AI Shortlisting Insights Fetcher</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">12 nodes</span></div></div><p class="st-fn">[Gmail] Shortlisting Insights Fetcher</p><div class="mini-flow" id="mf-1"></div><p>Monitors incoming Gmail messages from clients responding to VA shortlisting emails. A Groq-powered AI agent reads each reply, classifies the client's intent (accept, reject, request more info), extracts key details, and updates the matching Airtable record automatically.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Placement coordinators manually check Gmail for client replies</li><li>Each reply read, interpreted, and hand-entered into Airtable</li><li>Replies sometimes missed or delayed — candidates left waiting</li><li>No structured record of why a client accepted or rejected</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Gmail trigger fires on every qualifying reply</li><li>AI classifies intent: accept, reject, or clarification needed</li><li>Airtable record updated with structured classification</li><li><strong>Every reply captured — no candidates left in limbo</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>~10 min saved per reply</strong> — no manual triage</li><li><strong>100% capture rate</strong> — every reply gets processed</li><li><strong>Structured data</strong> — accept/reject reasons available for analysis</li></ul></div></article>
+
+    <article class="station ai-station"><div class="st-head"><span class="st-num">2</span><h2>AI Placements PR Summary</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip ai">AI Agent</span><span class="chip time">15 nodes</span></div></div><p class="st-fn">[Scheduled] PR - Summary</p><div class="mini-flow" id="mf-2"></div><p>Runs at end of shift, pulling all active placement records from Airtable. An OpenAI agent analyzes the data, writes an executive summary of placement activity, and renders it as a visual report card image delivered to stakeholders.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>No daily placement summary existed</li><li>Leadership had no consistent visibility into pipeline health</li><li>Status updates happened ad-hoc or not at all</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>End-of-shift schedule triggers data pull from Airtable</li><li>AI writes a narrative summary — wins, risks, pipeline health</li><li>Visual report card rendered and delivered automatically</li><li><strong>Net-new capability — the report appears every end of shift</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Net-new capability</strong> — this report didn't exist before</li><li><strong>Consistent end-of-shift visibility</strong> for leadership</li><li><strong>Visual report card</strong> — easy to scan and share</li></ul></div></article>
+
+    <h3 class="group-label">Endorsement &amp; interview pipeline</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">3</span><h2>VA Endorsement &amp; Candidate Request</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">10 nodes (2 workflows)</span></div></div><p class="st-fn">[AT] New VA Endorsement + [AT] VA Candidate Request</p><div class="mini-flow" id="mf-3"></div><p>Two coordinated workflows. When a VA is endorsed for a role, the endorsement workflow sends the client a formatted email with the VA's profile. When a Process Engineer or Success Coach submits a candidate request, the workflow validates the data and sends the appropriate follow-up.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Coordinator writes endorsement emails manually — pulling VA details from Airtable</li><li>Candidate requests from Process Engineers and Success Coaches tracked informally, sometimes missed</li><li>No standard format for endorsement emails</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Airtable status change triggers automatic endorsement email</li><li>VA profile details formatted consistently every time</li><li>Candidate requests from PEs and SCs validated and routed automatically</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>~10–15 min saved per endorsement</strong></li><li><strong>Consistent email format</strong> — professional presentation of every VA</li><li><strong>No missed requests</strong> — every candidate request captured</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">4</span><h2>Interview Scheduling</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">13 nodes</span></div></div><p class="st-fn">[AT] Send Cal invite</p><div class="mini-flow" id="mf-4"></div><p>When a client confirms they want to interview a VA, this workflow looks up both parties in Airtable, creates a Google Calendar event with the correct details, and sends calendar invites via Gmail to both the client and the VA.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Coordinator manually creates calendar event with correct timezone</li><li>Invite details copied from Airtable by hand</li><li>Wrong times or missing attendees if done in a rush</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Airtable status change triggers calendar creation</li><li>Google Calendar event created with all attendee details</li><li>Invites sent automatically — no timezone mistakes</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>~5–10 min saved per interview</strong></li><li><strong>Zero scheduling errors</strong> — automated timezone handling</li></ul></div></article>
+
+    <h3 class="group-label">Placement &amp; onboarding</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">5</span><h2>Placement-Ready Notification</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">7 nodes</span></div></div><p class="st-fn">[AT] Placement-Ready</p><div class="mini-flow" id="mf-5"></div><p>When a VA's status changes to "Placement-Ready" in Airtable, this workflow sends an immediate notification email to the VA, then waits and sends a follow-up reminder for them to prepare and update their materials before placement.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>VAs not always informed promptly when they reach placement-ready status</li><li>No structured reminder for VAs to update their materials</li><li>Coordinators had to manually email each VA</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Status change triggers immediate email to the VA</li><li>Follow-up reminder sent after a set delay — VA prompted to prepare/update materials</li><li><strong>Every VA gets a two-touch notification to get ready</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>VAs arrive prepared</strong> — materials updated before client-facing interactions</li><li><strong>Built-in follow-up</strong> — no manual reminder needed</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">6</span><h2>Logistics &amp; Onboarding Email Suite</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">34 nodes (2 workflows)</span></div></div><p class="st-fn">[AT] Preview Logistics Email + [AT] Send Logistics, Endorsement to Ops, and Congrats Email</p><div class="mini-flow" id="mf-6"></div><p>Two coordinated workflows that handle the full onboarding sequence. The preview workflow renders a visual logistics email using HTML/CSS-to-Image. The main workflow sends the logistics email, endorsement email to operations, and a congratulations email to the VA. It also creates a dedicated Slack support channel and sends a welcome message to the VA — all from a single Airtable trigger.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Coordinator sends 3 separate emails manually — logistics, ops endorsement, VA congrats</li><li>Each email requires looking up different data from Airtable</li><li>Support channel created manually with inconsistent naming</li><li>VA welcome message often forgotten or delayed</li><li><strong>Total: 20–30 min per placement</strong></li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Single Airtable trigger sends all 3 emails in sequence</li><li>Logistics email includes visual preview card</li><li>Ops gets endorsement with full VA details</li><li>Dedicated Slack support channel created automatically</li><li>Welcome message sent to the VA in the new channel</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>20–30 min → seconds</strong> — entire onboarding sequence automated</li><li><strong>No missed steps</strong> — emails, channel, and welcome message all handled</li><li><strong>Professional visual preview</strong> — consistent brand presentation</li></ul></div></article>
+
+    <h3 class="group-label">STP management</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">7</span><h2>STP Channel &amp; Notifications</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">20 nodes (3 workflows)</span></div></div><p class="st-fn">[AT] Create STP Channel + [AT] STP Requests Notifier + [AT] STP Completed Notifier</p><div class="mini-flow" id="mf-7"></div><p>Three workflows managing the STP (Straight-to-Placements) lifecycle. STPs are VAs sourced by the Talent Acquisitions team directly from job platforms and endorsed to Placements without completing the company's training program. When an STP is created, a dedicated Slack channel is provisioned. Requests trigger notifications via Gmail and Slack. Completion triggers a final status update to the team.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Slack channels created manually for each STP — naming inconsistent</li><li>STP request notifications sent by hand</li><li>Completions tracked informally — sometimes overlooked</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>STP creation auto-provisions a named Slack channel</li><li>Requests trigger email + Slack notifications</li><li>Completion status posted to Slack automatically</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Consistent Slack channels</strong> — every STP gets one automatically</li><li><strong>No missed notifications</strong> — requests and completions always surfaced</li><li><strong>~10 min saved per STP lifecycle</strong></li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">8</span><h2>STP Daily &amp; Weekly Reports</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">25 nodes</span></div></div><p class="st-fn">[Scheduled] STP Daily/Weekly Reports</p><div class="mini-flow" id="mf-8"></div><p>Runs on a schedule to compute STP metrics, render visual report cards using HTML/CSS-to-Image, and distribute them via Gmail and Slack. Covers daily status and weekly summaries with different report formats.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>No STP reporting existed — no daily or weekly summaries</li><li>No visibility into STP pipeline health or trends</li><li>Leadership had to ask for updates manually</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Schedule triggers automatic data pull and metric computation</li><li>Visual report cards rendered with consistent format</li><li>Distributed via Gmail and Slack — daily and weekly cadence</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Net-new capability</strong> — STP reporting didn't exist before</li><li><strong>Visual report cards</strong> — stakeholders scan in seconds</li><li><strong>Consistent cadence</strong> — daily + weekly, no exceptions</li></ul></div></article>
+
+    <h3 class="group-label">VA lifecycle &amp; monitoring</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">9</span><h2>Limbo Management</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">7 nodes (2 workflows)</span></div></div><p class="st-fn">[AT] Limbo Removal + [Scheduled] Limbo Notifier</p><div class="mini-flow" id="mf-9"></div><p>Two workflows managing VAs in "limbo" status — candidates who have stalled in the pipeline. The notifier runs daily to flag limbo VAs on Slack. The removal workflow sends formal notification emails when a VA is removed from limbo.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Limbo VAs discovered during manual Airtable reviews — often weeks late</li><li>No proactive alerting when VAs stall in the pipeline</li><li>Removal emails written and sent by hand</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Daily schedule flags all limbo VAs on Slack</li><li>Limbo removal triggers formal email notification</li><li><strong>No VA stalls unnoticed</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Proactive limbo detection</strong> — daily visibility</li><li><strong>Faster pipeline velocity</strong> — stalled candidates addressed quickly</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">10</span><h2>VA Readiness &amp; Cancellation Alerts</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">21 nodes (2 workflows)</span></div></div><p class="st-fn">[Scheduled] VA Readiness + [AT] MVA Cancellation Notifier</p><div class="mini-flow" id="mf-10"></div><p>The readiness workflow sends a weekly email to VAs asking them to fill out an Airtable form — reporting how ready they are to be placed, updating their availability, and flagging any concerns. The cancellation workflow fires when a VA is cancelled, sending notifications to stakeholders and updating Slack.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>No structured way to check in with VAs about their placement readiness</li><li>Coordinators manually reached out to gauge availability</li><li>Cancellations communicated informally — sometimes the team doesn't learn for days</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Weekly automated email prompts VAs to submit readiness status via Airtable</li><li>Responses collected and tracked centrally — no manual outreach</li><li>Cancellation triggers immediate email + Slack notification</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Consistent weekly check-in</strong> — every VA self-reports readiness</li><li><strong>Zero-delay cancellation alerts</strong></li><li><strong>Structured readiness data</strong> — available for pipeline planning</li></ul></div></article>
+
+    <h3 class="group-label">Daily operations &amp; reporting</h3>
+
+    <article class="station"><div class="st-head"><span class="st-num">11</span><h2>Daily Placements Health Digest</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip time">30 nodes (2 workflows)</span></div></div><p class="st-fn">[Scheduled] Daily Scrubbing (Placements) + Daily Scrubbing Notifier (Placements)</p><div class="mini-flow" id="mf-11"></div><p>Two coordinated workflows running daily. The scrubbing workflow computes health metrics for every active placement and writes scores back to Airtable. The notifier scores, ranks, and posts a prioritized digest to Slack — surfacing the placements that need attention.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Someone manually reviews all active placements each morning</li><li>Urgency assessed subjectively — inconsistent across reviewers</li><li>Summary written and posted to Slack by hand</li><li>Some days it doesn't happen — issues slip</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Health metrics computed daily for every active placement</li><li>Each record updated with current scores in Airtable</li><li>Prioritized digest posted to Slack automatically</li><li><strong>The digest happens every day — no exceptions</strong></li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Consistent daily visibility</strong> — objective scoring, not subjective review</li><li><strong>Historical trend data</strong> — see exactly when placements stall</li><li><strong>~20–30 min saved daily</strong></li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">12</span><h2>Podio Automation</h2><div class="st-chips-row"><span class="chip live">Active</span><span class="chip sys">Integration</span><span class="chip time">12 nodes</span></div></div><p class="st-fn">[AT] Podio Automation</p><div class="mini-flow" id="mf-12"></div><p>Handles real-time updates between Airtable and Podio. When placement records are created or updated in Airtable, corresponding records in Podio are created or modified via API calls, with Slack notifications on completion or failure.</p><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Podio records created manually for every placement change</li><li>Dual-entry required — same data entered in both Airtable and Podio</li><li>No notification when something goes wrong</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Airtable webhook triggers Podio record creation automatically</li><li>Failure notifications posted to Slack immediately</li><li>Both systems updated in real time</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>No manual dual-entry</strong> — Podio records created automatically</li><li><strong>Failure visibility</strong> — broken syncs caught immediately</li></ul></div></article>
+
+    <article class="station"><div class="st-head"><span class="st-num">13</span><h2>Error Monitoring</h2><div class="st-chips-row"><span class="chip off">Inactive</span><span class="chip time">6 nodes</span></div></div><p class="st-fn">Placements Error Trigger</p><div class="mini-flow" id="mf-13"></div><div class="ba-grid"><div class="ba-col before"><h3>Before</h3><ul><li>Workflow failures noticed hours or days later</li><li>Manual log investigation, manual ticket creation</li><li>No centralized error history</li></ul></div><div class="ba-col after"><h3>After</h3><ul><li>Failure caught instantly via error trigger</li><li>ClickUp bug ticket filed automatically</li><li>Error logged in Supabase, Slack notification sent</li></ul></div></div><div class="impact"><p class="impact-head">Impact</p><ul><li><strong>Zero-delay detection</strong></li><li><strong>Full audit trail</strong> in Supabase for pattern analysis</li></ul></div></article>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var NS="http://www.w3.org/2000/svg";
+
+  // ---- tabs ----
+  var tabs=document.querySelectorAll(".tab");
+  var panels=document.querySelectorAll(".panel");
+  tabs.forEach(function(btn){
+    btn.addEventListener("click",function(){
+      tabs.forEach(function(t){t.classList.remove("active");t.setAttribute("aria-selected","false")});
+      btn.classList.add("active");btn.setAttribute("aria-selected","true");
+      var target=btn.getAttribute("aria-controls");
+      panels.forEach(function(p){p.hidden=p.id!==target});
+    });
+  });
+
+  // ---- mini flow generator ----
+  function buildMiniFlow(id,stages){
+    var c=document.getElementById(id);
+    if(!c)return;
+    var NW=170,NH=50,GAP=32,PAD=14;
+    var W=PAD*2+stages.length*NW+(stages.length-1)*GAP;
+    var H=NH+PAD*2;
+    var s=document.createElementNS(NS,"svg");
+    s.setAttribute("viewBox","0 0 "+W+" "+H);
+    var xs=[];
+    for(var i=0;i<stages.length;i++){xs.push(PAD+i*(NW+GAP));}
+    for(var i=0;i<stages.length-1;i++){
+      var x1=xs[i]+NW,x2=xs[i+1],y=PAD+NH/2;
+      var isAiEdge=stages[i].c==="ai"||stages[i+1].c==="ai";
+      var p=document.createElementNS(NS,"path");
+      p.setAttribute("d","M"+x1+" "+y+"L"+x2+" "+y);
+      p.setAttribute("class","mf-edge"+(isAiEdge?" mf-edge-ai":""));
+      p.setAttribute("marker-end","url(#"+(isAiEdge?"mf-arr-ai":"mf-arr")+")");
+      s.appendChild(p);
+    }
+    for(var i=0;i<stages.length;i++){
+      var x=xs[i],y=PAD;
+      var r=document.createElementNS(NS,"rect");
+      var cls="mf-node";
+      if(stages[i].c==="trigger")cls+=" mf-trig";
+      else if(stages[i].c==="ai")cls+=" mf-ai";
+      r.setAttribute("class",cls);
+      r.setAttribute("x",x);r.setAttribute("y",y);
+      r.setAttribute("width",NW);r.setAttribute("height",NH);
+      r.setAttribute("rx",8);
+      s.appendChild(r);
+      var t1=document.createElementNS(NS,"text");
+      t1.setAttribute("class","mf-title"+(stages[i].c==="ai"?" mf-title-ai":""));
+      t1.setAttribute("x",x+NW/2);t1.setAttribute("y",y+22);
+      t1.setAttribute("text-anchor","middle");
+      t1.textContent=stages[i].t;
+      s.appendChild(t1);
+      var t2=document.createElementNS(NS,"text");
+      t2.setAttribute("class","mf-sub");
+      t2.setAttribute("x",x+NW/2);t2.setAttribute("y",y+37);
+      t2.setAttribute("text-anchor","middle");
+      t2.textContent=stages[i].s;
+      s.appendChild(t2);
+    }
+    c.appendChild(s);
+  }
+
+  buildMiniFlow("mf-1",[{t:"Gmail Trigger",s:"new client reply",c:"trigger"},{t:"Code",s:"filter & parse",c:"proc"},{t:"AI Agent",s:"Groq",c:"ai"},{t:"Airtable",s:"update record",c:"dest"},{t:"Merge",s:"consolidate",c:"proc"}]);
+  buildMiniFlow("mf-2",[{t:"Schedule",s:"daily trigger",c:"trigger"},{t:"Airtable",s:"fetch placements",c:"proc"},{t:"AI Agent",s:"OpenAI",c:"ai"},{t:"HTML/CSS → Image",s:"render report",c:"proc"},{t:"HTTP Post",s:"deliver report",c:"dest"}]);
+  buildMiniFlow("mf-3",[{t:"Webhook",s:"Airtable trigger",c:"trigger"},{t:"Code",s:"build payload",c:"proc"},{t:"Gmail",s:"endorsement email",c:"dest"},{t:"HTTP Request",s:"validate data",c:"proc"},{t:"Gmail",s:"candidate request",c:"dest"}]);
+  buildMiniFlow("mf-4",[{t:"Webhook",s:"interview confirmed",c:"trigger"},{t:"Airtable",s:"lookup records",c:"proc"},{t:"Code",s:"build invite",c:"proc"},{t:"Google Calendar",s:"create event",c:"dest"},{t:"Gmail",s:"send invite",c:"dest"}]);
+  buildMiniFlow("mf-5",[{t:"Webhook",s:"status change",c:"trigger"},{t:"Code",s:"build notification",c:"proc"},{t:"Gmail",s:"notify team",c:"dest"},{t:"Wait",s:"delay period",c:"proc"},{t:"Gmail",s:"follow-up reminder",c:"dest"}]);
+  buildMiniFlow("mf-6",[{t:"Webhook",s:"Airtable trigger",c:"trigger"},{t:"Airtable",s:"lookup records",c:"proc"},{t:"Code",s:"build 3 emails",c:"proc"},{t:"Gmail",s:"logistics + congrats",c:"dest"},{t:"Slack",s:"notify ops",c:"dest"}]);
+  buildMiniFlow("mf-7",[{t:"Webhook",s:"STP status change",c:"trigger"},{t:"Code",s:"parse & filter",c:"proc"},{t:"Slack",s:"create channel",c:"dest"},{t:"Gmail",s:"stakeholder email",c:"dest"},{t:"Slack",s:"post notification",c:"dest"}]);
+  buildMiniFlow("mf-8",[{t:"Schedule",s:"daily / weekly",c:"trigger"},{t:"Airtable",s:"fetch STP data",c:"proc"},{t:"Code",s:"compute metrics",c:"proc"},{t:"HTML/CSS → Image",s:"render report card",c:"proc"},{t:"Gmail + Slack",s:"distribute",c:"dest"}]);
+  buildMiniFlow("mf-9",[{t:"Schedule / Webhook",s:"daily + on-demand",c:"trigger"},{t:"Airtable",s:"query limbo VAs",c:"proc"},{t:"Code",s:"filter & format",c:"proc"},{t:"Gmail",s:"removal notice",c:"dest"},{t:"Slack",s:"limbo alert",c:"dest"}]);
+  buildMiniFlow("mf-10",[{t:"Schedule / Webhook",s:"daily + on-cancel",c:"trigger"},{t:"Airtable",s:"check VA status",c:"proc"},{t:"Code",s:"evaluate criteria",c:"proc"},{t:"Gmail",s:"notifications",c:"dest"},{t:"Slack",s:"team alerts",c:"dest"}]);
+  buildMiniFlow("mf-11",[{t:"Schedule",s:"daily trigger",c:"trigger"},{t:"Airtable",s:"fetch placements",c:"proc"},{t:"Code",s:"score & rank",c:"proc"},{t:"Airtable",s:"update metrics",c:"dest"},{t:"Slack",s:"post digest",c:"dest"}]);
+  buildMiniFlow("mf-12",[{t:"Webhook",s:"Airtable change",c:"trigger"},{t:"HTTP Request",s:"Podio API call",c:"proc"},{t:"If",s:"check result",c:"proc"},{t:"Slack",s:"success / failure",c:"dest"}]);
+  buildMiniFlow("mf-13",[{t:"Error Trigger",s:"any workflow fails",c:"trigger"},{t:"Code",s:"format error",c:"proc"},{t:"ClickUp",s:"create bug ticket",c:"dest"},{t:"Slack",s:"alert channel",c:"dest"},{t:"Supabase",s:"log error",c:"dest"}]);
+
+  // ---- SVG ANIMATED MAP ----
+  var svg=document.getElementById("flow");
+  function el(tag,attrs,parent){
+    var e=document.createElementNS(NS,tag);
+    for(var k in attrs)e.setAttribute(k,attrs[k]);
+    (parent||svg).appendChild(e);return e;
+  }
+
+  // Nodes: TRIGGERS (left) | PROCESSING (center) | DESTINATIONS (right)
+  var NODES={
+    wh_at:    {x:30, y:52,  w:170,h:50,title:"Airtable Webhook",sub:"status change",       cls:"trigger"},
+    gmail_in: {x:30, y:138, w:170,h:50,title:"Gmail",           sub:"email trigger",       cls:"trigger"},
+    sched:    {x:30, y:224, w:170,h:50,title:"Scheduler",        sub:"daily / weekly cron", cls:"trigger"},
+    wh_stp:   {x:30, y:310, w:170,h:50,title:"STP Webhook",      sub:"STP status change",   cls:"trigger"},
+    err:      {x:30, y:396, w:170,h:50,title:"Error Trigger",    sub:"workflow failure",    cls:"trigger"},
+
+    email_eng:{x:460,y:52,  w:200,h:54,title:"Email Engine",     sub:"build · send · follow-up",cls:"proc"},
+    ai:       {x:460,y:160, w:200,h:54,title:"AI Agent",         sub:"LLM inference",       cls:"ai-node"},
+    stp_mgr:  {x:460,y:268, w:200,h:54,title:"STP Manager",      sub:"channel · notify · complete",cls:"proc"},
+    metrics:  {x:460,y:376, w:200,h:54,title:"Metrics Engine",    sub:"scoring · ranking · sync",cls:"proc"},
+    report:   {x:460,y:484, w:200,h:54,title:"Report Builder",    sub:"visual report cards", cls:"proc"},
+
+    airtable: {x:930,y:42,  w:170,h:50,title:"Airtable",         sub:"create / update",     cls:"dest"},
+    gmail_out:{x:930,y:128, w:170,h:50,title:"Gmail",            sub:"send email",          cls:"dest"},
+    slack:    {x:930,y:214, w:170,h:50,title:"Slack",             sub:"team notifications",  cls:"dest"},
+    gcal:     {x:930,y:300, w:170,h:50,title:"Google Calendar",   sub:"events & invites",    cls:"dest"},
+    podio:    {x:930,y:386, w:170,h:50,title:"Podio",             sub:"sync records",        cls:"dest"},
+    clickup:  {x:930,y:472, w:170,h:50,title:"ClickUp",           sub:"bug tickets",         cls:"dest"},
+    supa:     {x:1140,y:472,w:170,h:50,title:"Supabase",          sub:"error log",           cls:"dest"}
+  };
+
+  var K=90;
+  function anchor(id,side,off){
+    var n=NODES[id],o=off||0;
+    if(side==="r")return{x:n.x+n.w,y:n.y+n.h/2+o};
+    if(side==="l")return{x:n.x,y:n.y+n.h/2+o};
+    if(side==="t")return{x:n.x+n.w/2+o,y:n.y};
+    return{x:n.x+n.w/2+o,y:n.y+n.h};
+  }
+  function edgeD(from,fs,to,ts,fo,to2,k1,k2){
+    var a=anchor(from,fs,fo),b=anchor(to,ts,to2);
+    var c1=k1||K,c2=k2||K;
+    var dx=fs==="r"?1:fs==="l"?-1:0,dy=fs==="t"?-1:fs==="b"?1:0;
+    var dx2=ts==="r"?1:ts==="l"?-1:0,dy2=ts==="t"?-1:ts==="b"?1:0;
+    return"M "+a.x+" "+a.y+" C "+(a.x+dx*c1)+" "+(a.y+dy*c1)+", "+(b.x+dx2*c2)+" "+(b.y+dy2*c2)+", "+b.x+" "+b.y;
+  }
+
+  var EDGES={
+    e_wh_email:      {d:edgeD("wh_at","r","email_eng","l")},
+    e_gmail_ai:      {d:edgeD("gmail_in","r","ai","l")},
+    e_gmail_email:   {d:edgeD("gmail_in","r","email_eng","l",0,0,100,80)},
+    e_sched_metrics: {d:edgeD("sched","r","metrics","l")},
+    e_sched_ai:      {d:edgeD("sched","r","ai","l",0,0,140,120)},
+    e_sched_report:  {d:edgeD("sched","r","report","l",0,0,110,130)},
+    e_sched_stp:     {d:edgeD("sched","r","stp_mgr","l",0,0,80,60)},
+    e_stp_stp:       {d:edgeD("wh_stp","r","stp_mgr","l")},
+    e_wh_metrics:    {d:edgeD("wh_at","r","metrics","l",0,0,150,130)},
+    e_err_report:    {d:edgeD("err","r","report","l",0,0,120,100)},
+
+    e_email_gmail:   {d:edgeD("email_eng","r","gmail_out","l")},
+    e_email_at:      {d:edgeD("email_eng","r","airtable","l",0,0,80,60)},
+    e_email_slack:   {d:edgeD("email_eng","r","slack","l",0,0,110,130)},
+    e_email_gcal:    {d:edgeD("email_eng","r","gcal","l",0,0,140,160)},
+    e_ai_at:         {d:edgeD("ai","r","airtable","l",0,0,140,170)},
+    e_ai_gmail:      {d:edgeD("ai","r","gmail_out","l")},
+    e_ai_slack:      {d:edgeD("ai","r","slack","l",0,0,80,60)},
+    e_ai_report:     {d:edgeD("ai","b","report","t",0,0,50,50)},
+    e_stp_slack:     {d:edgeD("stp_mgr","r","slack","l")},
+    e_stp_gmail:     {d:edgeD("stp_mgr","r","gmail_out","l",0,0,130,160)},
+    e_metrics_at:    {d:edgeD("metrics","r","airtable","l",0,0,150,200)},
+    e_metrics_slack: {d:edgeD("metrics","r","slack","l",0,0,130,160)},
+    e_metrics_podio: {d:edgeD("metrics","r","podio","l",0,0,80,60)},
+    e_report_gmail:  {d:edgeD("report","r","gmail_out","l",0,0,180,220)},
+    e_report_slack:  {d:edgeD("report","r","slack","l",0,0,160,200)},
+    e_report_clickup:{d:edgeD("report","r","clickup","l",0,0,80,60)},
+    e_report_supa:   {d:edgeD("report","r","supa","l",0,0,60,40)}
+  };
+
+  el("text",{x:115,y:32,class:"t-col","text-anchor":"middle"}).textContent="TRIGGERS";
+  el("text",{x:560,y:32,class:"t-col","text-anchor":"middle"}).textContent="PROCESSING";
+  el("text",{x:1015,y:26,class:"t-col","text-anchor":"middle"}).textContent="DESTINATIONS";
+
+  var defs=el("defs",{});
+  var filt=el("filter",{id:"glow",x:"-50%",y:"-50%",width:"200%",height:"200%"},defs);
+  el("feGaussianBlur",{stdDeviation:"4",result:"blur"},filt);
+  var mg=el("feMerge",{},filt);
+  el("feMergeNode",{"in":"blur"},mg);
+  el("feMergeNode",{"in":"SourceGraphic"},mg);
+  var marker=el("marker",{id:"arrow",viewBox:"0 0 10 8",refX:"9",refY:"4",markerWidth:"8",markerHeight:"6",orient:"auto-start-reverse"},defs);
+  el("path",{d:"M 0 0 L 10 4 L 0 8 z",fill:"var(--rule)",class:"arrow-fill"},marker);
+
+  Object.keys(EDGES).forEach(function(id){
+    el("path",{id:id,d:EDGES[id].d,class:"edge","marker-end":"url(#arrow)"});
+  });
+  Object.keys(NODES).forEach(function(id){
+    var n=NODES[id];
+    var g=el("g",{id:"n_"+id,class:"node "+n.cls});
+    el("rect",{x:n.x,y:n.y,width:n.w,height:n.h,rx:8,class:"body"},g);
+    var t=el("text",{x:n.x+n.w/2,y:n.y+n.h/2-5,"text-anchor":"middle",class:"t-title"},g);
+    t.textContent=n.title;
+    var s=el("text",{x:n.x+n.w/2,y:n.y+n.h/2+11,"text-anchor":"middle",class:"t-sub"},g);
+    s.textContent=n.sub;
+  });
+  var pulse=el("circle",{id:"pulse",cx:0,cy:0,r:6});
+
+  // ---- workflow scenarios ----
+  var SCENARIOS=[
+    {key:"endorse",btn:"VA Endorsement",route:"Endorsement Pipeline",
+     desc:"When a VA is endorsed in Airtable, the email engine builds and sends a formatted endorsement email to the client with the VA's profile, then notifies the team on Slack.",
+     stat:"10 nodes · ~10-15 min saved per endorsement",
+     steps:[["n:wh_at"],["e:e_wh_email"],["n:email_eng"],["e:e_email_gmail","e:e_email_slack"],["n:gmail_out","n:slack"]]},
+    {key:"cal",btn:"Interview Scheduling",route:"Calendar Invite Pipeline",
+     desc:"Client confirms an interview — Airtable webhook triggers the email engine which looks up both parties, creates a Google Calendar event, and sends invites via Gmail.",
+     stat:"13 nodes · zero scheduling errors",
+     steps:[["n:wh_at"],["e:e_wh_email"],["n:email_eng"],["e:e_email_gcal","e:e_email_gmail"],["n:gcal","n:gmail_out"]]},
+    {key:"ready",btn:"Placement-Ready",route:"Placement-Ready Notification",
+     desc:"VA reaches 'Placement-Ready' status — the email engine sends an immediate notification email, waits, then sends a follow-up reminder.",
+     stat:"7 nodes · two-touch notification",
+     steps:[["n:wh_at"],["e:e_wh_email"],["n:email_eng"],["e:e_email_gmail","e:e_email_slack"],["n:gmail_out","n:slack"]]},
+    {key:"logistics",btn:"Logistics & Onboarding",route:"Onboarding Email Suite",
+     desc:"Single Airtable trigger fires the email engine which sends logistics to client, endorsement to ops, and congratulations to the VA — plus creation of Slack channel and a Slack notification.",
+     stat:"34 nodes · 20-30 min → seconds",
+     steps:[["n:wh_at"],["e:e_wh_email"],["n:email_eng"],["e:e_email_gmail","e:e_email_slack","e:e_email_at"],["n:gmail_out","n:slack","n:airtable"]]},
+    {key:"stp",btn:"STP Lifecycle",route:"STP Channel & Notifications",
+     desc:"STP status changes trigger the STP manager which auto-provisions Slack channels, sends request emails, and posts completion notifications.",
+     stat:"20 nodes · every STP gets a channel",
+     steps:[["n:wh_stp"],["e:e_stp_stp"],["n:stp_mgr"],["e:e_stp_slack","e:e_stp_gmail"],["n:slack","n:gmail_out"]]},
+    {key:"stpreport",btn:"STP Reports",route:"STP Daily/Weekly Reports",
+     desc:"Schedule triggers the metrics engine which computes STP stats, then the report builder renders visual report cards distributed via Gmail and Slack.",
+     stat:"25 nodes · daily + weekly cadence",
+     steps:[["n:sched"],["e:e_sched_report"],["n:report"],["e:e_report_gmail","e:e_report_slack"],["n:gmail_out","n:slack"]]},
+    {key:"limbo",btn:"Limbo Management",route:"Limbo Notifier & Removal",
+     desc:"Weekly schedule queries limbo VAs via the metrics engine, posts alerts to Slack. Status changes trigger formal removal emails via the email engine.",
+     stat:"7 nodes · no VA stalls unnoticed",
+     steps:[["n:sched"],["e:e_sched_metrics"],["n:metrics"],["e:e_metrics_slack","e:e_metrics_at"],["n:slack","n:airtable"]]},
+    {key:"readiness",btn:"VA Readiness",route:"VA Readiness & Cancellation",
+     desc:"Weekly readiness checks evaluate VAs against placement criteria. Cancellations fire instant email + Slack alerts. Scores written back to Airtable.",
+     stat:"21 nodes · consistent daily evaluation",
+     steps:[["n:sched"],["e:e_sched_metrics"],["n:metrics"],["e:e_metrics_at","e:e_metrics_slack"],["n:airtable","n:slack"]]},
+    {key:"digest",btn:"Daily Health Digest",route:"Placements Health Digest",
+     desc:"Two coordinated workflows: the metrics engine scores every active placement, updates Airtable, then posts a prioritized Slack digest.",
+     stat:"30 nodes · ~20-30 min saved daily",
+     steps:[["n:sched"],["e:e_sched_metrics"],["n:metrics"],["e:e_metrics_at","e:e_metrics_slack"],["n:airtable","n:slack"]]},
+    {key:"podio",btn:"Podio Automation",route:"Real-Time Podio Sync",
+     desc:"Airtable webhook triggers the metrics engine which pushes changes to Podio in real time and notifies the team on Slack.",
+     stat:"12 nodes · real-time sync",
+     steps:[["n:wh_at"],["e:e_wh_metrics"],["n:metrics"],["e:e_metrics_podio","e:e_metrics_slack"],["n:podio","n:slack"]]},
+    {key:"error",btn:"Error Monitor",route:"Error Monitoring",
+     desc:"When any placements workflow fails, the report builder logs the error in Supabase, files a ClickUp bug ticket, and alerts the team on Slack.",
+     stat:"6 nodes · zero-delay detection",
+     steps:[["n:err"],["e:e_err_report"],["n:report"],["e:e_report_clickup","e:e_report_supa","e:e_report_slack"],["n:clickup","n:supa","n:slack"]]},
+    {key:"ai_insights",btn:"AI Shortlisting Insights",route:"AI Shortlisting Insights Fetcher",isAI:true,
+     desc:"Every client reply to a shortlisting email is read by an AI agent (Groq) which classifies intent — accept, reject, or clarification — and updates the Airtable record.",
+     stat:"12 nodes · Groq · 100% capture rate",
+     steps:[["n:gmail_in"],["e:e_gmail_ai"],["n:ai"],["e:e_ai_at"],["n:airtable"]]},
+    {key:"ai_pr",btn:"AI PR Summary",route:"Daily AI PR Summary",isAI:true,
+     desc:"Daily schedule triggers an OpenAI agent that analyzes all placement records, writes an executive narrative summary, renders a visual report card, and delivers it to stakeholders.",
+     stat:"15 nodes · OpenAI · net-new capability",
+     steps:[["n:sched"],["e:e_sched_ai"],["n:ai"],["e:e_ai_report"],["n:report"],["e:e_report_gmail","e:e_report_slack"],["n:gmail_out","n:slack"]]}
+  ];
+
+  var qbar=document.getElementById("qbar");
+  var capRoute=document.getElementById("cap-route");
+  var capDesc=document.getElementById("cap-desc");
+  var capStat=document.getElementById("cap-stat");
+
+  SCENARIOS.forEach(function(sc){
+    var b=document.createElement("button");
+    b.className="qbtn"+(sc.isAI?" ai-q":"");
+    b.textContent=sc.btn;
+    b.dataset.key=sc.key;
+    b.addEventListener("click",function(){play(sc)});
+    qbar.appendChild(b);
+  });
+
+  var animId=0;
+  var playAllTimer=null;
+
+  function clearAnim(){
+    animId++;
+    if(playAllTimer){clearTimeout(playAllTimer);playAllTimer=null;}
+    svg.classList.remove("running");
+    svg.querySelectorAll(".on").forEach(function(e){e.classList.remove("on")});
+    svg.querySelectorAll(".ai-edge").forEach(function(e){e.classList.remove("ai-edge")});
+    pulse.classList.remove("visible","ai-pulse");
+    qbar.querySelectorAll(".qbtn").forEach(function(b){b.classList.remove("active")});
+  }
+
+  function animateAlongPath(pathElem,dur,myId,cb){
+    var len=pathElem.getTotalLength();
+    var t0=null;
+    pulse.classList.add("visible");
+    function frame(ts){
+      if(myId!==animId)return;
+      if(!t0)t0=ts;
+      var p=Math.min((ts-t0)/dur,1);
+      var pt=pathElem.getPointAtLength(p*len);
+      pulse.setAttribute("cx",pt.x);
+      pulse.setAttribute("cy",pt.y);
+      if(p<1)requestAnimationFrame(frame);
+      else if(cb)cb();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function runSteps(steps,isAI,myId,done){
+    var i=0;
+    function next(){
+      if(myId!==animId||i>=steps.length){
+        if(myId===animId)pulse.classList.remove("visible");
+        if(done)done();
+        return;
+      }
+      var ids=steps[i];i++;
+      var nodes=[],edges=[];
+      ids.forEach(function(id){
+        var pre=id.substring(0,2),eid=id.substring(2),elem;
+        if(pre==="n:"){
+          elem=document.getElementById("n_"+eid);
+          if(elem){elem.classList.add("on");nodes.push(eid);}
+        }else{
+          elem=document.getElementById(eid);
+          if(elem){elem.classList.add("on");if(isAI)elem.classList.add("ai-edge");edges.push(elem);}
+        }
+      });
+      if(edges.length>0){
+        var done0=0,total=edges.length;
+        edges.forEach(function(pathEl,idx){
+          if(idx===0){
+            animateAlongPath(pathEl,380,myId,function(){done0++;if(done0>=total)setTimeout(next,80);});
+          }else{
+            setTimeout(function(){done0++;if(done0>=total&&myId===animId)setTimeout(next,80);},380);
+          }
+        });
+      }else if(nodes.length>0){
+        var nd=NODES[nodes[0]];
+        if(nd){pulse.setAttribute("cx",nd.x+nd.w/2);pulse.setAttribute("cy",nd.y+nd.h/2);pulse.classList.add("visible");}
+        setTimeout(next,320);
+      }else{setTimeout(next,200);}
+    }
+    next();
+  }
+
+  function play(sc,cb){
+    clearAnim();
+    qbar.querySelectorAll(".qbtn").forEach(function(b){if(b.dataset.key===sc.key)b.classList.add("active")});
+    capRoute.textContent=sc.route;
+    capRoute.style.background=sc.isAI?"var(--ai-soft)":"";
+    capRoute.style.color=sc.isAI?"var(--ai)":"";
+    capDesc.textContent=sc.desc;
+    capStat.textContent=sc.stat;
+    if(sc.isAI)pulse.classList.add("ai-pulse");
+    svg.classList.add("running");
+    var myId=animId;
+    runSteps(sc.steps,sc.isAI,myId,cb);
+  }
+
+  function playAll(){
+    var idx=0;
+    function nextScenario(){
+      if(idx>=SCENARIOS.length)return;
+      play(SCENARIOS[idx],function(){idx++;if(idx<SCENARIOS.length){playAllTimer=setTimeout(nextScenario,900);}});
+    }
+    nextScenario();
+  }
+
+  var pab=document.createElement("button");
+  pab.className="qbtn playall";
+  pab.textContent="Play All";
+  pab.addEventListener("click",playAll);
+  qbar.insertBefore(pab,qbar.firstChild);
+
+})();
+</script>

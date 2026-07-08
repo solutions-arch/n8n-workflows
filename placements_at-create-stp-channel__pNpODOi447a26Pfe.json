@@ -1,0 +1,816 @@
+{
+  "updatedAt": "2026-07-04T13:11:42.544Z",
+  "createdAt": "2026-06-15T20:29:51.913Z",
+  "id": "pNpODOi447a26Pfe",
+  "name": "[AT] Create STP Channel",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-stp-channel",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -144,
+        16
+      ],
+      "id": "164ff0e7-ba30-4131-a04d-b43c3fd39493",
+      "name": "Webhook",
+      "webhookId": "d3024ee8-f4f3-4920-ad4c-dbb676259e17"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fields = $input.first().json.body.fields;\nconst pick = (val) => Array.isArray(val) ? (val[0] ?? null) : (val ?? null);\nconst SLACK = {\n  boom:  \"U03TQJSAD1S\",\n  jaja:  \"U04PBE8NDMY\",\n  joey:  \"U03MW6CT03U\",\n  green: \"U05E7RU1JAE\",\n  lyz:   \"U0AP65WUPMF\",\n  aja:   \"U05J6CWMM2A\",\n  jk:    \"U08PB377Y94\",\n  // bam:   \"U0ACU6YF12L\",\n  ace:   \"U05M03YMMG9\",\n  ck:    \"U07Q1JXLNHM\",\n  alex:  \"U09FT84PWHE\",\n  ella:  \"U0B1RNVFPJA\",\n  fiona: \"U079HKXJUF4\",\n  chi:   \"U091Q0QFNKE\",\n  jesy:  \"U03MFHTSS79\",\n  marc:  \"U0B1RNWU5HU\",\n  steve: \"U03N8RAV2KB\",\n  wendy: \"U03NFL9V3RQ\",\n};\n\nconst vaName             = pick(fields[\"Virtual Assistant (from Placed VA)\"]);\nconst clientName         = pick(fields[\"Client (text)\"]);\nconst role               = pick(fields[\"Role\"]);\nconst vaStartDate        = fields[\"VA Start Date\"] ?? null;\nconst normalizedSchedule = fields[\"Normalized Schedule\"] ?? null;\nconst clientRate         = pick(fields[\"Final Client Rate\"]) ?? pick(fields[\"Client Rate\"]);\nconst vaRate             = pick(fields[\"Final SV Base Rate\"]) ?? pick(fields[\"SV Base Rate\"]);\nconst personalEmail      = fields[\"Personal Email\"] ?? null;\nconst phoneNumber        = fields[\"Phone Number\"] ?? null;\nconst processEngineer    = pick(fields[\"Process Engineer\"]);\n\n// \u2705 Fix: sanitize special characters (e.g. \"&\") from channel name\nconst sanitize = (str) => str\n  .toLowerCase()\n  .replace(/&/g, 'and')         // & \u2192 \"and\"\n  .replace(/[^a-z0-9_-]/g, '')  // remove any remaining invalid chars\n  .replace(/_+/g, '_')          // collapse multiple underscores\n  .replace(/^_|_$/g, '');       // trim leading/trailing underscores\n\nconst channelName = `stp-${sanitize(clientName)}-${sanitize(role)}`;\n\nconst message = `Hi Everyone!\nWe have a Straight-to-Placements VA for *${clientName}*, *${vaName}*. I need help setting them up. Below are the work details for ${vaName}:\n*Role*: ${role}\n*Start Date*: ${vaStartDate ?? \"TBD\"}\n*Work Schedule*: ${normalizedSchedule ?? \"TBD\"}\n*Client Rate*: $${clientRate}/hr\n*${vaName}'s Contact Details*:\n${personalEmail ?? \"\u2014\"}\n${phoneNumber ?? \"\u2014\"}\n*VA Rate*: $${vaRate}/hr\n*To-dos*:\n<@${SLACK.jaja}> - We'll be requesting a Scale Virtually email\n<@${SLACK.joey}> (Contractor Services) and <@${SLACK.green}> - schedule a NCO and Job Offer meeting\n@Process Engineer - once we're done sending the logistics email to the client, kindly schedule the Process Onboarding Course\n<@${SLACK.boom}> - once everything is clear, kindly schedule an Onboarding meeting\nPlease let us know if there's anything else that I can help you with.\n- Placements Team`;\n\nreturn [{\n  json: {\n    vaName,\n    clientName,\n    role,\n    vaStartDate,\n    normalizedSchedule,\n    clientRate,\n    vaRate,\n    personalEmail,\n    phoneNumber,\n    processEngineer,\n    channelName,\n    stpMessage: message,\n    slackMemberIds: Object.values(SLACK),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "e11ec6fe-2bcb-4c6b-ad3a-214fad9cb22d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "={{ $('Create a channel').item.json.id }}",
+          "mode": "id"
+        },
+        "text": "={{ $('Code in JavaScript').item.json.stpMessage }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "da191de9-d1f4-46a5-b2a1-0e19155c39f9",
+      "name": "Send a message",
+      "webhookId": "88ff1361-32f3-4af6-9f2a-1705b6e4e170",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "channelId": "={{ $json.channelName }}",
+        "channelVisibility": "private"
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "988c4d13-9a86-44d0-a055-bb772af61743",
+      "name": "Create a channel",
+      "webhookId": "2e89cf64-4599-413c-a4ce-79159abd9efb",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "invite",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "userIds": "={{ $('Code in JavaScript').item.json.slackMemberIds }}"
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        16
+      ],
+      "id": "adfe1746-d038-4581-971b-58d02bbb56c7",
+      "name": "Invite a user to a channel",
+      "webhookId": "8bb0f168-67bc-493c-8128-e8b58c61ea10",
+      "credentials": {
+        "slackApi": {
+          "id": "fCZASZSmQRqVQSXH",
+          "name": "SVPortal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c129c3d9-1c6f-41e0-98ff-9ac8726c04d6",
+              "leftValue": "={{ $json.body.fields[\"VA Source\"] }}",
+              "rightValue": "Straight-To-Placements",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        64,
+        16
+      ],
+      "id": "58770b79-5612-4928-9358-fc89c26f6877",
+      "name": "Filter"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a channel": {
+      "main": [
+        [
+          {
+            "node": "Invite a user to a channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invite a user to a channel": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": true,
+    "errorWorkflow": "toZk8fLW9s9OWJYj",
+    "saveExecutionProgress": true
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "svsolutionarchitects.app.n8n.cloud",
+            "user-agent": "Mozilla/5.0 (compatible; AirtableScripting; +https://airtable.com/developers/scripting;)",
+            "content-length": "5280",
+            "accept": "*/*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1; subreqs=1",
+            "cf-connecting-ip": "54.205.187.132",
+            "cf-ew-via": "15",
+            "cf-ipcountry": "US",
+            "cf-ray": "a13dc0ac2aacf26e-IAD",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-worker": "n8n.cloud",
+            "content-type": "application/json",
+            "x-airtable-source": "apptuAm73VyH7pcHA/wflOPm2V3lrJjd3QK",
+            "x-forwarded-for": "54.205.187.132, 172.71.222.60",
+            "x-forwarded-host": "svsolutionarchitects.app.n8n.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "traefik-prod-users-gwc-43-58786f47b8-svtx8",
+            "x-is-trusted": "yes",
+            "x-real-ip": "54.205.187.132"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "tableName": "VA Placements",
+            "recordId": "recS9cSCyQjg8GI2V",
+            "fields": {
+              "Placements ID": "Charles Segovia for Jake McKinney \u2013 AI Systems Builder \u2013 First - 1",
+              "PLACEMENTS Requirements": [
+                {
+                  "id": "recUOtLH78CYTL7QQ",
+                  "name": "Jake McKinney \u2013 AI Systems Builder \u2013 First - 1"
+                }
+              ],
+              "PL Status": {
+                "id": "selJBfwsJRZ5AHZZo",
+                "name": "Awaiting Endorsement",
+                "color": "grayLight1"
+              },
+              "Replaced By": null,
+              "Notes": null,
+              "Active VA Name": null,
+              "REQUIRED MVA (from PLACEMENTS Requirements)": [
+                1
+              ],
+              "End Date with Client": null,
+              "Reason for MVA Cancellation": null,
+              "PL - Client Interviews": [
+                {
+                  "id": "reckydkXnvqhKzkQL",
+                  "name": "Charles Segovia - CI Batch #1 - Jake McKinney \u2013 AI Systems Builder \u2013 First - 1"
+                }
+              ],
+              "PLACEMENTS Requirements (from VA) (from PL - Client Interviews)": [
+                "recUOtLH78CYTL7QQ"
+              ],
+              "Virtual Assistants (from PL - Client Interviews)": [
+                "recdDFa7hG5vo0B7M"
+              ],
+              "Created": "2026-06-30T14:03:18.000Z",
+              "PDEV Requirement": [
+                "Jake McKinney - AI Systems Builder"
+              ],
+              "PLACEMENT TYPE (from PLACEMENTS Requirements)": [
+                "First"
+              ],
+              "Clients": [
+                "recM9uhr4q74K7mxg"
+              ],
+              "Replacement Requirements": null,
+              "MVA Pair being REPLACED Rollup (from PLACEMENTS Requirements)": [
+                null
+              ],
+              "Created By": {
+                "id": "usrWORKFLOWEXESVC",
+                "email": "automations@noreply.airtable.com",
+                "permissionLevel": "none",
+                "name": "Automations",
+                "profilePicUrl": "https://static.airtable.com/images/userIcons/workflows_icon@2x.png"
+              },
+              "Placed VA (from CI)": [
+                "recdDFa7hG5vo0B7M"
+              ],
+              "Placed VA": [
+                {
+                  "id": "recdDFa7hG5vo0B7M",
+                  "name": "Charles Segovia"
+                }
+              ],
+              "Virtual Assistants 2": null,
+              "PL STAGE (from PLACEMENTS Requirements)": [
+                "PL - Ongoing"
+              ],
+              "Role": [
+                "AI Systems Builder"
+              ],
+              "PL - Shortlisting": null,
+              "Logistics Needed (from PLACEMENTS Requirements)": null,
+              "Interviewer Contact Details (from PLACEMENTS Requirements)": null,
+              "Requirement POC / POCs (Interviewers from Placements Requirements)": null,
+              "Finance Notes": null,
+              "Scope Type": null,
+              "Company Address": [
+                "2607 Wolflin Ave #287"
+              ],
+              "SUF": [
+                0
+              ],
+              "Full/Part Time": [
+                "Full Time VA"
+              ],
+              "Time Zone": [
+                "CST"
+              ],
+              "JD + Client Profile": [
+                "NA"
+              ],
+              "Client Rate": [
+                25
+              ],
+              "PL STAGE": [
+                "PL - Ongoing"
+              ],
+              "Company": [
+                "recuDKmivqCWCmVM7"
+              ],
+              "Account Owner Email": [
+                "jake@rspur.com"
+              ],
+              "Account Owner Contact Details": [
+                "(512) 636-4906"
+              ],
+              "Number of VA/s": 1,
+              "SV Base Rate": [
+                15
+              ],
+              "Phone Number": [
+                "+63 923 738 8894"
+              ],
+              "SV Email": null,
+              "VA Source": [
+                "Straight-To-Placements"
+              ],
+              "Virtual Assistant (from Placed VA)": [
+                "Charles Segovia"
+              ],
+              "PAD": null,
+              "Docusign": null,
+              "Logistics": null,
+              "Logistics For VA": null,
+              "VA Start Date": "2026-07-02",
+              "Schedule for VA": null,
+              "Activity Logs": null,
+              "Logistics Request Status": null,
+              "Logistics Request Sent?": null,
+              "Logistics Request Sent At": null,
+              "Resend Logistics Request?": null,
+              "VA Image": null,
+              "Endorsement Email Status": null,
+              "Endorsement Email Sent?": null,
+              "Endorsement Email Sent At": null,
+              "Resend Endorsement Email?": null,
+              "Endorsed to OPS": null,
+              "Congrats Email Status": null,
+              "Congrats Email Sent?": null,
+              "Congrats Email Sent At": null,
+              "Resend Congrats Email?": null,
+              "NCO": null,
+              "Podio Upload": null,
+              "Record ID": "recS9cSCyQjg8GI2V",
+              "MVA Cancellation": null,
+              "Other Recipient": null,
+              "For Scrubbing?": null,
+              "Fields with Missing Data": null,
+              "Last Scrubbed At": null,
+              "Profit Margin": 10,
+              "Profit Justification": null,
+              "Profit Indicator": "\ud83d\udfe2 High Profit",
+              "Final Client Rate": null,
+              "Final SV Base Rate": 18,
+              "Role (Rollup)": [
+                "AI Systems Builder"
+              ],
+              "Last Modified": "2026-06-30T14:07:01.000Z",
+              "Virtual Assistants copy": null,
+              "Personal Email": [
+                "segoviacharles01@gmail.com"
+              ],
+              "VA Tenure": null,
+              "Company (text)": [
+                "Rocking Spur Homes LLC"
+              ],
+              "Client (text)": [
+                "Jake McKinney"
+              ],
+              "Client OT Rate": 37.5,
+              "SV OT Rate": 22.5,
+              "Rest Days": null,
+              "Number of Working Hours": null,
+              "TA STP Requests (from PLACEMENTS Requirements)": [
+                "recPIl85iAfxX9Zwq"
+              ],
+              "Day 1 Schedule": null,
+              "Day 2 Schedule": null,
+              "Day 3 Schedule": null,
+              "Day 4 Schedule": null,
+              "Day 5 Schedule": null,
+              "JD + C (from PLACEMENTS Requirements)": null,
+              "Client Contract (Docusign)": null,
+              "VA Contract (Docusign)": null,
+              "Logistics Email Preview": null,
+              "POC Name (from PLACEMENTS Requirements)": null,
+              "POC Position (from PLACEMENTS Requirements)": null,
+              "POC Email (from PLACEMENTS Requirements)": null,
+              "POC Contact Number (from PLACEMENTS Requirements)": null,
+              "SC Slack User ID": null,
+              "YEAR Endorsed": {
+                "specialValue": "NaN"
+              },
+              "Candidate Request Date": [
+                "2026-06-22"
+              ],
+              "VA Resignation Reason": null,
+              "VA Replacement Reason": null,
+              "Success Coach (from Clients) (from PLACEMENTS Requirements)": null,
+              "VA Cancellation Reason": null,
+              "Success Coach (Text)": null,
+              "Additional Notes": null,
+              "Podio Record ID": null,
+              "Podio Data": null,
+              "VA Placements": null,
+              "From field: VA Placements": null,
+              "VA Task List": null,
+              "End Time": null,
+              "Start Time": null,
+              "Rest Day 2": null,
+              "Rest Day 1": null,
+              "Work Days": null,
+              "MVA Start Date": null,
+              "MVA Type": null,
+              "SV Base Rate Contract (from Podio Data)": null,
+              "SV Current Rate Currency": null,
+              "SV Current Rate Amount": null,
+              "Client Rate Currency": null,
+              "Client Rate Amount": null,
+              "Work Hours": null,
+              "MVA (from Podio Data)": null,
+              "MVA Contract": null,
+              "VA Email Address": null,
+              "Client Billing Email Address": null,
+              "Client Email Address": null,
+              "Company Name": null,
+              "Client Name": null,
+              "Contractor Full Name": null,
+              "Match Key": "|jake@rspur.com",
+              "Podio Data Record ID": null,
+              "Slack Channel ID": null,
+              "Existing Slack Channel ID": null,
+              "Slack User ID": null,
+              "MVA Pair Being Replaced Slack User ID": null,
+              "Process Engineer": [
+                "Jesy Jopio"
+              ],
+              "Normalized Schedule": "Monday - Friday: 9:00 am - 6:00 pm MST"
+            }
+          },
+          "webhookUrl": "https://svsolutionarchitects.app.n8n.cloud/webhook/create-stp-channel",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Create a channel": [
+      {
+        "json": {
+          "id": "C0BE4A2CD46",
+          "created": 1782828609,
+          "creator": "U09DY2Q1FN3",
+          "is_org_shared": false,
+          "is_im": false,
+          "context_team_id": "T03N8PRACSD",
+          "updated": 1782828609684,
+          "name": "stp-jakemckinney-aisystemsbuilder",
+          "name_normalized": "stp-jakemckinney-aisystemsbuilder",
+          "is_channel": true,
+          "is_group": false,
+          "is_mpim": false,
+          "is_private": true,
+          "is_archived": false,
+          "is_general": false,
+          "is_shared": false,
+          "is_ext_shared": false,
+          "unlinked": 0,
+          "is_pending_ext_shared": false,
+          "pending_shared": [],
+          "parent_conversation": null,
+          "purpose": {
+            "value": "",
+            "creator": "",
+            "last_set": 0
+          },
+          "topic": {
+            "value": "",
+            "creator": "",
+            "last_set": 0
+          },
+          "shared_team_ids": [
+            "T03N8PRACSD"
+          ],
+          "pending_connected_team_ids": [],
+          "is_member": true,
+          "is_open": true,
+          "last_read": "0000000000.000000",
+          "priority": 0
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "versionId": "bbcb11cb-2aba-4000-9deb-d7be1a799144",
+  "activeVersionId": "bbcb11cb-2aba-4000-9deb-d7be1a799144",
+  "versionCounter": 27,
+  "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-15T20:29:51.919Z",
+      "createdAt": "2026-06-15T20:29:51.919Z",
+      "role": "workflow:owner",
+      "workflowId": "pNpODOi447a26Pfe",
+      "projectId": "MnrYTtvkn4gmLPx6",
+      "project": {
+        "updatedAt": "2025-09-25T13:21:38.033Z",
+        "createdAt": "2025-09-25T13:21:38.033Z",
+        "id": "MnrYTtvkn4gmLPx6",
+        "name": "My project",
+        "type": "team",
+        "icon": {
+          "type": "icon",
+          "value": "layers"
+        },
+        "description": null,
+        "projectRelations": [
+          {
+            "updatedAt": "2025-09-25T13:21:38.038Z",
+            "createdAt": "2025-09-25T13:21:38.038Z",
+            "userId": "16f0560f-622c-469e-b224-0a5affca8f72",
+            "projectId": "MnrYTtvkn4gmLPx6",
+            "user": {
+              "updatedAt": "2026-07-08T04:02:02.000Z",
+              "createdAt": "2025-09-03T13:17:32.990Z",
+              "id": "16f0560f-622c-469e-b224-0a5affca8f72",
+              "email": "solutions@scalevirtually.com",
+              "firstName": "Solution",
+              "lastName": "Architects",
+              "personalizationAnswers": null,
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "WjBrrZhkOqOXwPCx",
+                "userActivatedAt": 1756930800597,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1776797401530
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-07-07",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": {
+    "updatedAt": "2026-07-04T13:11:42.546Z",
+    "createdAt": "2026-07-04T13:11:42.546Z",
+    "versionId": "bbcb11cb-2aba-4000-9deb-d7be1a799144",
+    "workflowId": "pNpODOi447a26Pfe",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "create-stp-channel",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -144,
+          16
+        ],
+        "id": "164ff0e7-ba30-4131-a04d-b43c3fd39493",
+        "name": "Webhook",
+        "webhookId": "d3024ee8-f4f3-4920-ad4c-dbb676259e17"
+      },
+      {
+        "parameters": {
+          "jsCode": "const fields = $input.first().json.body.fields;\nconst pick = (val) => Array.isArray(val) ? (val[0] ?? null) : (val ?? null);\nconst SLACK = {\n  boom:  \"U03TQJSAD1S\",\n  jaja:  \"U04PBE8NDMY\",\n  joey:  \"U03MW6CT03U\",\n  green: \"U05E7RU1JAE\",\n  lyz:   \"U0AP65WUPMF\",\n  aja:   \"U05J6CWMM2A\",\n  jk:    \"U08PB377Y94\",\n  // bam:   \"U0ACU6YF12L\",\n  ace:   \"U05M03YMMG9\",\n  ck:    \"U07Q1JXLNHM\",\n  alex:  \"U09FT84PWHE\",\n  ella:  \"U0B1RNVFPJA\",\n  fiona: \"U079HKXJUF4\",\n  chi:   \"U091Q0QFNKE\",\n  jesy:  \"U03MFHTSS79\",\n  marc:  \"U0B1RNWU5HU\",\n  steve: \"U03N8RAV2KB\",\n  wendy: \"U03NFL9V3RQ\",\n};\n\nconst vaName             = pick(fields[\"Virtual Assistant (from Placed VA)\"]);\nconst clientName         = pick(fields[\"Client (text)\"]);\nconst role               = pick(fields[\"Role\"]);\nconst vaStartDate        = fields[\"VA Start Date\"] ?? null;\nconst normalizedSchedule = fields[\"Normalized Schedule\"] ?? null;\nconst clientRate         = pick(fields[\"Final Client Rate\"]) ?? pick(fields[\"Client Rate\"]);\nconst vaRate             = pick(fields[\"Final SV Base Rate\"]) ?? pick(fields[\"SV Base Rate\"]);\nconst personalEmail      = fields[\"Personal Email\"] ?? null;\nconst phoneNumber        = fields[\"Phone Number\"] ?? null;\nconst processEngineer    = pick(fields[\"Process Engineer\"]);\n\n// \u2705 Fix: sanitize special characters (e.g. \"&\") from channel name\nconst sanitize = (str) => str\n  .toLowerCase()\n  .replace(/&/g, 'and')         // & \u2192 \"and\"\n  .replace(/[^a-z0-9_-]/g, '')  // remove any remaining invalid chars\n  .replace(/_+/g, '_')          // collapse multiple underscores\n  .replace(/^_|_$/g, '');       // trim leading/trailing underscores\n\nconst channelName = `stp-${sanitize(clientName)}-${sanitize(role)}`;\n\nconst message = `Hi Everyone!\nWe have a Straight-to-Placements VA for *${clientName}*, *${vaName}*. I need help setting them up. Below are the work details for ${vaName}:\n*Role*: ${role}\n*Start Date*: ${vaStartDate ?? \"TBD\"}\n*Work Schedule*: ${normalizedSchedule ?? \"TBD\"}\n*Client Rate*: $${clientRate}/hr\n*${vaName}'s Contact Details*:\n${personalEmail ?? \"\u2014\"}\n${phoneNumber ?? \"\u2014\"}\n*VA Rate*: $${vaRate}/hr\n*To-dos*:\n<@${SLACK.jaja}> - We'll be requesting a Scale Virtually email\n<@${SLACK.joey}> (Contractor Services) and <@${SLACK.green}> - schedule a NCO and Job Offer meeting\n@Process Engineer - once we're done sending the logistics email to the client, kindly schedule the Process Onboarding Course\n<@${SLACK.boom}> - once everything is clear, kindly schedule an Onboarding meeting\nPlease let us know if there's anything else that I can help you with.\n- Placements Team`;\n\nreturn [{\n  json: {\n    vaName,\n    clientName,\n    role,\n    vaStartDate,\n    normalizedSchedule,\n    clientRate,\n    vaRate,\n    personalEmail,\n    phoneNumber,\n    processEngineer,\n    channelName,\n    stpMessage: message,\n    slackMemberIds: Object.values(SLACK),\n  }\n}];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          416,
+          0
+        ],
+        "id": "e11ec6fe-2bcb-4c6b-ad3a-214fad9cb22d",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "select": "user",
+          "user": {
+            "__rl": true,
+            "value": "={{ $('Create a channel').item.json.id }}",
+            "mode": "id"
+          },
+          "text": "={{ $('Code in JavaScript').item.json.stpMessage }}",
+          "otherOptions": {
+            "includeLinkToWorkflow": false
+          }
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          1168,
+          0
+        ],
+        "id": "da191de9-d1f4-46a5-b2a1-0e19155c39f9",
+        "name": "Send a message",
+        "webhookId": "88ff1361-32f3-4af6-9f2a-1705b6e4e170",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "channel",
+          "channelId": "={{ $json.channelName }}",
+          "channelVisibility": "private"
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          624,
+          0
+        ],
+        "id": "988c4d13-9a86-44d0-a055-bb772af61743",
+        "name": "Create a channel",
+        "webhookId": "2e89cf64-4599-413c-a4ce-79159abd9efb",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "resource": "channel",
+          "operation": "invite",
+          "channelId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          },
+          "userIds": "={{ $('Code in JavaScript').item.json.slackMemberIds }}"
+        },
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2.4,
+        "position": [
+          880,
+          16
+        ],
+        "id": "adfe1746-d038-4581-971b-58d02bbb56c7",
+        "name": "Invite a user to a channel",
+        "webhookId": "8bb0f168-67bc-493c-8128-e8b58c61ea10",
+        "credentials": {
+          "slackApi": {
+            "id": "fCZASZSmQRqVQSXH",
+            "name": "SVPortal"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "c129c3d9-1c6f-41e0-98ff-9ac8726c04d6",
+                "leftValue": "={{ $json.body.fields[\"VA Source\"] }}",
+                "rightValue": "Straight-To-Placements",
+                "operator": {
+                  "type": "array",
+                  "operation": "contains",
+                  "rightType": "any"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.filter",
+        "typeVersion": 2.3,
+        "position": [
+          64,
+          16
+        ],
+        "id": "58770b79-5612-4928-9358-fc89c26f6877",
+        "name": "Filter"
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Filter",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Create a channel",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create a channel": {
+        "main": [
+          [
+            {
+              "node": "Invite a user to a channel",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Invite a user to a channel": {
+        "main": [
+          [
+            {
+              "node": "Send a message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "authors": "Solution Architects",
+    "name": null,
+    "description": null
+  }
+}
