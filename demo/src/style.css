@@ -250,7 +250,7 @@ h1, h2, h3 { font-weight: 720; letter-spacing: -.01em; }
 .map-col { position: sticky; top: 78px; }
 @media (max-width: 1080px) { .map-col { position: static; } }
 .map-panel { display: flex; flex-direction: column; }
-.board { position: relative; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); overflow-x: auto; }
+.board { position: relative; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); overflow-x: auto; padding-bottom: 64px; }
 /* direct-child selector so this doesn't also blow up the board-expand icon svg nested inside the button below */
 .board > svg { display: block; min-width: 760px; width: 100%; height: auto; }
 
