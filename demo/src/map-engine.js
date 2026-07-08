@@ -5,6 +5,13 @@
 const NS = "http://www.w3.org/2000/svg";
 const XLINK = "http://www.w3.org/1999/xlink";
 
+// Scenario-animation pacing — tune here rather than scattering magic numbers.
+const EDGE_TRAVEL_MS = 650; // time for the pulse to travel along one edge
+const STEP_GAP_MS = 150; // pause after a step's edges finish, before the next step
+const NODE_PAUSE_MS = 550; // pause on a node-only step (no edges to travel)
+const EMPTY_PAUSE_MS = 350; // pause on a step with nothing to highlight
+const LOOP_RESTART_GAP_MS = 900; // pause before a standalone play loops back to the start
+
 function addIcon(parent, key, x, y, w, h, cls) {
   const u = document.createElementNS(NS, "use");
   u.setAttributeNS(XLINK, "href", "#icon-" + key);
@@ -123,9 +130,20 @@ export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
   function runSteps(steps, isAI, myId, done) {
     let i = 0;
     function next() {
-      if (myId !== animId || i >= steps.length) {
-        if (myId === animId) pulse.classList.remove("visible");
-        if (done) done();
+      if (myId !== animId) return;
+      if (i >= steps.length) {
+        pulse.classList.remove("visible");
+        if (done) {
+          done();
+          return;
+        }
+        // No completion callback means this is a standalone play (not a step
+        // inside Play All) — loop it continuously so the flow keeps animating
+        // for as long as someone's narrating or just watching.
+        i = 0;
+        svgEl.querySelectorAll(".on").forEach((e) => e.classList.remove("on"));
+        svgEl.querySelectorAll(".ai-edge").forEach((e) => e.classList.remove("ai-edge"));
+        setTimeout(next, LOOP_RESTART_GAP_MS);
         return;
       }
       const ids = steps[i];
@@ -147,9 +165,9 @@ export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
         const total = stepEdges.length;
         stepEdges.forEach((pathEl, idx) => {
           if (idx === 0) {
-            animateAlongPath(pathEl, 380, myId, () => { done0++; if (done0 >= total) setTimeout(next, 80); });
+            animateAlongPath(pathEl, EDGE_TRAVEL_MS, myId, () => { done0++; if (done0 >= total) setTimeout(next, STEP_GAP_MS); });
           } else {
-            setTimeout(() => { done0++; if (done0 >= total && myId === animId) setTimeout(next, 80); }, 380);
+            setTimeout(() => { done0++; if (done0 >= total && myId === animId) setTimeout(next, STEP_GAP_MS); }, EDGE_TRAVEL_MS);
           }
         });
       } else if (stepNodes.length > 0) {
@@ -159,9 +177,9 @@ export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
           pulse.setAttribute("cy", nd.y + nd.h / 2);
           pulse.classList.add("visible");
         }
-        setTimeout(next, 320);
+        setTimeout(next, NODE_PAUSE_MS);
       } else {
-        setTimeout(next, 200);
+        setTimeout(next, EMPTY_PAUSE_MS);
       }
     }
     next();

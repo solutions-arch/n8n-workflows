@@ -1,5 +1,6 @@
 import { navigate } from "./router.js";
 import { mediaPlaceholder, metaRow } from "./ui.js";
+import { wireMedia } from "./media.js";
 import * as pdev from "./systems/pdev.js";
 import * as placements from "./systems/placements.js";
 import * as linkedin from "./systems/linkedin.js";
@@ -63,5 +64,10 @@ export function renderOverview(container) {
       e.preventDefault();
       navigate(a.dataset.navCard, null);
     });
+  });
+
+  SYSTEMS.forEach(({ meta }) => {
+    const mediaId = `${meta.key}-overview-thumbnail`;
+    wireMedia(container.querySelector(`[data-media-id="${mediaId}"]`), mediaId, `${meta.name} overview`);
   });
 }

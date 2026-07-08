@@ -1,6 +1,8 @@
 import { createMap } from "./map-engine.js";
 import { setScenarioSilently } from "./router.js";
 import { mediaPlaceholder, metaRow } from "./ui.js";
+import { narrationSrc, createNarrationControl } from "./narration.js";
+import { wireMedia } from "./media.js";
 import * as pdev from "./systems/pdev.js";
 import * as placements from "./systems/placements.js";
 import * as linkedin from "./systems/linkedin.js";
@@ -78,6 +80,15 @@ export function renderDetail(container, systemKey, scenarioKey) {
                 <button class="board-expand" id="board-expand" type="button" aria-label="Expand map">
                   <svg viewBox="0 0 24 24" width="16" height="16"><use href="#icon-expand"></use></svg>
                 </button>
+                <div class="narration-btn" id="narration-btn">
+                  <button class="narration-toggle" type="button" aria-label="Play narration">
+                    <svg width="12" height="12" viewBox="0 0 24 24"><use href="#icon-play"></use></svg>
+                  </button>
+                  <div class="narration-track" tabindex="0" role="slider" aria-label="Seek narration" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div class="narration-fill"></div>
+                  </div>
+                  <span class="narration-time">0:00 / 0:00</span>
+                </div>
                 <svg id="flow" role="img" aria-label="Flow diagram of the ${meta.name} automation system"></svg>
               </div>
               <div class="qbar" id="qbar">
@@ -136,6 +147,9 @@ export function renderDetail(container, systemKey, scenarioKey) {
   container.querySelector("#board-expand").addEventListener("click", openModal);
   modal.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeModal));
 
+  const narrationBtn = container.querySelector("#narration-btn");
+  const narration = createNarrationControl(narrationBtn);
+
   scenarios.forEach((sc) => {
     const btn = document.createElement("button");
     btn.className = "qbtn" + (sc.isAI ? " ai-q" : "");
@@ -159,6 +173,14 @@ export function renderDetail(container, systemKey, scenarioKey) {
     setActiveButton(sc ? sc.key : null);
     panelSlot.innerHTML = scenarioPanelHtml(system, sc);
     wireAccordion();
+    narrationBtn.classList.toggle("is-ai", !!(sc && sc.isAI));
+    if (sc) {
+      narration.load(narrationSrc(meta.key, sc.key));
+      const mediaId = `${meta.key}-${sc.key}-output`;
+      wireMedia(panelSlot.querySelector(`[data-media-id="${mediaId}"]`), mediaId, `Output of "${sc.route}"`);
+    } else {
+      narration.reset();
+    }
   }
 
   function wireAccordion() {
@@ -191,5 +213,6 @@ export function renderDetail(container, systemKey, scenarioKey) {
   return function cleanup() {
     document.removeEventListener("keydown", onModalKeydown);
     document.body.style.overflow = "";
+    narration.stop();
   };
 }

@@ -204,6 +204,37 @@ h1, h2, h3 { font-weight: 720; letter-spacing: -.01em; }
 .media-placeholder svg { width: 26px; height: 26px; opacity: .7; }
 .media-placeholder span { font-size: 12px; line-height: 1.4; max-width: 34ch; }
 
+/* ---- once a real image loads, the placeholder becomes a maximizable thumbnail ---- */
+.media-placeholder.has-media {
+  position: relative; padding: 0; border-style: solid; border-color: var(--rule);
+  cursor: zoom-in; overflow: hidden;
+}
+.media-placeholder.has-media:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.media-placeholder.has-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sys-card .media-placeholder.has-media { border-radius: 0; }
+.media-zoom-badge {
+  position: absolute; right: 10px; bottom: 10px; width: 28px; height: 28px; border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 85%, transparent); border: 1px solid var(--rule);
+  color: var(--ink-2); display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+/* ---- image lightbox ---- */
+.media-lightbox {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 40px;
+}
+.media-lightbox[hidden] { display: none; }
+.media-lightbox-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--ink) 65%, transparent); }
+.media-lightbox-img { position: relative; max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: var(--shadow-lg); }
+.media-lightbox-close {
+  position: absolute; top: 22px; right: 22px; z-index: 2;
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--rule);
+  background: var(--surface); color: var(--ink-2); font-size: 20px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.media-lightbox-close:hover { border-color: var(--accent); color: var(--accent); }
+
 /* ===================================================================
    Detail view — split layout
    =================================================================== */
@@ -232,6 +263,55 @@ h1, h2, h3 { font-weight: 720; letter-spacing: -.01em; }
 }
 .board-expand svg { width: 16px; height: 16px; flex-shrink: 0; }
 .board-expand:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---- narration player — overlaid on the map, hidden until its audio file resolves ---- */
+.narration-btn {
+  display: none; position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 2;
+  align-items: center; gap: 9px;
+  background: color-mix(in srgb, var(--accent-soft) 92%, transparent);
+  border: 1px solid transparent; border-radius: 20px;
+  padding: 6px 14px 6px 6px;
+  backdrop-filter: blur(4px);
+}
+.narration-btn.ready { display: inline-flex; }
+
+.narration-toggle {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; border: none;
+  background: var(--accent); color: var(--surface); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.narration-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.narration-toggle svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+.narration-track {
+  --progress: 0%;
+  flex: 1; position: relative; height: 16px; cursor: pointer; touch-action: none;
+}
+.narration-track::before {
+  content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 4px;
+  transform: translateY(-50%); border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.narration-fill {
+  position: absolute; top: 50%; left: 0; height: 4px; width: var(--progress);
+  transform: translateY(-50%); border-radius: 2px; background: var(--accent);
+}
+.narration-track::after {
+  content: ''; position: absolute; top: 50%; left: var(--progress);
+  width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+  transform: translate(-50%, -50%); box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface) 85%, transparent);
+}
+.narration-track:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.narration-time {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10.5px;
+  color: var(--ink-3); font-weight: 500; white-space: nowrap; flex-shrink: 0;
+}
+
+.narration-btn.is-ai .narration-toggle { background: var(--ai); }
+.narration-btn.is-ai .narration-track::before { background: color-mix(in srgb, var(--ai) 22%, transparent); }
+.narration-btn.is-ai .narration-fill,
+.narration-btn.is-ai .narration-track::after { background: var(--ai); }
 
 /* ---- expanded map modal ---- */
 .map-modal {
