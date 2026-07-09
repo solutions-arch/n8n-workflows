@@ -19,26 +19,26 @@ export const viewBox = "0 0 1340 620";
 
 export const columnLabels = [
   { x: 115, y: 32, text: "TRIGGERS" },
-  { x: 560, y: 50, text: "PROCESSING" },
+  { x: 560, y: 50, text: "PROCESSING · BUILT BY SV" },
   { x: 1015, y: 26, text: "DESTINATIONS" },
 ];
 
 export const nodes = {
-  form: { x: 30, y: 52, w: 170, h: 50, title: "Intake Form", sub: "webhook trigger", cls: "trigger", icon: "form" },
-  record: { x: 30, y: 138, w: 170, h: 50, title: "Record Change", sub: "automation trigger", cls: "trigger", icon: "sync" },
+  form: { x: 30, y: 52, w: 170, h: 50, title: "Intake Form", sub: "RFP form submitted", cls: "trigger", icon: "form" },
+  record: { x: 30, y: 138, w: 170, h: 50, title: "Record Change", sub: "record updated", cls: "trigger", icon: "sync" },
   notetaker: { x: 30, y: 224, w: 170, h: 50, title: "AI Notetaker", sub: "meeting recording", cls: "trigger", icon: "mic" },
   email_in: { x: 30, y: 310, w: 170, h: 50, title: "Email Inbox", sub: "email trigger", cls: "trigger", icon: "envelope" },
   sched: { x: 30, y: 396, w: 170, h: 50, title: "Scheduler", sub: "daily cron", cls: "trigger", icon: "clock" },
   err: { x: 30, y: 482, w: 170, h: 50, title: "Error Trigger", sub: "workflow failure", cls: "trigger", icon: "warning" },
   dedup: { x: 460, y: 70, w: 200, h: 54, title: "Dedup & Build", sub: "company · client · POC", cls: "proc", icon: "gear" },
-  sync_eng: { x: 460, y: 175, w: 200, h: 54, title: "Sync Engine", sub: "cross-system reconcile", cls: "proc", icon: "sync" },
-  ai: { x: 460, y: 285, w: 200, h: 54, title: "AI Engine", sub: "LLM inference", cls: "ai-node", icon: "brain" },
-  compute: { x: 460, y: 400, w: 200, h: 54, title: "Metrics Engine", sub: "scoring · snapshots", cls: "proc", icon: "chart" },
+  sync_eng: { x: 460, y: 175, w: 200, h: 54, title: "Reconciler", sub: "detect · merge · resolve", cls: "proc", icon: "sync" },
+  ai: { x: 460, y: 285, w: 200, h: 54, title: "Reasoning Engine", sub: "parse · synthesize", cls: "ai-node", icon: "brain" },
+  compute: { x: 460, y: 400, w: 200, h: 54, title: "Trend Analyzer", sub: "score · snapshot · trend", cls: "proc", icon: "chart" },
   database: { x: 930, y: 42, w: 170, h: 50, title: "Database", sub: "create / update", cls: "dest", icon: "database" },
   portal: { x: 930, y: 128, w: 170, h: 50, title: "Portal", sub: "internal portal", cls: "dest", icon: "window" },
   task: { x: 930, y: 214, w: 170, h: 50, title: "Task Manager", sub: "project management", cls: "dest", icon: "checklist" },
   email_out: { x: 930, y: 300, w: 170, h: 50, title: "Email", sub: "send email", cls: "dest", icon: "envelope" },
-  chat: { x: 930, y: 386, w: 170, h: 50, title: "Team Chat", sub: "team notifications", cls: "dest", icon: "chat" },
+  chat: { x: 930, y: 386, w: 170, h: 50, title: "Slack Notification", sub: "team notifications", cls: "dest", icon: "slack" },
   errorlog: { x: 930, y: 472, w: 170, h: 50, title: "Error Log", sub: "database storage", cls: "dest", icon: "document" },
 };
 

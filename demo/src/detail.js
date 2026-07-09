@@ -28,16 +28,17 @@ function aiStackHtml(stack) {
 // (currently just the two Error Monitors) fall back to their qualitative
 // descriptor instead of a time figure.
 function scenarioStatLine(scenario) {
+  const runs = `${scenario.executions30d.toLocaleString()} runs`;
   if (typeof scenario.hoursSaved30d === "number") {
-    return `~${scenario.hoursSaved30d.toFixed(1)} hrs saved / 30 days`;
+    return `${runs} · ~${scenario.hoursSaved30d.toFixed(1)} hrs saved / 30 days`;
   }
   const qualitative = scenario.stat.split("·").slice(1).join("·").trim();
-  return qualitative || scenario.stat;
+  return qualitative ? `${runs} / 30 days · ${qualitative}` : `${runs} / 30 days`;
 }
 
 function scenarioPanelHtml(system, scenario) {
   if (!scenario) {
-    return `<div class="scenario-panel"><p class="scenario-empty">Select a scenario above, or Play All to see every workflow in sequence.</p></div>`;
+    return `<div class="scenario-panel"><p class="scenario-empty">Select a scenario above to see how it works.</p></div>`;
   }
   const before = scenario.before.map((li) => `<li>${li}</li>`).join("");
   const after = scenario.after.map((li) => `<li>${li}</li>`).join("");
@@ -103,9 +104,13 @@ export function renderDetail(container, systemKey, scenarioKey) {
                 </div>
                 <svg id="flow" role="img" aria-label="Flow diagram of the ${meta.name} automation system"></svg>
               </div>
-              <div class="qbar" id="qbar">
-                <button class="qbtn playall" id="play-all" type="button">Play All</button>
+              <div class="map-legend">
+                <span class="map-legend-item"><span class="map-legend-dot dot-trigger"></span>External trigger</span>
+                <span class="map-legend-item"><span class="map-legend-dot dot-proc"></span>Built by SV</span>
+                <span class="map-legend-item"><span class="map-legend-dot dot-ai"></span>AI-powered</span>
+                <span class="map-legend-item"><span class="map-legend-dot dot-dest"></span>Existing tool</span>
               </div>
+              <div class="qbar" id="qbar"></div>
             </div>
           </div>
           <div class="panel-col">
@@ -113,14 +118,29 @@ export function renderDetail(container, systemKey, scenarioKey) {
           </div>
         </div>
       </div>
-      <div class="map-modal" id="map-modal" hidden>
-        <div class="map-modal-backdrop" data-close></div>
-        <div class="map-modal-dialog">
-          <button class="map-modal-close" type="button" data-close aria-label="Close expanded map">&times;</button>
-          <div class="map-modal-slot" id="map-modal-slot"></div>
-        </div>
+    </div>`;
+
+  // The expand modal is fixed-positioned and must live outside the animated
+  // route wrapper: `.route-view`'s enter animation keeps `transform` engaged
+  // (animation-fill-mode: both never releases it, even once visually
+  // settled at the identity matrix), which silently hijacks position:fixed's
+  // containing block away from the viewport onto `.route-view` itself —
+  // the modal ends up sized/positioned to the route's content box instead
+  // of the screen. Portaling to document.body sidesteps that entirely.
+  // data-system is repeated here since each system's accent color is scoped
+  // via [data-system="..."] custom properties that otherwise wouldn't reach
+  // a node living outside `.route-view[data-system]`'s subtree.
+  const modalHost = document.createElement("div");
+  modalHost.innerHTML = `
+    <div class="map-modal" id="map-modal" hidden data-system="${meta.key}">
+      <div class="map-modal-backdrop" data-close></div>
+      <div class="map-modal-dialog">
+        <button class="map-modal-close" type="button" data-close aria-label="Close expanded map">&times;</button>
+        <div class="map-modal-slot" id="map-modal-slot"></div>
       </div>
     </div>`;
+  const modal = modalHost.firstElementChild;
+  document.body.appendChild(modal);
 
   const svgEl = container.querySelector("#flow");
   const engine = createMap(svgEl, {
@@ -132,14 +152,12 @@ export function renderDetail(container, systemKey, scenarioKey) {
 
   const qbar = container.querySelector("#qbar");
   const panelSlot = container.querySelector("#scenario-panel-slot");
-  const playAllBtn = container.querySelector("#play-all");
 
   // ---- expand-to-modal: move the live map-panel node (board + toolbar) into
   // the modal and back, so there's exactly one engine/toolbar instance ----
   const mapPanel = container.querySelector("#map-panel");
   const mapPanelHome = mapPanel.parentElement;
-  const modal = container.querySelector("#map-modal");
-  const modalSlot = container.querySelector("#map-modal-slot");
+  const modalSlot = modal.querySelector("#map-modal-slot");
 
   function onModalKeydown(e) {
     if (e.key === "Escape") closeModal();
@@ -233,13 +251,6 @@ export function renderDetail(container, systemKey, scenarioKey) {
     });
   }
 
-  playAllBtn.addEventListener("click", () => {
-    engine.playAll(scenarios, (sc) => {
-      selectScenario(sc);
-      setScenarioSilently(meta.key, sc.key);
-    });
-  });
-
   wireAccordion();
 
   const initial = scenarioKey ? scenarios.find((s) => s.key === scenarioKey) : null;
@@ -249,10 +260,14 @@ export function renderDetail(container, systemKey, scenarioKey) {
   }
 
   // Called by the router before the next view renders, so a modal left open
-  // mid-navigation doesn't leave its keydown listener / body scroll-lock behind.
+  // mid-navigation doesn't leave its keydown listener / body scroll-lock
+  // behind — and since the modal now lives on document.body rather than
+  // inside `container`, it won't be cleared away by the next route's
+  // `container.innerHTML` assignment, so it must be removed explicitly here.
   return function cleanup() {
     document.removeEventListener("keydown", onModalKeydown);
     document.body.style.overflow = "";
     narration.stop();
+    modal.remove();
   };
 }

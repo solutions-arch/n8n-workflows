@@ -19,22 +19,22 @@ export const viewBox = "0 0 1340 520";
 
 export const columnLabels = [
   { x: 115, y: 32, text: "TRIGGERS" },
-  { x: 560, y: 62, text: "PROCESSING" },
+  { x: 560, y: 62, text: "PROCESSING · BUILT BY SV" },
   { x: 1015, y: 38, text: "DESTINATIONS" },
 ];
 
 export const nodes = {
   inbox: { x: 30, y: 50, w: 170, h: 50, title: "Outreach Inbox", sub: "reply received", cls: "trigger", icon: "envelope" },
-  webhook: { x: 30, y: 145, w: 170, h: 50, title: "Booking Event", sub: "webhook trigger", cls: "trigger", icon: "calendar" },
+  webhook: { x: 30, y: 145, w: 170, h: 50, title: "Booking Event", sub: "booked via Calendly", cls: "trigger", icon: "calendar" },
   sched: { x: 30, y: 240, w: 170, h: 50, title: "Scheduler", sub: "daily cron", cls: "trigger", icon: "clock" },
-  campaign_u: { x: 30, y: 335, w: 170, h: 50, title: "Campaign Update", sub: "client status change", cls: "trigger", icon: "gear" },
+  campaign_u: { x: 30, y: 335, w: 170, h: 50, title: "Marketing Team", sub: "updates spreadsheet", cls: "trigger", icon: "gear" },
   err: { x: 30, y: 430, w: 170, h: 50, title: "Error Trigger", sub: "process failure", cls: "trigger", icon: "warning" },
-  ai: { x: 460, y: 80, w: 200, h: 54, title: "AI Engine", sub: "classify intent", cls: "ai-node", icon: "brain" },
-  validator: { x: 460, y: 185, w: 200, h: 54, title: "Lead Validator", sub: "warm · dedup · log", cls: "proc", icon: "checklist" },
-  campaign: { x: 460, y: 290, w: 200, h: 54, title: "Campaign Engine", sub: "fetch · aggregate", cls: "proc", icon: "chart" },
-  wfmgr: { x: 460, y: 395, w: 200, h: 54, title: "Workflow Manager", sub: "activate · deactivate", cls: "proc", icon: "gear" },
+  ai: { x: 460, y: 80, w: 200, h: 54, title: "Intent Classifier", sub: "read · classify · route", cls: "ai-node", icon: "brain" },
+  validator: { x: 460, y: 185, w: 200, h: 54, title: "Cross-List Validator", sub: "warm · dedup · log", cls: "proc", icon: "checklist" },
+  campaign: { x: 460, y: 290, w: 200, h: 54, title: "Campaign Aggregator", sub: "fetch · aggregate", cls: "proc", icon: "chart" },
+  wfmgr: { x: 460, y: 395, w: 200, h: 54, title: "Campaign State Sync", sub: "check · decide · flip", cls: "proc", icon: "gear" },
   sheets: { x: 930, y: 55, w: 170, h: 50, title: "Tracking Sheet", sub: "log results", cls: "dest", icon: "table" },
-  chat: { x: 930, y: 170, w: 170, h: 50, title: "Team Chat", sub: "notifications", cls: "dest", icon: "chat" },
+  chat: { x: 930, y: 170, w: 170, h: 50, title: "Slack Notification", sub: "notifications", cls: "dest", icon: "slack" },
   task: { x: 930, y: 290, w: 170, h: 50, title: "Task Manager", sub: "create ticket", cls: "dest", icon: "checklist" },
   errorlog: { x: 930, y: 400, w: 170, h: 50, title: "Error Log", sub: "audit trail", cls: "dest", icon: "document" },
 };

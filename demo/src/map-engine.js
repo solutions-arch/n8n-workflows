@@ -6,13 +6,32 @@ const NS = "http://www.w3.org/2000/svg";
 const XLINK = "http://www.w3.org/1999/xlink";
 
 // Scenario-animation pacing — tune here rather than scattering magic numbers.
-const EDGE_TRAVEL_MS = 650; // time for the pulse to travel along one edge
+const EDGE_TRAVEL_MS = 1400; // time for the pulse to travel along one edge
 const STEP_GAP_MS = 150; // pause after a step's edges finish, before the next step
 const NODE_PAUSE_MS = 550; // pause on a node-only step (no edges to travel)
 const EMPTY_PAUSE_MS = 350; // pause on a step with nothing to highlight
 const LOOP_RESTART_GAP_MS = 900; // pause before a standalone play loops back to the start
+const DETAIL_ITEM_MS = 480; // stagger between each revealed sub-step of a processing node
+const DETAIL_HOLD_MS = 550; // hold once fully revealed, before continuing
+
+// Every icon is a monochrome line-stroke symbol tinted via currentColor
+// (see index.html's sprite) — except real brand marks, which have their own
+// fixed colors and render as a raster <image> instead of a tinted <use>.
+const RASTER_ICONS = { slack: "/icons/slack-mark.png" };
 
 function addIcon(parent, key, x, y, w, h, cls) {
+  if (RASTER_ICONS[key]) {
+    const img = document.createElementNS(NS, "image");
+    img.setAttributeNS(XLINK, "href", RASTER_ICONS[key]);
+    img.setAttribute("href", RASTER_ICONS[key]);
+    img.setAttribute("x", x);
+    img.setAttribute("y", y);
+    img.setAttribute("width", w);
+    img.setAttribute("height", h);
+    img.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    parent.appendChild(img);
+    return img;
+  }
   const u = document.createElementNS(NS, "use");
   u.setAttributeNS(XLINK, "href", "#icon-" + key);
   u.setAttribute("href", "#icon-" + key);
@@ -49,7 +68,7 @@ export function edgeD(nodes, from, fs, to, ts, fo, to2, k1, k2) {
 
 /**
  * Build the animated SVG map inside `svgEl` and return a controller with
- * play(scenario, cb) / playAll(scenarios, onEach, cb) / stop().
+ * play(scenario, cb) / stop().
  */
 export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
   svgEl.innerHTML = "";
@@ -93,36 +112,76 @@ export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
     s.textContent = n.sub;
   });
 
-  const pulse = el("circle", { id: "pulse", cx: 0, cy: 0, r: 6 });
-
   let animId = 0;
-  let playAllTimer = null;
+
+  // Each concurrently-animating edge or node-pause gets its own pulse dot —
+  // a step that fans out to multiple destinations needs one dot per branch,
+  // not one dot that can only be in one place at a time.
+  function spawnPulse(isAI) {
+    return el("circle", { class: "pulse visible" + (isAI ? " ai-pulse" : ""), r: 6 });
+  }
 
   function clearAnim() {
     animId++;
-    if (playAllTimer) {
-      clearTimeout(playAllTimer);
-      playAllTimer = null;
-    }
     svgEl.classList.remove("running");
     svgEl.querySelectorAll(".on").forEach((e) => e.classList.remove("on"));
     svgEl.querySelectorAll(".ai-edge").forEach((e) => e.classList.remove("ai-edge"));
-    pulse.classList.remove("visible", "ai-pulse");
+    svgEl.querySelectorAll(".pulse").forEach((e) => e.remove());
+    // A processing node mid-reveal (see revealSubSteps) may have its subtitle
+    // text partially built up — always restore the authored text so nothing
+    // is ever left showing a truncated mid-reveal state.
+    Object.keys(nodes).forEach((id) => {
+      const subEl = svgEl.querySelector(`#n_${id} .t-sub`);
+      if (subEl) subEl.textContent = nodes[id].sub;
+    });
   }
 
-  function animateAlongPath(pathElem, dur, myId, cb) {
+  // Re-triggers the subtitle's pop animation (forces a reflow so repeat
+  // ticks on the same element restart the CSS animation instead of no-op'ing).
+  function popText(subEl) {
+    subEl.classList.remove("pop");
+    subEl.getBoundingClientRect();
+    subEl.classList.add("pop");
+  }
+
+  // Reveals a node's authored sub-steps one at a time (its subtitle is
+  // already written as e.g. "company · client · POC" — this just builds
+  // that string up piece by piece, popping on each addition) instead of a
+  // flat pause, so arriving at any node — trigger, processing, or
+  // destination — gives a small visible acknowledgment rather than just
+  // flashing through. Single-phrase subtitles (nothing to break up) still
+  // get one pop so every node type reads consistently.
+  function revealSubSteps(id, myId, cb) {
+    const subEl = svgEl.querySelector(`#n_${id} .t-sub`);
+    const items = nodes[id].sub.split(" · ");
+    let shown = 0;
+    subEl.textContent = "";
+    function revealNext() {
+      if (myId !== animId) return;
+      shown++;
+      subEl.textContent = items.slice(0, shown).join(" · ");
+      popText(subEl);
+      if (shown < items.length) setTimeout(revealNext, DETAIL_ITEM_MS);
+      else setTimeout(cb, DETAIL_HOLD_MS);
+    }
+    setTimeout(revealNext, DETAIL_ITEM_MS);
+  }
+
+  function animateAlongPath(pathElem, dur, myId, pulseEl, cb) {
     const len = pathElem.getTotalLength();
     let t0 = null;
-    pulse.classList.add("visible");
     function frame(ts) {
       if (myId !== animId) return;
       if (!t0) t0 = ts;
       const p = Math.min((ts - t0) / dur, 1);
       const pt = pathElem.getPointAtLength(p * len);
-      pulse.setAttribute("cx", pt.x);
-      pulse.setAttribute("cy", pt.y);
+      pulseEl.setAttribute("cx", pt.x);
+      pulseEl.setAttribute("cy", pt.y);
       if (p < 1) requestAnimationFrame(frame);
-      else if (cb) cb();
+      else {
+        pulseEl.remove();
+        if (cb) cb();
+      }
     }
     requestAnimationFrame(frame);
   }
@@ -132,14 +191,12 @@ export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
     function next() {
       if (myId !== animId) return;
       if (i >= steps.length) {
-        pulse.classList.remove("visible");
         if (done) {
           done();
           return;
         }
-        // No completion callback means this is a standalone play (not a step
-        // inside Play All) — loop it continuously so the flow keeps animating
-        // for as long as someone's narrating or just watching.
+        // No completion callback — loop it continuously so the flow keeps
+        // animating for as long as someone's narrating or just watching.
         i = 0;
         svgEl.querySelectorAll(".on").forEach((e) => e.classList.remove("on"));
         svgEl.querySelectorAll(".ai-edge").forEach((e) => e.classList.remove("ai-edge"));
@@ -163,21 +220,39 @@ export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
       if (stepEdges.length > 0) {
         let done0 = 0;
         const total = stepEdges.length;
-        stepEdges.forEach((pathEl, idx) => {
-          if (idx === 0) {
-            animateAlongPath(pathEl, EDGE_TRAVEL_MS, myId, () => { done0++; if (done0 >= total) setTimeout(next, STEP_GAP_MS); });
-          } else {
-            setTimeout(() => { done0++; if (done0 >= total && myId === animId) setTimeout(next, STEP_GAP_MS); }, EDGE_TRAVEL_MS);
-          }
+        stepEdges.forEach((pathEl) => {
+          const pulseEl = spawnPulse(isAI);
+          animateAlongPath(pathEl, EDGE_TRAVEL_MS, myId, pulseEl, () => {
+            done0++;
+            if (done0 >= total && myId === animId) setTimeout(next, STEP_GAP_MS);
+          });
         });
       } else if (stepNodes.length > 0) {
-        const nd = nodes[stepNodes[0]];
-        if (nd) {
-          pulse.setAttribute("cx", nd.x + nd.w / 2);
-          pulse.setAttribute("cy", nd.y + nd.h / 2);
-          pulse.classList.add("visible");
+        stepNodes.forEach((id) => {
+          const nd = nodes[id];
+          if (!nd) return;
+          const pulseEl = spawnPulse(isAI);
+          pulseEl.setAttribute("cx", nd.x + nd.w / 2);
+          pulseEl.setAttribute("cy", nd.y + nd.h / 2);
+        });
+        const revealIds = stepNodes.filter((id) => nodes[id]);
+        if (revealIds.length > 0) {
+          let doneCount = 0;
+          revealIds.forEach((id) => {
+            revealSubSteps(id, myId, () => {
+              doneCount++;
+              if (doneCount >= revealIds.length && myId === animId) {
+                svgEl.querySelectorAll(".pulse").forEach((e) => e.remove());
+                next();
+              }
+            });
+          });
+        } else {
+          setTimeout(() => {
+            svgEl.querySelectorAll(".pulse").forEach((e) => e.remove());
+            next();
+          }, NODE_PAUSE_MS);
         }
-        setTimeout(next, NODE_PAUSE_MS);
       } else {
         setTimeout(next, EMPTY_PAUSE_MS);
       }
@@ -187,25 +262,10 @@ export function createMap(svgEl, { nodes, edges, viewBox, columnLabels = [] }) {
 
   function play(scenario, cb) {
     clearAnim();
-    if (scenario.isAI) pulse.classList.add("ai-pulse");
     svgEl.classList.add("running");
     const myId = animId;
     runSteps(scenario.steps, scenario.isAI, myId, cb);
   }
 
-  function playAll(scenarios, onEach, cb) {
-    let idx = 0;
-    function nextScenario() {
-      if (idx >= scenarios.length) { if (cb) cb(); return; }
-      if (onEach) onEach(scenarios[idx]);
-      play(scenarios[idx], () => {
-        idx++;
-        if (idx < scenarios.length) playAllTimer = setTimeout(nextScenario, 900);
-        else if (cb) cb();
-      });
-    }
-    nextScenario();
-  }
-
-  return { play, playAll, stop: clearAnim };
+  return { play, stop: clearAnim };
 }

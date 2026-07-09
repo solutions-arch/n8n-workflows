@@ -19,7 +19,7 @@ export const viewBox = "0 0 1340 560";
 
 export const columnLabels = [
   { x: 115, y: 32, text: "TRIGGERS" },
-  { x: 560, y: 32, text: "PROCESSING" },
+  { x: 560, y: 32, text: "PROCESSING · BUILT BY SV" },
   { x: 1015, y: 26, text: "DESTINATIONS" },
 ];
 
@@ -29,14 +29,14 @@ export const nodes = {
   sched: { x: 30, y: 224, w: 170, h: 50, title: "Scheduler", sub: "daily / weekly", cls: "trigger", icon: "clock" },
   wh_stp: { x: 30, y: 310, w: 170, h: 50, title: "Status Change", sub: "VA status change", cls: "trigger", icon: "sync" },
   err: { x: 30, y: 396, w: 170, h: 50, title: "Error Trigger", sub: "process failure", cls: "trigger", icon: "warning" },
-  email_eng: { x: 460, y: 52, w: 200, h: 54, title: "Email Engine", sub: "build · send · follow-up", cls: "proc", icon: "envelope" },
-  ai: { x: 460, y: 148, w: 200, h: 54, title: "AI Engine", sub: "read · understand · decide", cls: "ai-node", icon: "brain" },
-  stp_mgr: { x: 460, y: 244, w: 200, h: 54, title: "Lifecycle Engine", sub: "route · notify · track", cls: "proc", icon: "gear" },
-  metrics: { x: 460, y: 340, w: 200, h: 54, title: "Metrics Engine", sub: "score · rank · sync", cls: "proc", icon: "chart" },
-  report: { x: 460, y: 436, w: 200, h: 54, title: "Report Builder", sub: "visual report cards", cls: "proc", icon: "document" },
+  email_eng: { x: 460, y: 52, w: 200, h: 54, title: "Email Sequencer", sub: "build · send", cls: "proc", icon: "envelope" },
+  ai: { x: 460, y: 148, w: 200, h: 54, title: "Insight Extractor", sub: "extract · summarize", cls: "ai-node", icon: "brain" },
+  stp_mgr: { x: 460, y: 244, w: 200, h: 54, title: "STP Orchestrator", sub: "route · notify · track", cls: "proc", icon: "gear" },
+  metrics: { x: 460, y: 340, w: 200, h: 54, title: "Health Scorer", sub: "score · rank · sync", cls: "proc", icon: "chart" },
+  report: { x: 460, y: 436, w: 200, h: 54, title: "Insight Synthesizer", sub: "visual report cards", cls: "proc", icon: "document" },
   airtable: { x: 930, y: 42, w: 170, h: 50, title: "Database", sub: "create / update", cls: "dest", icon: "database" },
   gmail_out: { x: 930, y: 128, w: 170, h: 50, title: "Email", sub: "send message", cls: "dest", icon: "envelope" },
-  slack: { x: 930, y: 214, w: 170, h: 50, title: "Team Chat", sub: "team notifications", cls: "dest", icon: "chat" },
+  slack: { x: 930, y: 214, w: 170, h: 50, title: "Slack Notification", sub: "team notifications", cls: "dest", icon: "slack" },
   gcal: { x: 930, y: 300, w: 170, h: 50, title: "Calendar", sub: "events & invites", cls: "dest", icon: "calendar" },
   podio: { x: 930, y: 386, w: 170, h: 50, title: "External CRM", sub: "sync records", cls: "dest", icon: "sync" },
   clickup: { x: 930, y: 472, w: 170, h: 50, title: "Task Manager", sub: "create ticket", cls: "dest", icon: "checklist" },
