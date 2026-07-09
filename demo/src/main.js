@@ -2,8 +2,11 @@ import { initTheme } from "./theme.js";
 import { initRouter } from "./router.js";
 import { renderOverview } from "./overview.js";
 import { renderDetail } from "./detail.js";
+import { initCalculatorTool } from "./calculator.js";
+import { CALCULATOR_TOOL_ENABLED } from "./feature-flags.js";
 
 initTheme();
+if (CALCULATOR_TOOL_ENABLED) initCalculatorTool();
 
 const app = document.getElementById("app");
 const navLinks = document.querySelectorAll(".topbar-nav a[data-nav]");
