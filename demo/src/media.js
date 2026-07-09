@@ -1,10 +1,15 @@
-// Swaps a media-placeholder for a real image once one exists at the
-// conventional path, and makes it click-to-maximize via a shared lightbox.
-// Mirrors narration.js's "stay a placeholder until the asset resolves"
-// pattern so nothing looks broken before Jia (or whoever) drops files in.
+// Swaps a media-placeholder for a real image OR video once one exists at the
+// conventional path, and makes images click-to-maximize via a shared lightbox.
+// Probes for an .mp4 first, then falls back to the .jpg behaviour. Mirrors
+// narration.js's "stay a placeholder until the asset resolves" pattern so
+// nothing looks broken before Jia (or whoever) drops files in.
 
 export function mediaSrc(mediaId) {
   return `/media/${mediaId}.jpg`;
+}
+
+export function mediaSrcVideo(mediaId) {
+  return `/media/${mediaId}.mp4`;
 }
 
 let lightboxEl = null;
@@ -43,13 +48,9 @@ function closeLightbox() {
   document.body.style.overflow = "";
 }
 
-/**
- * Probes for a real image at mediaSrc(mediaId). If it loads, replaces
- * containerEl's placeholder content with the image (click or Enter/Space to
- * maximize). If it 404s, leaves the existing placeholder markup untouched.
- */
-export function wireMedia(containerEl, mediaId, alt) {
-  if (!containerEl) return;
+// Existing behaviour: probe for a real image and, if it loads, swap in a
+// maximizable thumbnail. If it 404s, leave the placeholder markup untouched.
+function wireImage(containerEl, mediaId, alt) {
   const src = mediaSrc(mediaId);
   const probe = new Image();
   probe.onload = () => {
@@ -77,4 +78,38 @@ export function wireMedia(containerEl, mediaId, alt) {
     });
   };
   probe.src = src;
+}
+
+// Probe for a real video. If its metadata loads, swap in an inline <video>
+// with native controls (which include fullscreen) — no lightbox/zoom badge.
+// If it 404s or errors, run onMissing() so callers can fall back to the image.
+function wireVideo(containerEl, mediaId, onMissing) {
+  const vsrc = mediaSrcVideo(mediaId);
+  const probe = document.createElement("video");
+  probe.preload = "metadata";
+  probe.muted = true;
+  probe.onloadedmetadata = () => {
+    containerEl.innerHTML = "";
+    const v = document.createElement("video");
+    v.src = vsrc;
+    v.controls = true;
+    v.playsInline = true;
+    v.muted = true;
+    v.preload = "metadata";
+    containerEl.appendChild(v);
+    containerEl.classList.add("has-media", "has-video");
+    // Keep control clicks from bubbling to an ancestor <a> (overview cards).
+    containerEl.addEventListener("click", (e) => e.stopPropagation());
+  };
+  probe.onerror = () => onMissing();
+  probe.src = vsrc;
+}
+
+/**
+ * Resolves a media-placeholder: tries an .mp4 first, then the .jpg. If neither
+ * exists, the dashed placeholder is left untouched.
+ */
+export function wireMedia(containerEl, mediaId, alt) {
+  if (!containerEl) return;
+  wireVideo(containerEl, mediaId, () => wireImage(containerEl, mediaId, alt));
 }
