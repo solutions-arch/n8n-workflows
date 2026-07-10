@@ -5,18 +5,19 @@ import * as pdev from "./systems/pdev.js";
 import * as placements from "./systems/placements.js";
 import * as linkedin from "./systems/linkedin.js";
 
-// Baseline headcount is Scale Virtually's current team, as of 2026-07.
-// Hours saved is NOT independently editable — it's always today's real
-// hours-saved total (systemHoursSaved30d, from Supabase execution volume)
-// scaled proportionally by team size ÷ today's real headcount. The only
-// two editable inputs per category are team size and the hourly $ rate,
-// which multiply against those hours to produce a dollar estimate.
+// Baseline headcount is a representative knowledge-worker team size per
+// category, as of 2026-07. Hours saved is NOT independently editable — it's
+// always today's real hours-saved total (systemHoursSaved30d, from Supabase
+// execution volume) scaled proportionally by team size ÷ today's real
+// headcount. The only two editable inputs per category are team size and
+// the hourly $ rate, which multiply against those hours to produce a
+// dollar estimate.
 const DEFAULT_HOURLY_RATE = 20;
 
 const CATEGORIES = [
-  { system: pdev, roleLabel: "Process Engineers", baselineTeam: 5 },
-  { system: placements, roleLabel: "Placements Specialists", baselineTeam: 3 },
-  { system: linkedin, roleLabel: "Marketing Specialists", baselineTeam: 3 },
+  { system: pdev, roleLabel: "Knowledge Workers", baselineTeam: 5 },
+  { system: placements, roleLabel: "Knowledge Workers", baselineTeam: 3 },
+  { system: linkedin, roleLabel: "Knowledge Workers", baselineTeam: 3 },
 ].map((c) => {
   const baselineHours = systemHoursSaved30d(c.system);
   return {
@@ -55,7 +56,7 @@ function categoryCard(cat, i) {
 
       <div class="calc-field">
         <div class="calc-field-label-row">
-          <label for="rate-${i}">Hourly rate ($) &mdash; ${roleLabel}</label>
+          <label for="rate-${i}">Hourly rate ($) for ${roleLabel}</label>
           <span class="calc-field-value" data-role="rate-val">$${DEFAULT_HOURLY_RATE}</span>
         </div>
         <input type="range" id="rate-${i}" min="0" max="100" step="1" value="${DEFAULT_HOURLY_RATE}" data-role="rate" />
@@ -68,18 +69,21 @@ function categoryCard(cat, i) {
 function panelMarkup() {
   return `
     <div class="calc-panel-head">
-      <h2>Savings calculator</h2>
+      <h2>
+        Savings calculator
+        <span class="calc-help" tabindex="0" aria-label="How this is calculated">
+          <span class="calc-help-mark" aria-hidden="true">?</span>
+        </span>
+      </h2>
       <div class="calc-panel-head-actions">
         <button type="button" class="calc-panel-maximize" data-role="maximize" data-tooltip="Maximize" data-tooltip-pos="below" aria-pressed="false" aria-label="Maximize calculator">
           <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-expand"></use></svg>
         </button>
         <button type="button" class="calc-panel-close" data-close data-tooltip="Close" data-tooltip-pos="below" aria-label="Close calculator">&times;</button>
       </div>
+      <div class="calc-help-tip" role="tooltip">Baseline hours come from real 30-day execution volume of the automated systems we designed and built (PDEV, Placements, and LinkedIn Outreach), not a projection. Moving the team-size slider scales those real hours proportionally; the hourly rate just converts them to a dollar figure.</div>
     </div>
-    <p class="calc-panel-intro">Hours saved scale proportionally with team size, anchored to Scale Virtually's real, current numbers. Set each role's hourly rate to see the dollar value.</p>
-    <div class="calc-grid">
-      ${CATEGORIES.map(categoryCard).join("")}
-    </div>
+    <p class="calc-panel-intro">Hours saved scale proportionally with team size, anchored to real, current automation numbers. Set each role's hourly rate to see the dollar value.</p>
     <div class="calc-summary">
       <p class="calc-summary-head">Combined estimate</p>
       <div class="calc-summary-rows">
@@ -87,6 +91,9 @@ function panelMarkup() {
         <div class="calc-summary-row"><span class="n" data-role="total-30d">0</span><span class="l">saved / 30d</span></div>
         <div class="calc-summary-row"><span class="n" data-role="total-year">0</span><span class="l">saved / year</span></div>
       </div>
+    </div>
+    <div class="calc-grid">
+      ${CATEGORIES.map(categoryCard).join("")}
     </div>`;
 }
 

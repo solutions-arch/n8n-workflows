@@ -7,8 +7,8 @@ export const meta = {
   name: "Placements Interface",
   shortName: "Placements",
   eyebrow: "scale virtually · placements interface",
-  cardLine: "The full VA lifecycle — endorsement through onboarding, status tracking, and reporting.",
-  lead: "Six stations — spanning 20 automated workflows, one powered by AI — handle the full VA lifecycle from endorsement through onboarding, status tracking, and daily reporting. No manual busywork, no missed steps, no forgotten follow-ups.",
+  cardLine: "The full VA lifecycle: endorsement through onboarding, status tracking, and reporting.",
+  lead: "Six stations, spanning 20 automated workflows (one powered by AI), handle the full VA lifecycle from endorsement through onboarding, status tracking, and daily reporting. No manual busywork, no missed steps, no forgotten follow-ups.",
   stationCount: 6,
   workflowCount: 20,
   aiPowered: true,
@@ -75,12 +75,64 @@ export const edges = {
 
 export const aiStack = {
   title: "AI models powering the intelligence layer",
-  desc: "These processes use AI to read, understand, and generate written output — they go beyond simple rule-based automation.",
-  note: "These are the AI models powering the intelligence layer today — the solution works with any compatible AI provider.",
+  desc: "These processes use AI to read, understand, and generate written output; they go beyond simple rule-based automation.",
+  note: "These are the AI models powering the intelligence layer today. The solution works with any compatible AI provider.",
   vendors: [
     { label: "Groq", letter: "G", colorVar: "--groq" },
     { label: "OpenAI", letter: "O", colorVar: "--openai" },
   ],
+};
+
+export const useCases = {
+  items: [
+    {
+      title: "E-commerce fulfillment: order lifecycle",
+      bullets: [
+        "Order status changes on the online store platform (placed &rarr; shipped &rarr; delivered &rarr; returned)",
+        "Each transition fires the matching customer email/SMS (tracking link, delivery confirmation, return instructions)",
+        "Orders stuck in \"label created\" for 48h+ get pulled into a daily ops digest instead of discovered by an angry customer email",
+        "Same \"status change &rarr; templated comms + stalled-item digest\" logic as the VA lifecycle station",
+      ],
+    },
+    {
+      title: "SaaS customer onboarding",
+      bullets: [
+        "New customer signs the contract",
+        "Triggers: kickoff call calendar invite auto-created, welcome email sequence (login + resources) sent, a dedicated shared chat channel spun up with the customer, account synced to the billing system",
+        "AI summarizes the kickoff call recording and emails the recap to the CS team",
+        "This is a 1:1 port of the Placements \"interview &rarr; onboarding orchestration\" station, same steps, just pointed at whatever CRM and billing tool the SaaS already uses",
+      ],
+    },
+    {
+      title: "Marketing agencies staffing their creative bench",
+      bullets: [
+        "A role opens up for a client campaign (e.g. a video editor for a Q3 launch)",
+        "The same shortlisting pipeline used for VA candidates sources and tracks interviews for freelancers/contractors instead",
+        "Once selected, onboarding to that specific client account happens automatically: project and chat access, contract, kickoff call",
+        "Same build as VA placements, just pointed at the agency's freelance bench",
+      ],
+    },
+  ],
+  alternatives: {
+    items: [
+      {
+        name: "Manatal",
+        price: "$19-59/user/mo, published pricing at every tier.",
+        note: "AI shortlisting and onboarding are built in across all tiers, the closest fully-packaged, affordable match. Interview scheduling automation, though, is gated behind a separate paid AI Interviewer add-on.",
+      },
+      {
+        name: "Bullhorn",
+        price: "$99-165/user/mo published, but real blended cost often runs $150-250+/user/mo once modules are added.",
+        note: "Shortlisting automation and onboarding both live behind paid add-ons or the full top-tier suite, not the base plans.",
+      },
+      {
+        name: "JobAdder",
+        price: "Fully custom quote, no public pricing (third-party estimates put it around $100-200+/user/mo).",
+        note: "Onboarding isn't native at all; it's handled through third-party integrations.",
+      },
+    ],
+    closing: "Manatal is the nearest packaged competitor, but even it splits shortlisting/onboarding from interview-scheduling automation across tiers and add-ons. This build bundles all three end-to-end with no extra line items.",
+  },
 };
 
 export const scenarios = [
@@ -88,7 +140,7 @@ export const scenarios = [
     key: "vadata",
     label: "VA Data Management",
     route: "VA Data Management",
-    desc: "When a VA's status changes — endorsed, placement-ready, stalled, or fast-tracked — the system handles endorsement emails, placement notifications, limbo flagging, and STP channel creation automatically.",
+    desc: "When a VA's status changes (endorsed, placement-ready, stalled, or fast-tracked), the system handles endorsement emails, placement notifications, limbo flagging, and STP channel creation automatically.",
     stat: "44 steps (8 workflows) · ~35 min saved per lifecycle event",
     executions30d: 80, // New VA Endorsement, Placement-Ready, Limbo Notifier, Create STP Channel, STP Completed/Requests Notifiers, VA Candidate Request — Supabase workflow_executions
     hoursSaved30d: 17.53, // (20×14m + 12×21m + 4×12m + 26×4m + 4×6m + 1×6m[assumed same as STP Completed] + 13×26m) / 60
@@ -104,12 +156,12 @@ export const scenarios = [
     after: [
       "Endorsement emails built and sent automatically, formatted consistently every time",
       "Two-touch notification sequence for every placement-ready VA",
-      "Stalled candidates flagged daily — no one slips through the cracks",
+      "Stalled candidates flagged daily; no one slips through the cracks",
       "STP channels created automatically with consistent naming",
       "<strong>Every status change triggers the right action, every time</strong>",
     ],
     impact: [
-      "<strong>Time saved:</strong> ~35 min per VA lifecycle event — no manual email drafting, no manual channel creation",
+      "<strong>Time saved:</strong> ~35 min per VA lifecycle event, no manual email drafting, no manual channel creation",
       "<strong>Cognitive load reduced:</strong> No forgotten follow-ups, no missed status changes, consistent process for every VA regardless of who's on shift",
     ],
   },
@@ -118,7 +170,7 @@ export const scenarios = [
     label: "Pipeline Management",
     route: "Pipeline Management",
     isAI: true,
-    desc: "From interview scheduling through onboarding and CRM sync — calendar events created, the full email suite sent, external CRM synced, a support channel opened, and an AI-generated summary of the call emailed out — each triggered automatically as the placement moves forward, with no manual coordination between steps.",
+    desc: "From interview scheduling through onboarding and CRM sync: calendar events created, the full email suite sent, external CRM synced, a support channel opened, and an AI-generated summary of the call emailed out, each triggered automatically as the placement moves forward, with no manual coordination between steps.",
     stat: "59 steps (5 workflows) · 30-45 min → seconds",
     executions30d: 158, // Send Cal Invite (61) + Send Logistics/Endorsement/Congrats Email (25) + Podio Automation (17) + Preview Logistics Email (19) + [Fathom] Transcript Workflow (36, AI reads the call transcript and emails a summary), Supabase workflow_executions
     hoursSaved30d: 92.25, // (61×7m + 25×82m + 17×14m + 19×12m + 36×72m) / 60
@@ -126,31 +178,31 @@ export const scenarios = [
     steps: [["n:wh_at"], ["e:e_wh_email", "e:e_wh_metrics", "e:e_wh_ai"], ["n:email_eng", "n:metrics", "n:ai"], ["e:e_email_gmail", "e:e_email_slack", "e:e_email_gcal", "e:e_email_at", "e:e_metrics_podio", "e:e_metrics_slack", "e:e_ai_gmail"], ["n:gmail_out", "n:slack", "n:gcal", "n:airtable", "n:podio"]],
     before: [
       "Calendar events created by hand with risk of wrong times or missing attendees",
-      "Three separate onboarding messages sent manually — logistics, internal handoff, welcome note",
+      "Three separate onboarding messages sent manually: logistics, internal handoff, welcome note",
       "Support channels created and welcome messages written every time",
-      "CRM records entered twice — once in the main system, once externally",
+      "CRM records entered twice: once in the main system, once externally",
       "Call summaries written up by hand after every interview, if they happened at all",
       "<strong>Total: 30–45 min per placement</strong>",
     ],
     after: [
-      "Calendar events created automatically — no timezone mistakes, no missed attendees",
-      "Each stage of onboarding fires automatically as it's reached — no one has to kick off the next step",
+      "Calendar events created automatically; no timezone mistakes, no missed attendees",
+      "Each stage of onboarding fires automatically as it's reached; no one has to kick off the next step",
       "Support channel created and welcome message posted instantly",
       "External CRM synced in real time with success/failure notifications",
       "AI reads the call transcript and emails a summary automatically",
       "<strong>Seconds, zero manual coordination</strong>",
     ],
     impact: [
-      "<strong>Time saved:</strong> 30–45 min → seconds per placement — no manual scheduling, no dual-entry",
+      "<strong>Time saved:</strong> 30–45 min → seconds per placement, no manual scheduling, no dual-entry",
       "<strong>Cognitive load reduced:</strong> Zero scheduling errors, no missed onboarding steps, both systems always in sync",
-      "<strong>New capability:</strong> AI-generated call summaries — didn't exist as a manual process before",
+      "<strong>New capability:</strong> AI-generated call summaries, didn't exist as a manual process before",
     ],
   },
   {
     key: "readiness",
     label: "Readiness & Reporting",
     route: "VA Readiness & Reporting",
-    desc: "Automated weekly readiness check-ins for VAs, scheduled STP pipeline reports with visual report cards, and instant cancellation alerts — all delivered to stakeholders on a set cadence.",
+    desc: "Automated weekly readiness check-ins for VAs, scheduled STP pipeline reports with visual report cards, and instant cancellation alerts, all delivered to stakeholders on a set cadence.",
     stat: "46 steps (3 workflows) · weekly + daily cadence",
     executions30d: 37, // VA Readiness (5) + STP Daily/Weekly Reports (22) + MVA Cancellation Notifier (10), Supabase workflow_executions
     hoursSaved30d: 22.12, // (5×15m + 22×46m + 10×24m) / 60
@@ -159,14 +211,14 @@ export const scenarios = [
     before: [
       "No structured way to check in with VAs about their readiness",
       "No daily or weekly reporting existed for STP candidates",
-      "Cancellations communicated informally — the team sometimes found out days later",
+      "Cancellations communicated informally; the team sometimes found out days later",
       "Getting a pipeline update meant someone stopping to compile one by hand",
     ],
     after: [
-      "VAs get a weekly automated check-in — responses collected centrally",
+      "VAs get a weekly automated check-in; responses collected centrally",
       "Visual report cards generated on daily and weekly cadences automatically",
-      "Cancellations trigger instant team notifications — zero delay",
-      "<strong>Consistent reporting cadence — no one has to remember to ask</strong>",
+      "Cancellations trigger instant team notifications; zero delay",
+      "<strong>Consistent reporting cadence, no one has to remember to ask</strong>",
     ],
     impact: [
       "<strong>New capabilities:</strong> STP reporting and structured readiness tracking didn't exist before",
@@ -178,7 +230,7 @@ export const scenarios = [
     label: "AI Insights & Daily Report",
     route: "AI Insights & Daily Report",
     isAI: true,
-    desc: "Every client reply to a candidate shortlist is read by the AI — it understands the intent (accept, reject, or request for more info) and updates the candidate record automatically. No reply goes unnoticed. At the end of each shift, the AI reviews all active placement records, writes an executive summary of the day's activity — wins, risks, and pipeline health — and delivers a visual report card to stakeholders.",
+    desc: "Every client reply to a candidate shortlist is read by the AI; it understands the intent (accept, reject, or request for more info) and updates the candidate record automatically. No reply goes unnoticed. At the end of each shift, the AI reviews all active placement records, writes an executive summary of the day's activity (wins, risks, and pipeline health) and delivers a visual report card to stakeholders.",
     stat: "27 steps (2 workflows) · AI-powered · 100% capture rate",
     executions30d: 201, // Shortlisting Insights Fetcher (179) + [Scheduled] PR - Summary (22), Supabase workflow_executions
     hoursSaved30d: 85.68, // (179×27m + 22×14m) / 60
@@ -188,11 +240,11 @@ export const scenarios = [
       "Coordinators manually checked for client replies throughout the day",
       "Every reply had to be read, interpreted, and typed into the candidate record by hand",
       "Replies sometimes missed or delayed, leaving candidates waiting",
-      "No daily placement summary existed — getting an update meant someone stopping to compile one",
+      "No daily placement summary existed; getting an update meant someone stopping to compile one",
     ],
     after: [
-      "Every client reply captured and processed automatically — intent understood instantly",
-      "Candidate records update themselves — no typing required",
+      "Every client reply captured and processed automatically; intent understood instantly",
+      "Candidate records update themselves; no typing required",
       "Executive summary written automatically at the end of every shift",
       "<strong>100% capture rate on replies + net-new daily reporting capability</strong>",
     ],
@@ -205,7 +257,7 @@ export const scenarios = [
     key: "digest",
     label: "Health Digest & Metrics",
     route: "Daily Health Digest",
-    desc: "Health metrics are computed daily for every active placement — scored objectively by urgency, not subjective review. A prioritized digest is posted to the team every morning, surfacing the placements that need attention first.",
+    desc: "Health metrics are computed daily for every active placement, scored objectively by urgency, not subjective review. A prioritized digest is posted to the team every morning, surfacing the placements that need attention first.",
     stat: "30 steps (2 workflows) · ~20-30 min saved daily",
     executions30d: 44, // Daily Scrubbing (Placements) (22) + its Notifier (22), Supabase workflow_executions
     hoursSaved30d: 32.63, // (22×66m + 22×23m) / 60
@@ -213,24 +265,24 @@ export const scenarios = [
     steps: [["n:sched"], ["e:e_sched_metrics"], ["n:metrics"], ["e:e_metrics_at", "e:e_metrics_slack"], ["n:airtable", "n:slack"]],
     before: [
       "Someone manually reviewed every active placement each morning",
-      "Urgency assessed subjectively — inconsistent from person to person",
+      "Urgency assessed subjectively; inconsistent from person to person",
       "Some days the review didn't happen at all, and issues slipped through",
     ],
     after: [
       "Health scores are calculated automatically every day for every active placement",
       "A prioritized summary is shared with the team every morning",
-      "<strong>The digest happens every day — no exceptions</strong>",
+      "<strong>The digest happens every day, no exceptions</strong>",
     ],
     impact: [
       "<strong>Time saved:</strong> ~20-30 min daily",
-      "<strong>Cognitive load reduced:</strong> Objective scoring removes guesswork — consistent visibility, no missed mornings",
+      "<strong>Cognitive load reduced:</strong> Objective scoring removes guesswork, consistent visibility, no missed mornings",
     ],
   },
   {
     key: "error",
     label: "Error Monitor",
     route: "Error Monitoring",
-    desc: "When any process encounters an issue, it's caught instantly — a ticket is created, the issue is logged, and the team is alerted, all within seconds.",
+    desc: "When any process encounters an issue, it's caught instantly: a ticket is created, the issue is logged, and the team is alerted, all within seconds.",
     stat: "6 steps · zero-delay detection",
     executions30d: 20, // Placements Error Trigger, Supabase workflow_executions
     chips: [{ type: "off", label: "Inactive" }, { type: "time", label: "6 steps" }],
@@ -246,7 +298,7 @@ export const scenarios = [
       "The team is alerted within seconds",
     ],
     impact: [
-      "<strong>Zero-delay detection</strong> — no risk of a missed failure",
+      "<strong>Zero-delay detection</strong>, no risk of a missed failure",
       "<strong>Full audit trail</strong> for pattern analysis over time",
     ],
   },

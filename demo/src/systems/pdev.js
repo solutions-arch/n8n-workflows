@@ -7,8 +7,8 @@ export const meta = {
   name: "Process Engineering Interface",
   shortName: "PDEV",
   eyebrow: "scale virtually · process engineering interface",
-  cardLine: "Meeting documentation, client intake, and daily reporting — automated end to end.",
-  lead: "Six stations — spanning 12 automated workflows, two powered by AI — handle meeting documentation, client intake, cross-system syncing, and daily reporting automatically, without manual data entry.",
+  cardLine: "Meeting documentation, client intake, and daily reporting, automated end to end.",
+  lead: "Six stations, spanning 12 automated workflows (two powered by AI), handle meeting documentation, client intake, cross-system syncing, and daily reporting automatically, without manual data entry.",
   stationCount: 6,
   workflowCount: 12,
   aiPowered: true,
@@ -74,8 +74,8 @@ export const edges = {
 
 export const aiStack = {
   title: "AI models powering the intelligence layer",
-  desc: "These stations call AI inference APIs to read, analyze, and generate structured output — they are not fixed, rule-based automations.",
-  note: "These are the AI models powering the intelligence layer today — the solution works with any compatible AI provider.",
+  desc: "These stations call AI inference APIs to read, analyze, and generate structured output; they are not fixed, rule-based automations.",
+  note: "These are the AI models powering the intelligence layer today. The solution works with any compatible AI provider.",
   vendors: [
     { label: "Mistral AI", letter: "M", colorVar: "--mistral" },
     { label: "OpenAI", letter: "O", colorVar: "--openai" },
@@ -83,12 +83,67 @@ export const aiStack = {
   ],
 };
 
+export const useCases = {
+  items: [
+    {
+      title: "Real estate brokerage: buyer lead intake",
+      bullets: [
+        "Buyer submits a \"request a showing\" form on the brokerage website",
+        "System checks the CRM for an existing buyer record by email/phone",
+        "If new: creates buyer record, links to the listing, assigns the agent covering that zip code",
+        "Sends the buyer a confirmation text + the assigned agent an internal notification with the buyer's details",
+        "Same mechanic as PDEV's \"form &rarr; dedup &rarr; create &rarr; notify,\" just against a different CRM and a different match key (zip code instead of PE assignment)",
+      ],
+    },
+    {
+      title: "Law firm: new matter intake",
+      bullets: [
+        "Prospective client fills an intake form",
+        "System checks the case management tool for a conflict-of-interest match against existing clients/opposing parties",
+        "If clear: creates the matter, assigns it to the right practice group attorney, auto-generates the engagement letter for e-signature",
+        "Notifies the practice group channel that a new matter is open",
+        "Same \"check before create, then fan out to the right destinations\" logic as PDEV's dedup engine, just with a conflict search instead of a company/client match",
+      ],
+    },
+    {
+      title: "Marketing agencies handling new client delivery",
+      bullets: [
+        "New client fills the agency's intake form: it automatically creates the client record, project, and folder across every tool the agency uses, then sends a branded welcome email",
+        "Every kickoff/status call gets automatic meeting minutes posted straight to the client's channel, with action items already laid out",
+        "The same AI pass reads client email threads to flag upsell opportunities or scope creep",
+        "Campaign data from the client's ad platforms syncs into one place daily, feeding an automatic performance report",
+        "If anything breaks in the pipeline, a ticket is created and the team is alerted before the client notices",
+      ],
+    },
+  ],
+  alternatives: {
+    items: [
+      {
+        name: "Zapier",
+        price: "$19.99-103.50/mo depending on tier/task volume.",
+        note: "No native dedup primitive: the intake&rarr;dedup&rarr;multi-tool-record logic would still have to be hand-built with Filter/Paths steps, same lift as building it in n8n.",
+      },
+      {
+        name: "Make.com",
+        price: "$9-38/mo, credit-based.",
+        note: "More flexible branching than Zapier via Data Stores, but still no turnkey dedup feature, custom scenario work either way.",
+      },
+      {
+        name: "Fireflies.ai",
+        price: "$10-39/seat/mo.",
+        note: "AI meeting minutes + CRM push are built in from the $19/seat tier up, the closest off-the-shelf match for the meeting-minutes half. But it only processes call recordings; email-thread scanning for upsell/scope-creep signals isn't covered by any tier.",
+      },
+    ],
+    closing: "The intake-dedup-and-sync half has no true off-the-shelf equivalent. The AI-meeting-minutes half is the closest thing to commoditized, but the upsell/scope-creep detection and full ad-performance rollup stay differentiated.",
+  },
+};
+
 export const scenarios = [
   {
     key: "onboarding",
     label: "Client Onboarding",
     route: "Client Onboarding Pipeline",
-    desc: "A single intake form submission checks for existing records to avoid duplicates, creates everything needed across systems, updates the internal portal, and sends a confirmation — automatically, in seconds.",
+    desc: "A single intake form submission checks for existing records to avoid duplicates, creates everything needed across systems, updates the internal portal, and sends a confirmation, automatically, in seconds.",
     stat: "106 nodes (3 workflows) · 30-60 min → seconds",
     executions30d: 17, // RFP Form Submission (8) + Create PDEV Requirement (3) + Create POC (6), Supabase workflow_executions
     hoursSaved30d: 39.07, // (8×284m + 3×16m + 6×4m) / 60
@@ -116,7 +171,7 @@ export const scenarios = [
     key: "sync",
     label: "Cross-System Sync",
     route: "Cross-System Sync & Portal Integration",
-    desc: "When a record changes anywhere — including team assignments — every connected system updates automatically to match, with a notification sent once it's done.",
+    desc: "When a record changes anywhere (including team assignments), every connected system updates automatically to match, with a notification sent once it's done.",
     stat: "48 nodes (2 workflows) · ~15-20 min saved per update",
     executions30d: 20, // PDEV Master Integration (12) + Bubble→AT Sync Projects (8), Supabase workflow_executions
     hoursSaved30d: 19.4, // 12×97m / 60 — Bubble→AT Sync has no reliable per-run rate yet, excluded from hours (still counted in executions30d above)
@@ -128,7 +183,7 @@ export const scenarios = [
       "Assignments tracked inconsistently",
     ],
     after: [
-      "Update once — all systems follow",
+      "Update once, all systems follow",
       "Team assignments synced automatically",
       "<strong>Notification sent on completion</strong>",
     ],
@@ -176,13 +231,13 @@ export const scenarios = [
     chips: [{ type: "live", label: "Active" }, { type: "ai", label: "AI Agent" }, { type: "time", label: "37 nodes (2 workflows)" }],
     steps: [["n:email_in"], ["e:e_email_ai"], ["n:ai"], ["e:e_ai_database", "e:e_ai_chat"], ["n:database", "n:chat"]],
     before: [
-      "Client email insights not captured — signals buried in inboxes",
+      "Client email insights not captured; signals buried in inboxes",
       "No structured record of client sentiment or updates",
-      "Daily insight review done by hand — rarely consistent",
+      "Daily insight review done by hand, rarely consistent",
       "Synthesizing patterns is time-consuming; summary shared ad-hoc",
     ],
     after: [
-      "AI scans every qualifying email — extracts updates, sentiment, project signals",
+      "AI scans every qualifying email, extracts updates, sentiment, project signals",
       "Matched to correct project and saved automatically",
       "Daily narrative summary written by AI with wins, risks, trends",
       "<strong>Visual report card posted to the team, every day</strong>",
@@ -196,7 +251,7 @@ export const scenarios = [
     key: "health",
     label: "Health Digest & Metrics",
     route: "Daily Health Digest & Metrics",
-    desc: "Every day, health metrics are computed for every active client project — urgency, recency, and overall health scored objectively. A prioritized digest is posted to the team, surfacing the projects that need attention first. Historical snapshots enable trend analysis over time.",
+    desc: "Every day, health metrics are computed for every active client project: urgency, recency, and overall health scored objectively. A prioritized digest is posted to the team, surfacing the projects that need attention first. Historical snapshots enable trend analysis over time.",
     stat: "24 nodes (2 workflows) · ~20-30 min saved daily",
     executions30d: 44, // Daily Scrubbing PDEV & Projects (22) + its Notifier (22), Supabase workflow_executions
     hoursSaved30d: 32.63, // (22×66m + 22×23m) / 60
@@ -209,7 +264,7 @@ export const scenarios = [
     ],
     after: [
       "Health metrics computed daily for every project",
-      "Objective scoring — not guessing",
+      "Objective scoring, not guessing",
       "<strong>Ranked digest posted automatically, every day</strong>",
     ],
     impact: [
@@ -221,7 +276,7 @@ export const scenarios = [
     key: "error",
     label: "Error Monitor",
     route: "Error Monitoring",
-    desc: "When any workflow hits an issue, it's caught instantly — a ticket is filed, the error is logged, and the team is notified, all within seconds.",
+    desc: "When any workflow hits an issue, it's caught instantly: a ticket is filed, the error is logged, and the team is notified, all within seconds.",
     stat: "6 nodes · zero-delay detection",
     executions30d: 4, // PDev Error Trigger, Supabase workflow_executions
     chips: [{ type: "off", label: "Inactive" }, { type: "time", label: "6 nodes" }],

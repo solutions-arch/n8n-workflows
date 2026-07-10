@@ -8,7 +8,7 @@ export const meta = {
   shortName: "LinkedIn Outreach",
   eyebrow: "scale virtually · linkedin outreach",
   cardLine: "Reply classification, booking capture, and campaign reporting across multi-client outreach.",
-  lead: "Four stations — spanning 8 automated workflows, one powered by AI — classify prospect replies, capture meeting bookings, report campaign performance, and manage system operations across multi-client LinkedIn outreach campaigns.",
+  lead: "Four stations, spanning 8 automated workflows (one powered by AI), classify prospect replies, capture meeting bookings, report campaign performance, and manage system operations across multi-client LinkedIn outreach campaigns.",
   stationCount: 4,
   workflowCount: 8,
   aiPowered: true,
@@ -58,11 +58,62 @@ export const edges = {
 
 export const aiStack = {
   title: "AI model powering the classification layer",
-  desc: "This process uses AI to read, understand, and classify prospect replies — it goes beyond simple rule-based automation.",
-  note: "This is the AI model powering the classification layer today — the solution works with any compatible AI provider.",
+  desc: "This process uses AI to read, understand, and classify prospect replies; it goes beyond simple rule-based automation.",
+  note: "This is the AI model powering the classification layer today. The solution works with any compatible AI provider.",
   vendors: [
     { label: "Anthropic Claude", letter: "C", colorVar: "--anthropic" },
   ],
+};
+
+export const useCases = {
+  items: [
+    {
+      title: "B2B SaaS company running its own outbound prospecting",
+      bullets: [
+        "Sales team runs LinkedIn outreach directly for its own pipeline: not a client campaign, the company prospecting for itself",
+        "AI reads every reply and classifies intent (interested / not interested / more info), routing it straight to the rep who owns that account instead of sitting in a shared inbox",
+        "When a prospect books a demo, it's logged to the pipeline tracker and the rep gets an instant alert",
+        "Every morning, the sales lead gets a rolled-up summary (replies, bookings, campaign health) without pulling it together by hand",
+      ],
+    },
+    {
+      title: "Multi-location franchise/dealership group",
+      bullets: [
+        "A lead books a test drive/consult via a scheduling link from an outreach sequence",
+        "System checks the booking against the \"already contacted this month\" list across all locations before logging it, to avoid two locations chasing the same lead",
+        "Booking logged per-location, instant notification sent to that location's manager",
+        "Same cross-list validation step as the booking tracker; the \"warm lead list\" becomes a cross-location dedup list",
+      ],
+    },
+    {
+      title: "Multi-client ad agency: daily reporting + budget-pause sync",
+      bullets: [
+        "Every morning, stats are pulled per client from the ad platform, aggregated, and posted to the team channel before the day starts",
+        "When a client pauses their monthly budget in the tracking sheet, the corresponding campaign automation deactivates automatically: no manual \"turn this off\" step, no risk of overspending after a pause",
+        "Same shape as LinkedIn's daily reporting + campaign on/off sync station",
+      ],
+    },
+  ],
+  alternatives: {
+    items: [
+      {
+        name: "HeyReach",
+        price: "$79/seat/mo (Growth), scaling to $999/mo (Agency, 25-50 senders) or $2,999/mo (Unlimited).",
+        note: "AI reply classification is built in on every paid tier, but there's no native meeting-booking capture or deep multi-client reporting; both need a Zapier/CRM add-on.",
+      },
+      {
+        name: "Expandi",
+        price: "$79-99/seat/mo, though real-world cost often lands at $250+/seat/mo once personalization add-ons stack.",
+        note: "No native AI reply classification or booking capture at all; it still needs an external stack bolted on.",
+      },
+      {
+        name: "Lemlist",
+        price: "$55-109/user/mo.",
+        note: "AI reply intent + out-of-office detection built in, but real meeting-booking intelligence requires a separate ~$60/mo add-on.",
+      },
+    ],
+    closing: "None of the three natively handle cross-list/cross-location lead validation or true daily multi-client reporting the way this build does. That gap is where the in-house version earns its keep.",
+  },
 };
 
 export const scenarios = [
@@ -71,7 +122,7 @@ export const scenarios = [
     label: "AI Reply Classification",
     route: "AI Reply Classification",
     isAI: true,
-    desc: "When a prospect replies via the outreach platform, the AI reads the message and classifies intent — interested, not interested, out of office, or requesting more info. The result is logged and the team is notified instantly.",
+    desc: "When a prospect replies via the outreach platform, the AI reads the message and classifies intent: interested, not interested, out of office, or requesting more info. The result is logged and the team is notified instantly.",
     stat: "12 steps · AI-powered · 100% capture rate",
     executions30d: 302, // Reply Capture & Classification, Supabase workflow_executions
     hoursSaved30d: 191.27, // 302×38m / 60
@@ -79,18 +130,18 @@ export const scenarios = [
     steps: [["n:inbox"], ["e:e_inbox_ai"], ["n:ai"], ["e:e_ai_sheets", "e:e_ai_chat"], ["n:sheets", "n:chat"]],
     before: [
       "Replies read and classified manually by team members",
-      "Inconsistent classification — different people categorized differently",
+      "Inconsistent classification; different people categorized differently",
       "Some replies missed or delayed, especially during high-volume campaigns",
       "No centralized record of classification decisions",
     ],
     after: [
-      "Every reply classified automatically by AI — consistent categories every time",
+      "Every reply classified automatically by AI; consistent categories every time",
       "Classification logged to tracking sheets instantly",
       "Team notified with the result in real time",
-      "<strong>100% capture rate — no reply goes unclassified</strong>",
+      "<strong>100% capture rate, no reply goes unclassified</strong>",
     ],
     impact: [
-      "<strong>Time saved:</strong> ~3-5 min per reply — no manual reading and categorizing",
+      "<strong>Time saved:</strong> ~3-5 min per reply, no manual reading and categorizing",
       "<strong>Cognitive load reduced:</strong> No inconsistent classifications, no missed replies, no split attention monitoring inboxes",
     ],
   },
@@ -116,7 +167,7 @@ export const scenarios = [
       "<strong>Real-time team notification the moment a booking comes in</strong>",
     ],
     impact: [
-      "<strong>Time saved:</strong> ~5-10 min per booking — no manual logging or cross-referencing",
+      "<strong>Time saved:</strong> ~5-10 min per booking, no manual logging or cross-referencing",
       "<strong>Cognitive load reduced:</strong> Zero missed bookings, no manual dedup, consistent tracking across all clients",
     ],
   },
@@ -124,7 +175,7 @@ export const scenarios = [
     key: "reporting",
     label: "Daily Campaign Reporting",
     route: "Daily Campaign Reporting",
-    desc: "Every morning, the system connects to the outreach platform, fetches campaign statistics for all active clients, aggregates the data per client, and updates the daily stats sheet. A summary notification is posted to the team — ready for review before the day starts.",
+    desc: "Every morning, the system connects to the outreach platform, fetches campaign statistics for all active clients, aggregates the data per client, and updates the daily stats sheet. A summary notification is posted to the team, ready for review before the day starts.",
     stat: "14 steps · ~15-20 min saved daily",
     executions30d: 69, // Daily Stats Fetcher (25, incl. pre-rename "Update Performance Flat (0620)" 18+7) + [Scheduled] Daily Sync (44, grouped here), Supabase workflow_executions
     hoursSaved30d: 21, // (25×24m + 44×15m) / 60
@@ -133,18 +184,18 @@ export const scenarios = [
     before: [
       "Campaign stats pulled manually from the outreach platform for each client",
       "Data aggregated by hand into spreadsheets",
-      "Reporting inconsistent — some days it didn't happen at all",
+      "Reporting inconsistent; some days it didn't happen at all",
       "No centralized view of multi-client campaign performance",
     ],
     after: [
       "Stats fetched automatically every morning for all active clients",
       "Data aggregated per client and upserted into the daily stats sheet",
-      "Summary notification posted automatically — consistent daily cadence",
+      "Summary notification posted automatically; consistent daily cadence",
       "<strong>Multi-client performance visible before the day starts</strong>",
     ],
     impact: [
-      "<strong>Time saved:</strong> ~15-20 min daily — no manual platform login or copy-paste",
-      "<strong>Cognitive load reduced:</strong> Consistent morning reporting without effort — no risk of missed days",
+      "<strong>Time saved:</strong> ~15-20 min daily, no manual platform login or copy-paste",
+      "<strong>Cognitive load reduced:</strong> Consistent morning reporting without effort, no risk of missed days",
     ],
   },
   {
@@ -171,7 +222,7 @@ export const scenarios = [
     ],
     impact: [
       "<strong>Cognitive load reduced:</strong> No manual workflow management, no missed errors, no stale campaign states",
-      "<strong>Consistency:</strong> Campaign activation always matches the tracking sheet — single source of truth",
+      "<strong>Consistency:</strong> Campaign activation always matches the tracking sheet, single source of truth",
     ],
   },
 ];

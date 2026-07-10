@@ -36,6 +36,40 @@ function scenarioStatLine(scenario) {
   return qualitative ? `${runs} / 30 days · ${qualitative}` : `${runs} / 30 days`;
 }
 
+function useCasesHtml(useCases) {
+  if (!useCases) return "";
+  const cards = useCases.items
+    .map(
+      (uc) => `
+        <div class="usecase-card">
+          <h3>${uc.title}</h3>
+          <ul>${uc.bullets.map((b) => `<li>${b}</li>`).join("")}</ul>
+        </div>`
+    )
+    .join("");
+  const alt = useCases.alternatives;
+  const altRows = alt.items
+    .map(
+      (a) => `
+        <div class="alt-row">
+          <div class="alt-row-head"><span class="alt-name">${a.name}</span><span class="alt-price">${a.price}</span></div>
+          <p class="alt-note">${a.note}</p>
+        </div>`
+    )
+    .join("");
+  return `
+    <section class="wrap use-cases">
+      <h2>Where else this fits</h2>
+      <p class="use-cases-intro">Same automation pattern, mapped onto a different industry: each one runs the identical shape of steps as one of the scenarios above.</p>
+      <div class="usecase-grid">${cards}</div>
+      <div class="alternatives">
+        <h3>What teams are using:</h3>
+        <div class="alt-grid">${altRows}</div>
+        <p class="alt-closing">${alt.closing}</p>
+      </div>
+    </section>`;
+}
+
 function scenarioPanelHtml(system, scenario) {
   if (!scenario) {
     return `<div class="scenario-panel"><p class="scenario-empty">Select a scenario above to see how it works.</p></div>`;
@@ -60,7 +94,7 @@ function scenarioPanelHtml(system, scenario) {
           <figcaption>After</figcaption>
           ${mediaPlaceholder(
             `${system.meta.key}-${scenario.key}-output`,
-            `The output this workflow produces — e.g. the Slack message, email, or record it creates`,
+            `The output this workflow produces: e.g. the Slack message, email, or record it creates`,
             `Screenshot: output of "${scenario.route}"`
           )}
         </figure>
@@ -131,6 +165,7 @@ export function renderDetail(container, systemKey, scenarioKey) {
           </div>
         </div>
       </div>
+      ${useCasesHtml(system.useCases)}
     </div>`;
 
   // The expand modal is fixed-positioned and must live outside the animated

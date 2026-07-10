@@ -44,7 +44,7 @@ export function renderOverview(container) {
       <section class="wrap hero">
         <p class="hero-name">Scale Virtually</p>
         <h1>Automated Operations Platform</h1>
-        <p class="hero-desc">Three internal systems, running end-to-end without manual busywork — from client intake and VA placements to multi-client outreach campaigns.</p>
+        <p class="hero-desc">Three internal systems, running end-to-end without manual busywork: from client intake and VA placements to multi-client outreach campaigns.</p>
         <div class="hero-stats">
           <span class="stat-pill">3 systems</span>
           <span class="stat-pill">${workflowCount} workflows</span>
