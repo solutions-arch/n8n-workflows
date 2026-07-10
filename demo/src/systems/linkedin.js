@@ -15,6 +15,19 @@ export const meta = {
   keyMetric: "~15-20 min saved daily",
 };
 
+export const dashboardCTA = {
+  href: "https://sv-linkedin-outreach-dashboard.vercel.app/overview",
+  heading: "Visit the current, up-to-date dashboard",
+  desc: "The real, live client-facing dashboard the daily reporting workflow feeds: Warm Leads, DC Booked, Shows, and Show Rate, updated automatically.",
+  mediaId: "linkedin-dashboard-cta",
+};
+
+export const inlineCalculator = {
+  roleLabel: "Knowledge Workers",
+  baselineTeam: 3,
+  intro: "Estimate savings for a Knowledge Workers team running LinkedIn Outreach.",
+};
+
 export const viewBox = "0 0 1340 520";
 
 export const columnLabels = [
@@ -177,6 +190,7 @@ export const scenarios = [
     route: "Daily Campaign Reporting",
     desc: "Every morning, the system connects to the outreach platform, fetches campaign statistics for all active clients, aggregates the data per client, and updates the daily stats sheet. A summary notification is posted to the team, ready for review before the day starts.",
     stat: "14 steps · ~15-20 min saved daily",
+    dashboardShot: true,
     executions30d: 69, // Daily Stats Fetcher (25, incl. pre-rename "Update Performance Flat (0620)" 18+7) + [Scheduled] Daily Sync (44, grouped here), Supabase workflow_executions
     hoursSaved30d: 21, // (25×24m + 44×15m) / 60
     chips: [{ type: "live", label: "Active" }, { type: "time", label: "14 steps" }],

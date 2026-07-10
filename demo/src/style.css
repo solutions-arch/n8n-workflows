@@ -628,6 +628,34 @@ svg .node, svg .edge { transition: opacity .35s; }
 .alt-note { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; margin: 0; }
 .alt-closing { font-size: 13px; color: var(--ink-2); line-height: 1.6; margin: 0; font-style: italic; }
 
+/* ---- dashboard CTA: clickable callout linking out to a system's real,
+   live product (not a mockup); sits above Use Cases ---- */
+.dashboard-cta { padding: 8px 0; }
+.dashboard-cta-link {
+  display: flex; align-items: stretch; gap: 0; text-decoration: none; color: inherit;
+  border: 1px solid var(--rule); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow);
+  overflow: hidden; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.dashboard-cta-link:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+.dashboard-cta-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dashboard-cta-link .media-placeholder { flex: 0 0 320px; width: 320px; border-radius: 0; border-width: 0 1.5px 0 0; aspect-ratio: 16/10; }
+.dashboard-cta-link .media-placeholder.has-media { cursor: pointer; border-width: 0 1.5px 0 0; }
+.dashboard-cta-body { padding: 22px 24px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.dashboard-cta-body h2 { font-size: 18px; margin: 0; }
+.dashboard-cta-body p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.55; }
+@media (max-width: 720px) {
+  .dashboard-cta-link { flex-direction: column; }
+  .dashboard-cta-link .media-placeholder { width: 100%; flex: none; aspect-ratio: 16/9; border-width: 0 0 1.5px; }
+  .dashboard-cta-link .media-placeholder.has-media { border-width: 0 0 1.5px; }
+}
+
+/* ---- inline, single-category savings section embedded at the bottom of a
+   system's own page (separate from the floating multi-system tool) ---- */
+.system-calc { padding: 8px 0 56px; }
+.system-calc-intro { font-size: 13px; color: var(--ink-2); margin: 0 0 16px; max-width: 60ch; }
+.system-calc-mount { max-width: 360px; }
+.system-calc-mount .calc-card { background: var(--surface); box-shadow: var(--shadow); }
+
 @media (prefers-reduced-motion: reduce) {
   *, .route-view { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

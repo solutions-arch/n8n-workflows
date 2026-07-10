@@ -2,7 +2,8 @@ import { createMap } from "./map-engine.js";
 import { setScenarioSilently } from "./router.js";
 import { mediaPlaceholder, metaRow, joinMetaParts, systemHoursSaved30d, hoursSavedLabel } from "./ui.js";
 import { narrationSrc, createNarrationControl } from "./narration.js";
-import { wireMedia } from "./media.js";
+import { wireMedia, mediaSrc } from "./media.js";
+import { initInlineSystemCalculator } from "./calculator.js";
 import * as pdev from "./systems/pdev.js";
 import * as placements from "./systems/placements.js";
 import * as linkedin from "./systems/linkedin.js";
@@ -59,7 +60,7 @@ function useCasesHtml(useCases) {
     .join("");
   return `
     <section class="wrap use-cases">
-      <h2>Where else this fits</h2>
+      <h2>Use Cases</h2>
       <p class="use-cases-intro">Same automation pattern, mapped onto a different industry: each one runs the identical shape of steps as one of the scenarios above.</p>
       <div class="usecase-grid">${cards}</div>
       <div class="alternatives">
@@ -68,6 +69,51 @@ function useCasesHtml(useCases) {
         <p class="alt-closing">${alt.closing}</p>
       </div>
     </section>`;
+}
+
+// A clickable callout for a system's real, live client-facing product (not a
+// mockup) — sits above Use Cases. Deliberately does NOT use wireMedia's
+// click-to-zoom behavior: the whole card is a single <a> that should navigate
+// out to the dashboard, not open a lightbox.
+function dashboardCtaHtml(cta) {
+  if (!cta) return "";
+  return `
+    <section class="wrap dashboard-cta">
+      <a class="dashboard-cta-link" href="${cta.href}" target="_blank" rel="noopener noreferrer">
+        ${mediaPlaceholder(cta.mediaId, "A screenshot of the live client dashboard this system feeds", `Screenshot: ${cta.heading}`)}
+        <div class="dashboard-cta-body">
+          <h2>${cta.heading}</h2>
+          <p>${cta.desc}</p>
+        </div>
+      </a>
+    </section>`;
+}
+
+// Always-visible, single-category savings section embedded at the bottom of
+// a system's own detail page — as opposed to the floating multi-system tool,
+// which stays untouched and shows all 3 systems together elsewhere.
+function systemCalculatorHtml(system) {
+  if (!system.inlineCalculator) return "";
+  return `
+    <section class="wrap system-calc">
+      <h2>Savings calculator</h2>
+      <p class="system-calc-intro">${system.inlineCalculator.intro}</p>
+      <div class="system-calc-mount"></div>
+    </section>`;
+}
+
+// Static, non-interactive image swap (no click-to-zoom) — used for the
+// dashboard screenshot(s), which should navigate via their wrapping <a>
+// rather than open a lightbox.
+function wireStaticImage(containerEl, mediaId, alt) {
+  if (!containerEl) return;
+  const src = mediaSrc(mediaId);
+  const probe = new Image();
+  probe.onload = () => {
+    containerEl.innerHTML = `<img src="${src}" alt="${alt || ""}" />`;
+    containerEl.classList.add("has-media");
+  };
+  probe.src = src;
 }
 
 function scenarioPanelHtml(system, scenario) {
@@ -165,7 +211,9 @@ export function renderDetail(container, systemKey, scenarioKey) {
           </div>
         </div>
       </div>
+      <div id="dashboard-cta-slot"></div>
       ${useCasesHtml(system.useCases)}
+      ${systemCalculatorHtml(system)}
     </div>`;
 
   // The expand modal is fixed-positioned and must live outside the animated
@@ -200,6 +248,28 @@ export function renderDetail(container, systemKey, scenarioKey) {
 
   const qbar = container.querySelector("#qbar");
   const panelSlot = container.querySelector("#scenario-panel-slot");
+  const dashboardCtaSlot = container.querySelector("#dashboard-cta-slot");
+
+  function updateDashboardCta(sc) {
+    if (sc && sc.dashboardShot && system.dashboardCTA) {
+      dashboardCtaSlot.innerHTML = dashboardCtaHtml(system.dashboardCTA);
+      wireStaticImage(
+        dashboardCtaSlot.querySelector(`[data-media-id="${system.dashboardCTA.mediaId}"]`),
+        system.dashboardCTA.mediaId,
+        system.dashboardCTA.heading
+      );
+    } else {
+      dashboardCtaSlot.innerHTML = "";
+    }
+  }
+
+  if (system.inlineCalculator) {
+    initInlineSystemCalculator(container.querySelector(".system-calc-mount"), {
+      system,
+      roleLabel: system.inlineCalculator.roleLabel,
+      baselineTeam: system.inlineCalculator.baselineTeam,
+    });
+  }
 
   // ---- expand-to-modal: move the live map-panel node (board + toolbar) into
   // the modal and back, so there's exactly one engine/toolbar instance ----
@@ -280,6 +350,7 @@ export function renderDetail(container, systemKey, scenarioKey) {
     wireAccordion();
     narrationBtn.classList.toggle("is-ai", !!(sc && sc.isAI));
     updateMetaRow(sc);
+    updateDashboardCta(sc);
     if (sc) {
       narration.load(narrationSrc(meta.key, sc.key));
       const mediaId = `${meta.key}-${sc.key}-output`;

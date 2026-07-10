@@ -206,3 +206,43 @@ export function initCalculatorTool() {
   maximizeBtn.addEventListener("click", () => setMaximized(!isMaximized));
   backdrop.addEventListener("click", () => setMaximized(false));
 }
+
+// Single-category, always-visible variant used inline on a system's own
+// detail page (as opposed to the floating multi-system tool above) — avoids
+// showing all 3 systems' categories while a viewer is focused on just one.
+export function initInlineSystemCalculator(container, { system, roleLabel, baselineTeam }) {
+  if (!container) return;
+
+  const baselineHours = systemHoursSaved30d(system);
+  const cat = { system, roleLabel, baselineTeam, baselineHours, teamMax: Math.max(10, baselineTeam * 4) };
+
+  container.innerHTML = categoryCard(cat, "sys");
+
+  const card = container.querySelector(".calc-card");
+  const teamInput = card.querySelector('[data-role="team"]');
+  const rateInput = card.querySelector('[data-role="rate"]');
+  const resetBtn = card.querySelector('[data-role="reset"]');
+
+  function recompute() {
+    const team = parseFloat(teamInput.value) || 0;
+    const rate = parseFloat(rateInput.value) || 0;
+    card.querySelector('[data-role="team-val"]').textContent = teamInput.value;
+    card.querySelector('[data-role="rate-val"]').textContent = `$${rateInput.value}`;
+
+    const hours = baselineHours * (team / baselineTeam);
+    const dollars = hours * rate;
+
+    card.querySelector('[data-role="hours-derived"]').textContent = `→ ${fmt(hours)} hrs saved / 30d`;
+    card.querySelector('[data-role="result"]').textContent = `= ${fmtMoney(dollars)} saved / 30 days`;
+  }
+
+  teamInput.addEventListener("input", recompute);
+  rateInput.addEventListener("input", recompute);
+  resetBtn.addEventListener("click", () => {
+    teamInput.value = baselineTeam;
+    rateInput.value = DEFAULT_HOURLY_RATE;
+    recompute();
+  });
+
+  recompute();
+}
