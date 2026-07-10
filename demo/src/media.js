@@ -89,14 +89,14 @@ function wireVideo(containerEl, mediaId, onMissing, onFound) {
   const vsrc = mediaSrcVideo(mediaId);
   const probe = document.createElement("video");
   probe.preload = "metadata";
-  probe.muted = true;
+  probe.muted = false;
   probe.onloadedmetadata = () => {
     containerEl.innerHTML = "";
     const v = document.createElement("video");
     v.src = vsrc;
     v.controls = true;
     v.playsInline = true;
-    v.muted = true;
+    v.muted = false;
     v.preload = "metadata";
     containerEl.appendChild(v);
     containerEl.classList.add("has-media", "has-video");
