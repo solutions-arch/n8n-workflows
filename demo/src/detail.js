@@ -47,11 +47,24 @@ function scenarioPanelHtml(system, scenario) {
     <div class="scenario-panel ${scenario.isAI ? "is-ai" : ""}">
       <span class="scenario-route">${scenario.route}</span>
       <p class="scenario-desc">${scenario.desc}</p>
-      ${mediaPlaceholder(
-        `${system.meta.key}-${scenario.key}-output`,
-        `The output this workflow produces — e.g. the Slack message, email, or record it creates`,
-        `Screenshot: output of "${scenario.route}"`
-      )}
+      <div class="media-ba">
+        <figure class="media-ba-item media-ba-before" hidden>
+          <figcaption>Before</figcaption>
+          ${mediaPlaceholder(
+            `${system.meta.key}-${scenario.key}-before`,
+            `The manual / old way this was handled before automation`,
+            `Screenshot: BEFORE "${scenario.route}"`
+          )}
+        </figure>
+        <figure class="media-ba-item media-ba-after">
+          <figcaption>After</figcaption>
+          ${mediaPlaceholder(
+            `${system.meta.key}-${scenario.key}-output`,
+            `The output this workflow produces — e.g. the Slack message, email, or record it creates`,
+            `Screenshot: output of "${scenario.route}"`
+          )}
+        </figure>
+      </div>
       <span class="scenario-stat">${scenarioStatLine(scenario)}</span>
       <div class="accordion">
         <button class="accordion-toggle" type="button" aria-expanded="false">
@@ -236,6 +249,15 @@ export function renderDetail(container, systemKey, scenarioKey) {
       narration.load(narrationSrc(meta.key, sc.key));
       const mediaId = `${meta.key}-${sc.key}-output`;
       wireMedia(panelSlot.querySelector(`[data-media-id="${mediaId}"]`), mediaId, `Output of "${sc.route}"`);
+      const beforeId = `${meta.key}-${sc.key}-before`;
+      const baWrap = panelSlot.querySelector(".media-ba");
+      const beforeFig = panelSlot.querySelector(".media-ba-before");
+      if (beforeFig) {
+        wireMedia(beforeFig.querySelector(`[data-media-id="${beforeId}"]`), beforeId, `Before "${sc.route}"`, {
+          onFound: () => { beforeFig.hidden = false; if (baWrap) baWrap.classList.add("has-before"); },
+          onMissing: () => { beforeFig.remove(); },
+        });
+      }
     } else {
       narration.reset();
     }

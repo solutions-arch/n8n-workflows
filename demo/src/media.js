@@ -50,7 +50,7 @@ function closeLightbox() {
 
 // Existing behaviour: probe for a real image and, if it loads, swap in a
 // maximizable thumbnail. If it 404s, leave the placeholder markup untouched.
-function wireImage(containerEl, mediaId, alt) {
+function wireImage(containerEl, mediaId, alt, onMissing, onFound) {
   const src = mediaSrc(mediaId);
   const probe = new Image();
   probe.onload = () => {
@@ -76,14 +76,16 @@ function wireImage(containerEl, mediaId, alt) {
         openLightbox(src, alt);
       }
     });
+    if (onFound) onFound();
   };
+  probe.onerror = () => { if (onMissing) onMissing(); };
   probe.src = src;
 }
 
 // Probe for a real video. If its metadata loads, swap in an inline <video>
 // with native controls (which include fullscreen) — no lightbox/zoom badge.
 // If it 404s or errors, run onMissing() so callers can fall back to the image.
-function wireVideo(containerEl, mediaId, onMissing) {
+function wireVideo(containerEl, mediaId, onMissing, onFound) {
   const vsrc = mediaSrcVideo(mediaId);
   const probe = document.createElement("video");
   probe.preload = "metadata";
@@ -100,6 +102,7 @@ function wireVideo(containerEl, mediaId, onMissing) {
     containerEl.classList.add("has-media", "has-video");
     // Keep control clicks from bubbling to an ancestor <a> (overview cards).
     containerEl.addEventListener("click", (e) => e.stopPropagation());
+    if (onFound) onFound();
   };
   probe.onerror = () => onMissing();
   probe.src = vsrc;
@@ -109,7 +112,12 @@ function wireVideo(containerEl, mediaId, onMissing) {
  * Resolves a media-placeholder: tries an .mp4 first, then the .jpg. If neither
  * exists, the dashed placeholder is left untouched.
  */
-export function wireMedia(containerEl, mediaId, alt) {
+export function wireMedia(containerEl, mediaId, alt, opts = {}) {
   if (!containerEl) return;
-  wireVideo(containerEl, mediaId, () => wireImage(containerEl, mediaId, alt));
+  wireVideo(
+    containerEl,
+    mediaId,
+    () => wireImage(containerEl, mediaId, alt, opts.onMissing, opts.onFound),
+    opts.onFound
+  );
 }
