@@ -110,8 +110,8 @@ function wireImage(containerEl, mediaId, alt, onMissing, onFound) {
 }
 
 // Probe for a real video. If its metadata loads, swap in an inline <video>
-// with native controls (which include fullscreen) — no lightbox/zoom badge.
-// If it 404s or errors, run onMissing() so callers can fall back to the image.
+// with native controls. If it 404s or errors, run onMissing() so callers can
+// fall back to the image.
 function wireVideo(containerEl, mediaId, onMissing, onFound, opts = {}) {
   const vsrc = mediaSrcVideo(mediaId);
   const probe = document.createElement("video");
@@ -119,13 +119,7 @@ function wireVideo(containerEl, mediaId, onMissing, onFound, opts = {}) {
   const shouldAutoplay =
     opts.autoplay === true || AUTOPLAY_MEDIA_IDS.has(mediaId);
 
-  // Muted autoplay is much more reliable in browsers.
-  // Users can still unmute manually using the native video controls.
-  const shouldMute =
-    typeof opts.muted === "boolean" ? opts.muted : shouldAutoplay;
-
   probe.preload = "metadata";
-  probe.muted = shouldMute;
 
   probe.onloadedmetadata = () => {
     containerEl.innerHTML = "";
@@ -136,20 +130,22 @@ function wireVideo(containerEl, mediaId, onMissing, onFound, opts = {}) {
     v.playsInline = true;
     v.preload = "metadata";
 
+    // Autoplay with sound.
     v.autoplay = shouldAutoplay;
-    v.muted = shouldMute;
+    v.muted = false;
 
     containerEl.appendChild(v);
     containerEl.classList.add("has-media", "has-video");
 
-    // Keep control clicks from bubbling to an ancestor <a> (overview cards).
+    // Keep control clicks from bubbling to an ancestor <a> on overview cards.
     containerEl.addEventListener("click", (e) => e.stopPropagation());
 
     if (shouldAutoplay) {
       v.currentTime = 0;
 
       v.play().catch(() => {
-        // Browser blocked autoplay; controls are still visible.
+        // Some browsers may block autoplay with sound.
+        // Controls remain visible, so the user can press play manually.
       });
     }
 
