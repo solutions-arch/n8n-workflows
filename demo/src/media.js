@@ -12,12 +12,6 @@ export function mediaSrcVideo(mediaId) {
   return `/media/${mediaId}.mp4`;
 }
 
-// Auto-play only this specific output video.
-// This is the Client Onboarding video shown when the circled button is clicked.
-const AUTOPLAY_MEDIA_IDS = new Set([
-  "pdev-onboarding-output",
-]);
-
 let lightboxEl = null;
 
 function ensureLightbox() {
@@ -114,25 +108,24 @@ function wireImage(containerEl, mediaId, alt, onMissing, onFound) {
 // fall back to the image.
 function wireVideo(containerEl, mediaId, onMissing, onFound, opts = {}) {
   const vsrc = mediaSrcVideo(mediaId);
-  const probe = document.createElement("video");
 
-  const shouldAutoplay =
-    opts.autoplay === true || AUTOPLAY_MEDIA_IDS.has(mediaId);
+  // Autoplay every real video by default.
+  // Passing { autoplay: false } still allows a caller to opt out later.
+  const shouldAutoplay = opts.autoplay !== false;
 
-  probe.preload = "metadata";
+  const v = document.createElement("video");
+  v.src = vsrc;
+  v.controls = true;
+  v.playsInline = true;
+  v.preload = "auto";
 
-  probe.onloadedmetadata = () => {
+  // Do not mute. Videos should autoplay with sound when the browser allows it.
+  v.autoplay = shouldAutoplay;
+  v.muted = false;
+  v.defaultMuted = false;
+
+  v.onloadedmetadata = () => {
     containerEl.innerHTML = "";
-
-    const v = document.createElement("video");
-    v.src = vsrc;
-    v.controls = true;
-    v.playsInline = true;
-    v.preload = "metadata";
-
-    // Autoplay with sound.
-    v.autoplay = shouldAutoplay;
-    v.muted = false;
 
     containerEl.appendChild(v);
     containerEl.classList.add("has-media", "has-video");
@@ -140,20 +133,21 @@ function wireVideo(containerEl, mediaId, onMissing, onFound, opts = {}) {
     // Keep control clicks from bubbling to an ancestor <a> on overview cards.
     containerEl.addEventListener("click", (e) => e.stopPropagation());
 
-    if (shouldAutoplay) {
-      v.currentTime = 0;
-
-      v.play().catch(() => {
-        // Some browsers may block autoplay with sound.
-        // Controls remain visible, so the user can press play manually.
-      });
-    }
-
     if (onFound) onFound();
   };
 
-  probe.onerror = () => onMissing();
-  probe.src = vsrc;
+  v.onerror = () => {
+    if (onMissing) onMissing();
+  };
+
+  if (shouldAutoplay) {
+    v.currentTime = 0;
+
+    v.play().catch(() => {
+      // Some browsers may block autoplay with sound.
+      // Controls remain visible, so the user can press play manually.
+    });
+  }
 }
 
 /**
